@@ -12,11 +12,13 @@ Foundation models (FMs) have opened new avenues for machine learning application
 pip install fmtk
 ```
 ### Developer
+```
 git clone https://github.com/umassos/fmtk.git
 cd FMTK
 conda create -n fmtk python=3.10
 conda activate fmtk
 pip install -e
+```
 
 2. Import libraries
 ```
