@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "fmtk"
+version = "0.1.0"                
+description = "Modular Toolkit for Timeseries Foundation Model"
+readme = "README.md"
+requires-python = ">=3.9"
+license = {file = "LICENSE"}
+authors = [{ name = "Hetvi Shastri", email = "hshastri@umass.edu" }]
+keywords = ["timeseries", "foundation model"]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: OS Independent",
+]
+
+dependencies = [
+"torch", 
+"torchvision", 
+"torchaudio",
+"numpy",
+"pandas==2.3.1",
+"matplotlib",
+"seaborn",
+"joblib",
+"scipy", 
+"scikit-learn", 
+"tqdm",
+"dotmap",
+"vitaldb",
+"openpyxl",
+"torch-ecg",
+"pytorch_metric_learning",
+"chronos-forecasting",
+"momentfm",
+"pynvml",
+"peft",
+]
+
+[project.urls]
+Homepage = "https://https://github.com/umassos/FMTK"
+Issues = "https://https://github.com/umassos/FMTK/issues"
+
