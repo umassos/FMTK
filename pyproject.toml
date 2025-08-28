@@ -7,22 +7,14 @@ name = "fmtk"
 version = "0.1.0"                
 description = "Modular Toolkit for Timeseries Foundation Model"
 readme = "README.md"
-requires-python = ">=3.9"
-license = {file = "LICENSE"}
-authors = [{ name = "Hetvi Shastri", email = "hshastri@umass.edu" }]
-keywords = ["timeseries", "foundation model"]
-classifiers = [
-  "Programming Language :: Python :: 3",
-  "License :: OSI Approved :: MIT License",
-  "Operating System :: OS Independent",
-]
+requires-python = ">=3.10"
 
 dependencies = [
 "torch", 
 "torchvision", 
 "torchaudio",
 "numpy",
-"pandas==2.3.1",
+"pandas",
 "matplotlib",
 "seaborn",
 "joblib",
@@ -32,15 +24,12 @@ dependencies = [
 "dotmap",
 "vitaldb",
 "openpyxl",
-"torch-ecg",
 "pytorch_metric_learning",
 "chronos-forecasting",
 "momentfm",
 "pynvml",
-"peft",
+"peft==0.10.0",
+"peakutils",
+"torch-ecg<=0.0.28",
 ]
-
-[project.urls]
-Homepage = "https://https://github.com/umassos/FMTK"
-Issues = "https://https://github.com/umassos/FMTK/issues"
 

@@ -65,7 +65,7 @@ class ETTh1Dataset(TimeSeriesDataset):
         self.n_channels = df.shape[1] - 1
 
         df.drop(columns=["date"], inplace=True)
-        df = df.infer_objects(copy=False).interpolate(method="cubic")
+        df = df.infer_objects().interpolate(method="cubic")
 
         data_splits = self._get_borders()
 

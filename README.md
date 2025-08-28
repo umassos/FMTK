@@ -5,65 +5,42 @@ Foundation models (FMs) have opened new avenues for machine learning application
 
 ![Architecture](./images/architecture.jpg)
 
-## How to use FMTK
-### Zero shot use
-1. Install fmtk package
+### Code Map
 ```
-pip install fmtk
+fmtk/
+├── pipeline.py             # Main pipeline implementation
+├── metrics.py              # Evaluation metrics
+├── utils.py                # Evaluation metrics
+├── logger.py               # Memory, Energy logger
+├── datasets/
+│   └── ecg5000.py          # ECG5000 dataset implementation
+├── components/
+│   ├── backbones/
+│   │   └── chronos.py      # Chronos foundation model
+│   │   └── ...            
+│   ├── encoders/
+│   │   └── ...             # encoder implementations
+│   └── decoders/
+│       ├── classification/  
+│       │   └── ...         # Classification decoders
+│       ├── regression/
+│       │   └── ...         # Regression decoders
+│       └── forecasting/
+│           └── ...         # forecasting decoders
 ```
-### Developer
+
+## Installation
+Clone the repo
 ```
-git clone https://github.com/umassos/fmtk.git
 cd FMTK
 conda create -n fmtk python=3.10
 conda activate fmtk
-pip install -e
+pip install -e .
 ```
-
-2. Import libraries
+For working with PPG-BP data related tasks install
 ```
-from fmtk.pipeline import Pipeline
-from fmtk.datasets.ecg5000 import ECG5000Dataset
-from fmtk.components.backbones.chronos import ChronosModel
-from fmtk.components.decoders.classification.mlp import MLPDecoder
-from fmtk.components.decoders.classification.svm import SVMDecoder
-from fmtk.logger import Logger
-from fmtk.metrics import get_accuracy
-from torch.utils.data import DataLoader
+pip install pyPPG==1.0.41
 ```
-3. Set device and Dataloader
-```
-device='cuda:0'
+Note: There might be a package conflict, but it should still function correctly.
 
-task_cfg={
-    'task_type': 'classification',
-    'inference_config': {
-        'batch_size': 32,
-        'shuffle':False
-        },    
-    'train_config':{
-        'batch_size': 32,
-        'shuffle':False,
-        'epochs':50,
-        'lr': 1e-2
-
-    }
-}  
-dataset_cfg={
-        'dataset_path': '../dataset/ECG5000',
-} 
-
-
-dataloader_train = DataLoader(ECG5000Dataset(dataset_cfg,task_cfg,split='train'), batch_size=task_cfg['train_config']['batch_size'], shuffle=task_cfg['train_config']['shuffle'])
-dataloader_test = DataLoader(ECG5000Dataset(dataset_cfg, task_cfg,split='test') , batch_size=task_cfg['inference_config']['batch_size'], shuffle=task_cfg['inference_config']['shuffle'])
-```
-
-4. Use Pipeline 
-```
-P=Pipeline(ChronosModel(device,'large'))
-svm_decoder=P.add_decoder(SVMDecoder(),load=True)
-P.train(dataloader_train,parts_to_train=['decoder'],cfg=task_cfg['train_config'])
-y_test,y_pred=P.predict(dataloader_test,cfg=task_cfg['inference_config'])
-result=get_accuracy(y_test, y_pred)
-```
-
+For quick start please check out [examples](./examples).
