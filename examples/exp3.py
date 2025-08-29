@@ -10,6 +10,7 @@ from peft import LoraConfig
 device='cuda:0'
 
 task_cfg={'task_type': 'regression','label': 'hr'}  
+# 'hr' for heart rate, 'sysbp' for systolic blood pressure, 'diasbp' for diastolic blood pressure
 train_config={'batch_size': 32,'shuffle':False,'epochs':50,'lr':1e-2}
 inference_config= {'batch_size': 32,'shuffle':False}  
 dataset_cfg={'dataset_path': '../dataset/PPG-data'} 

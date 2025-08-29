@@ -7,11 +7,13 @@ from fractions import Fraction
 from scipy.signal import filtfilt, resample_poly
 from math import gcd
 from dotmap import DotMap
+import os
 
 class PapageiModel(BaseModel):
     def __init__(self,device,model_name=None,model_config=None):
         super().__init__()
         self.device=device
+        base_dir = os.path.dirname(__file__)
         if model_name==None:
             model_name='papagei_p'
             
@@ -24,13 +26,13 @@ class PapageiModel(BaseModel):
                 'n_block': 18,
                 'n_classes': 512}
         if model_name=='papagei_p':
-            model_path='../weights/papagei_p.pt'
+            model_path = os.path.join(base_dir, '../../../../weights', 'papagei_p.pt')
             model = ResNet1D(**model_config)
         elif model_name=='papagei_s':
-            model_path='../weights/papagei_s.pt'
+            model_path = os.path.join(base_dir, '../../../../weights', 'papagei_s.pt')
             model = ResNet1DMoE(**model_config)
         elif model_name=='papagei_s_svri':
-            model_path='../weights/papagei_s_svri.pt'
+            model_path = os.path.join(base_dir, '../../../../weights', 'papagei_s_svri.pt')
             model = ResNet1D(**model_config)                       
         self.model = self.load_model_without_module_prefix(model,model_path )
         self.model.to(self.device)
