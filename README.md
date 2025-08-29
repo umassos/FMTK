@@ -14,19 +14,20 @@ fmtk/
 ├── logger.py               # Memory, Energy logger
 ├── datasets/
 │   └── ecg5000.py          # ECG5000 dataset implementation
+│   └── ... 
 ├── components/
 │   ├── backbones/
 │   │   └── chronos.py      # Chronos foundation model
 │   │   └── ...            
 │   ├── encoders/
-│   │   └── ...             # encoder implementations
+│   │   └── ...             # Encoders
 │   └── decoders/
 │       ├── classification/  
 │       │   └── ...         # Classification decoders
 │       ├── regression/
 │       │   └── ...         # Regression decoders
 │       └── forecasting/
-│           └── ...         # forecasting decoders
+│           └── ...         # Forecasting decoders
 ```
 
 ## Installation
