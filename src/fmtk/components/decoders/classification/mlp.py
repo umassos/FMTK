@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torch
 import torch.nn as nn
-from timeseries.components.base import BaseModel
+from fmtk.components.base import BaseModel
 
 class MLPHead(nn.Module):
     def __init__(self, input_dim: int, output_dim: int, hidden_dim: int = 128):

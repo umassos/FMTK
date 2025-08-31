@@ -6,7 +6,7 @@ from torch.optim.lr_scheduler import OneCycleLR
 from sklearn.svm import SVC
 from sklearn.model_selection import GridSearchCV, train_test_split
 from tqdm import tqdm
-from timeseries.components.base import BaseModel
+from fmtk.components.base import BaseModel
 
 class SVMDecoder(BaseModel):
     def __init__(self, max_samples: int = 10000):

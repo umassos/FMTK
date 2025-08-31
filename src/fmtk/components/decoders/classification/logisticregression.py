@@ -1,5 +1,5 @@
 from sklearn.linear_model import LogisticRegression
-from timeseries.components.base import BaseModel
+from fmtk.components.base import BaseModel
 from torch.utils.data import DataLoader
 import numpy.typing as npt
 import numpy as np

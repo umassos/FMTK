@@ -4,7 +4,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 import numpy.typing as npt
 from sklearn.utils.class_weight import compute_class_weight
-from timeseries.components.base import BaseModel
+from fmtk.components.base import BaseModel
 
 class MLPHead(nn.Module):
     def __init__(self, input_dim: int, output_dim: int, hidden_dim: int = 128):

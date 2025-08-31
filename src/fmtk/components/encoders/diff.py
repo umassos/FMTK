@@ -1,6 +1,6 @@
 #code from Mantis
 import torch
-from timeseries.components.base import BaseModel
+from fmtk.components.base import BaseModel
 from torch import nn
 
 

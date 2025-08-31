@@ -7,7 +7,7 @@ from sklearn.svm import SVC
 from sklearn.model_selection import GridSearchCV, train_test_split
 from tqdm import tqdm
 import numpy.typing as npt
-from timeseries.components.base import BaseModel
+from fmtk.components.base import BaseModel
 
 class MLPHead(nn.Module):
     def __init__(self, head_nf: int, forecast_horizon: int, head_dropout: float = 0.1):

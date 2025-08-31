@@ -1,7 +1,7 @@
-from timeseries.components.base  import BaseModel
+from fmtk.components.base  import BaseModel
 import numpy as np
 import torch
-from timeseries.components.backbones.resnet import ResNet1D, ResNet1DMoE
+from fmtk.components.backbones.resnet import ResNet1D, ResNet1DMoE
 from torch_ecg._preprocessors import Normalize
 from fractions import Fraction
 from scipy.signal import filtfilt, resample_poly

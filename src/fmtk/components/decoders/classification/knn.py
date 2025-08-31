@@ -1,5 +1,5 @@
 from sklearn.neighbors import KNeighborsClassifier
-from timeseries.components.base import BaseModel
+from fmtk.components.base import BaseModel
 import numpy as np
 from torch.utils.data import DataLoader
 import numpy.typing as npt

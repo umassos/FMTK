@@ -9,7 +9,7 @@ from sklearn.model_selection import GridSearchCV, train_test_split
 from sklearn.preprocessing import StandardScaler
 from tqdm import tqdm
 import numpy.typing as npt
-from timeseries.components.base import BaseModel
+from fmtk.components.base import BaseModel
 
 class RidgeDecoder(BaseModel):
     def __init__(self):
