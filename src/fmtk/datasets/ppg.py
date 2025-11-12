@@ -13,6 +13,8 @@ from torch_ecg._preprocessors import Normalize
 class PPGDataset(TimeSeriesDataset):
     def __init__(self, dataset_cfg, task_cfg, split):
         super().__init__(dataset_cfg, task_cfg, split)
+        self.seq_len = 1250  # 10 seconds at 125 Hz original
+        #self.seq_len = 512  # 4.096 seconds at 125 Hz
         self.task_name = self.task_cfg['task_type']  
         self.x_df,self.y_df = self.load_data()
         self.length = len(self.x_df)
@@ -75,6 +77,7 @@ class PPGDataset(TimeSeriesDataset):
             subject_id = row["subject_ID"]
             segments = []
             for s in range(1, 4):
+            # for s in range(1, 2):  # Using only first segment for now
                 file_path = f"{main_dir}{subject_id}_{s}.txt"
 
                 signal = pd.read_csv(file_path, sep='\t', header=None)
@@ -83,7 +86,7 @@ class PPGDataset(TimeSeriesDataset):
                 signal, _, _, _ = self.preprocess(waveform=signal, frequency=fs)
                 signal = self.resample_batch_signal(signal, fs_original=fs, fs_target=fs_target, axis=0)
 
-                padding_needed = 1250 - len(signal)
+                padding_needed = self.seq_len - len(signal)
                 pad_left = padding_needed // 2
                 pad_right = padding_needed - pad_left
                 signal = np.pad(signal, pad_width=(pad_left, pad_right))
@@ -97,7 +100,10 @@ class PPGDataset(TimeSeriesDataset):
         if self.task_name == 'regression':
             label_name = self.task_cfg.get("label", "sysbp")
             row = self.y_df[self.label][idx]
-            return x, row
+            return {
+                'x':x,
+                'y':row,
+            }
 
     def __len__(self):
         return self.length

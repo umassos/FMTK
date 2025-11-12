@@ -33,16 +33,19 @@ class MLPDecoder(BaseModel):
 
     def to_device(self):
         self.model.to(self.device)
+        
+    def to_cpu(self):
+        self.model.to('cpu')
 
-    def preprocess(self,batch):
-        x,y=batch
+    def preprocess(self,batch_x):
+        x=batch_x
         x = x.to(self.device).to(torch.float32)
-        return x,y
+        return x
 
-    def forward(self,batch):
-        x,y=self.preprocess(batch)
+    def forward(self,batch_x):
+        x=self.preprocess(batch_x)
         output = self.model(x)
-        return output,y
+        return output
 
     def postprocess(self,x):
         pass

@@ -32,18 +32,18 @@ class MLPDecoder(BaseModel):
     def trainable_parameters(self):
         return self.model.parameters()
     
-    def preprocess(self,batch):
-        x,y=batch
+    def preprocess(self,batch_x):
+        x=batch_x
         x=x.to(torch.float32).to(self.device)
         if x.ndimension() == 4:
             x=x.mean(dim=2)
         if x.ndimension() == 3:
             x=x.mean(dim=1)
-        return x,y
+        return x
     
     def postprocess(self,embedding):
         pass
 
-    def forward(self, batch):
-        features,y=self.preprocess(batch)
-        return self.model(features),y
+    def forward(self, batch_x):
+        features=self.preprocess(batch_x)
+        return self.model(features)

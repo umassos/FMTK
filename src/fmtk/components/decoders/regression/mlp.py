@@ -19,28 +19,30 @@ class MLPHead(nn.Module):
         return self.net(x).squeeze(-1)
 
 class MLPDecoder(BaseModel):
-    def __init__(self, device, cfg, lr):
+    def __init__(self, device, cfg=None):
         self.device = device
         self.model = MLPHead(input_dim=cfg['input_dim'],output_dim=cfg['output_dim'],hidden_dim=cfg['hidden_dim'])
-        self.criterion = nn.MSELoss()
-        self.optimizer = torch.optim.Adam(self.model.parameters(), lr=lr)
+        self.criterion = nn.MSELoss().to(self.device)
 
     def to_device(self):
         self.model.to(self.device)
 
+    def to_cpu(self):
+        self.model.to('cpu')
+        
     def trainable_parameters(self):
         return self.model.parameters()
     
-    def preprocess(self,batch):
-        x,y=batch
+    def preprocess(self,batch_x):
+        x=batch_x
         x=x.to(self.device).to(torch.float32)
         if x.ndimension() == 4:
             x=x.mean(dim=2)
         if x.ndimension() == 3:
             x=x.mean(dim=1)
-        return x,y
+        return x
         
-    def forward(self, batch):
-        features,y=self.preprocess(batch)
-        return self.model(features),y
+    def forward(self, batch_x):
+        features=self.preprocess(batch_x)
+        return self.model(features)
     

@@ -4,7 +4,9 @@ import numpy as np
 import torch.nn as nn
 from tqdm import tqdm
 import time
+import os
 from contextlib import nullcontext
+import json
 
 class Pipeline:
     def __init__(self, model_instance,logger=None):
@@ -17,17 +19,25 @@ class Pipeline:
         self.decoder_id=0
         self.adapter_id=0
         self.encoder_id=0
+        self.base_dir = os.path.dirname(__file__)
         
     def add_adapter(self,peft_cfg):
         adapter_name=f'adapter_{self.adapter_id}'
+        self.adapter_id+=1
         if self.model_instance.peft_enable:
             with (self.logger.measure("add_adapter", device=self.logger.device) if self.logger else nullcontext()):
-                self.model_instance.model.add_adapter(peft_cfg,adapter_name)
+                self.model_instance.model.add_adapter(adapter_name=adapter_name, peft_config=peft_cfg)
             return adapter_name
         else:
             self.model_instance.enable_peft(peft_cfg)
             return 'default'
         
+    def unload_adapter(self):
+        if hasattr(self.model_instance,'peft_enable') and self.model_instance.peft_enable:
+            self.model_instance.disable_adapters()
+
+
+
     def add_encoder(self,encoder_obj,load=True):
         encoder_name=f'encoder_{self.encoder_id}'
         with (self.logger.measure("add_encoder", device=self.logger.device) if self.logger else nullcontext()):
@@ -37,11 +47,19 @@ class Pipeline:
             self.active_encoder = self.encoders[encoder_name]
         return f"{encoder_name}"
     
-    def add_decoder(self,decoder_obj,load=True):
+    def unload_encoder(self):
+        self.active_encoder=None
+    
+    def add_decoder(self,decoder_obj,load=True,trained=False,path=None):
         """Adds a named decoder to the manager."""
         decoder_name=f"decoder_{self.decoder_id}"
         with (self.logger.measure("add_decoder", device=self.logger.device) if self.logger else nullcontext()):
-            self.decoders[decoder_name] = decoder_obj
+            if trained:
+                self.decoders[decoder_name]= decoder_obj
+                self.decoders[decoder_name].model.load_state_dict(torch.load(f"{self.base_dir}/saved/{path}/decoder.pth"))
+                
+            else:
+                self.decoders[decoder_name] = decoder_obj
             self.decoder_id+=1
             if load:
                 if hasattr(decoder_obj,'to_device'):
@@ -49,7 +67,7 @@ class Pipeline:
                 self.active_decoder = self.decoders[decoder_name]
         return f"{decoder_name}"
 
-    def load_decoder(self,decoder_id,swap=True):
+    def load_decoder(self,decoder_id,swap=False):
         """Sets the active decoder for future predict/train."""        
         if decoder_id not in self.decoders:
             raise ValueError(f"decoder {decoder_id} not found. Available: {list(self.decoders.keys())}")
@@ -57,11 +75,14 @@ class Pipeline:
             if swap:
                 if self.active_decoder is not None:
                     self.active_decoder.to_cpu()
-            self.decoders[decoder_id].to_device()
+                self.decoders[decoder_id].to_device()
+                
             self.active_decoder = self.decoders[decoder_id]
 
+    def unload_decoder(self):
+        self.active_decoder=None
 
-    def train(self, train_loader, val_loader=None, parts_to_train=['decoder'],cfg=None):
+    def train(self, train_loader, val_loader=None, parts_to_train=['decoder'],cfg=None,path=None):
 
         trains_decoder = 'decoder' in parts_to_train
         trains_adapter = 'adapter' in parts_to_train
@@ -110,21 +131,73 @@ class Pipeline:
             for _ in range(cfg['epochs']):
                 for batch in tqdm(train_loader):
                         optimizer.zero_grad()
+                        if len(batch)==3:
+                            x,mask,y=batch
+                        else:
+                            x,y=batch
+                            mask=None
+
                         if self.active_encoder is not None:
                             x,y= self.active_encoder.forward(batch)
                             batch=(x,y)
-                        feats,y=self.model_instance.forward(batch)
-                        logits,y = self.active_decoder.forward((feats,y))
+                        self.set_eval_mode()
+                        feats=self.model_instance.forward(x,mask)
+                        logits = self.active_decoder.forward((feats))
                         if (hasattr(self.active_decoder, "requires_model") and self.active_decoder.requires_model and hasattr(self.model_instance.model, "normalizer")):
                             logits = self.model_instance.model.normalizer(x=logits, mode="denorm")
                         if isinstance(criterion, (nn.MSELoss, nn.L1Loss, nn.SmoothL1Loss)): 
                             logits = logits.float()
                             y = y.to(self.active_decoder.device).float() 
                         elif isinstance(criterion, (nn.CrossEntropyLoss)): 
-                            y = y.to(self.active_decoder.device)             
+                            y = y.to(self.active_decoder.device)            
                         loss = criterion(logits, y)
                         loss.backward()
                         optimizer.step()
+        
+        os.makedirs(f"{self.base_dir}/saved/{path}",exist_ok=True)
+        if trains_decoder:
+            torch.save(self.active_decoder.model.state_dict(), f"{self.base_dir}/saved/{path}/decoder.pth")
+        if trains_encoder:
+            torch.save(self.active_encoder.model.state_dict(), f"{self.base_dir}/saved/{path}/encoder.pth")
+        if trains_adapter:
+            self.model_instance.model.save_pretrained(f"{self.base_dir}/saved/{path}/adapter.pth")
+        if path is not None:
+            summary_metrics = self.logger.summary()
+            summary_path = f"{self.base_dir}/saved/{path}/pipeline.json"
+            with open(summary_path, 'w') as f:
+                json.dump(summary_metrics,f, indent=2)
+
+    def set_eval_mode(self):
+        model = self.model_instance
+        # Chronos has nested `.model.model`
+        if hasattr(model, "model") and hasattr(model.model, "model"):
+            model.model.model.eval()
+        # PaPaGei / ResNet-style (just one .model)
+        elif hasattr(model, "model") and isinstance(model.model, torch.nn.Module):
+            model.model.eval()
+        # Direct nn.Module
+        elif isinstance(model, torch.nn.Module):
+            model.eval()
+        else:
+            return
+
+    def predict_one_batch(self,batch):
+        if len(batch)==3:
+            x,mask,y=batch
+        else:
+            x,y=batch
+            mask=None
+        if self.active_encoder is not None:
+            x,y= self.active_encoder.forward(batch)
+            batch=(x,y)
+        self.set_eval_mode()
+        feats=self.model_instance.forward(x,mask)
+        logits = self.active_decoder.forward((feats))
+        if isinstance(self.active_decoder.criterion, (nn.CrossEntropyLoss)):
+            logits = torch.argmax(logits, dim=1)
+        if (hasattr(self.active_decoder, "requires_model") and self.active_decoder.requires_model and hasattr(self.model_instance.model, "normalizer")):
+            logits = self.model_instance.model.normalizer(x=logits, mode="denorm")
+        return logits,y
 
     def predict(self, test_loader, cfg):
         if self.active_decoder is not None:
@@ -142,21 +215,16 @@ class Pipeline:
             else:
                 preds=[]
                 labels=[]
-                for batch in test_loader:
+                for batch in tqdm(test_loader):
                     with (self.logger.measure("predict", device=self.logger.device) if self.logger else nullcontext()):
-                        if self.active_encoder is not None:
-                            x,y= self.active_encoder.forward(batch)
-                            batch=(x,y)
-                        feats,y=self.model_instance.forward(batch)
-                        logits,y = self.active_decoder.forward((feats,y))
-                        if isinstance(self.active_decoder.criterion, (nn.CrossEntropyLoss)):
-                            logits = torch.argmax(logits, dim=1)
-                        if (hasattr(self.active_decoder, "requires_model") and self.active_decoder.requires_model and hasattr(self.model_instance.model, "normalizer")):
-                            logits = self.model_instance.model.normalizer(x=logits, mode="denorm")
-                        et=time.time()
-                        preds.append(logits.detach().cpu().numpy())
-                        labels.append(y.numpy())
+                        logits,y=self.predict_one_batch(batch)
+                    preds.append(logits.detach().cpu().numpy())
+                    labels.append(y.numpy())
                 return np.concatenate(labels), np.concatenate(preds)
+        else:
+            preds,labels=self.model_instance.predict(test_loader)
+            return np.concatenate(labels), np.concatenate(preds)
+
 
     def _encoder_loader(self, dataloader, cfg):
         xs=[]

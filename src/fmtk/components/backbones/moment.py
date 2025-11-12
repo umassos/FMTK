@@ -9,7 +9,7 @@ from tqdm import tqdm
 from peft import LoraConfig, get_peft_model
 
 class MomentModel(BaseModel):
-    def __init__(self,device,model_name=None):
+    def __init__(self,device,model_name=None,model_config=None):
         super().__init__()
         self.device=device
         if model_name=='large':
@@ -32,7 +32,7 @@ class MomentModel(BaseModel):
         self.model.init()     
         self.model.to(device)     
 
-    def preprocess(self,batch):
+    def preprocess(self,batch_x,mask=None):
         """
         Match the shape and preprocess before sending it to model.
         Args:
@@ -41,26 +41,22 @@ class MomentModel(BaseModel):
             x: input
             y: output
         """
-        if len(batch)==3:
-            x, mask, y = batch
+        if mask is not None:
             mask=mask.to(self.device)
-        elif len(batch)==2:
-            x, y = batch
-            mask=None
-
-        x=x.float()
+        
+        x=batch_x.float()
         self.B, self.S, self.L = x.shape
         x=x.to(self.device)
-        return x, mask, y   
+        return x, mask   
 
 
-    def forward(self, batch):
-        x, mask, y=self.preprocess(batch)
+    def forward(self, batch_x, mask=None):
+        x, mask=self.preprocess(batch_x,mask)
         if mask is None:
             embedding=self.model(x_enc=x, reduction="none").embeddings
         else:
             embedding=self.model(x_enc=x, input_mask=mask, reduction="none").embeddings
-        return embedding,y
+        return embedding
     
     def postprocess(self, embedding):
         pass
@@ -74,8 +70,9 @@ class MomentModel(BaseModel):
         self.model.eval()
         all_embeddings, all_labels = [], []
         for batch in tqdm(dataloader, total=len(dataloader)):
+            x,y=batch
             with torch.no_grad():
-                output,y=self.forward(batch)   
+                output=self.forward(x)   
             all_embeddings.append(output.cpu().float().numpy())
             all_labels.append(y)
         embeddings_np = np.vstack(all_embeddings)

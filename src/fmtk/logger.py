@@ -141,16 +141,42 @@ class Logger:
 
         return path
 
+
     def summary(self):
-        s = []
+        s = {}
+        grouped = defaultdict(list)
+
+        # group records by section
         for r in self.records:
-            line = f"[{r['section']}] wall={r.get('wall_time_sec',0):.3f}s"
-            if "gpu_time_ms" in r: line += f", gpu={r['gpu_time_ms']:.2f}ms"
-            if "gpu_alloc_peak" in r:
-                line += f", gpu_peak={r['gpu_alloc_peak']/1e6:.1f}MB"
-            if "gpu_energy_mJ" in r and r["gpu_energy_mJ"] is not None:
-                line += f", gpu_energy={r['gpu_energy_mJ']/1000:.3f}J"
-            if "cpu_rss_delta" in r:
-                line += f", cpu_dRSS={r['cpu_rss_delta']/1e6:.1f}MB"
-            s.append(line)
-        return "\n".join(s)
+            grouped[r['section']].append(r)
+
+        # compute averages for each section
+        for section, records in grouped.items():
+            s[section] = {}
+            n = len(records)
+            if any("wall_time_sec" in r for r in records):
+                wall = sum(r.get('wall_time_sec', 0) for r in records) / n
+                line = f"[{section}] wall={wall:.3f}s"
+                s[section].update({"wall time":wall*1000})
+
+            if any("gpu_time_ms" in r for r in records):
+                gpu = sum(r.get("gpu_time_ms", 0) for r in records) / n
+                line += f", gpu={gpu:.2f}ms"
+                s[section].update({"gpu time":gpu})
+
+            if any("gpu_alloc_peak" in r for r in records):
+                gpu_peak = sum(r.get("gpu_alloc_peak", 0) for r in records) / n
+                line += f", gpu_peak={gpu_peak/1e6:.1f}MB"
+                s[section].update({"gpu peak":gpu_peak/1e6})
+
+            if any("gpu_energy_mJ" in r and r["gpu_energy_mJ"] is not None for r in records):
+                gpu_energy = sum((r.get("gpu_energy_mJ") or 0) for r in records) / n
+                line += f", gpu_energy={gpu_energy/1000:.3f}J"
+                s[section].update({"gpu energy":gpu_energy/1000})
+
+            if any("cpu_rss_delta" in r for r in records):
+                cpu = sum(r.get("cpu_rss_delta", 0) for r in records) / n
+                line += f", cpu_dRSS={cpu/1e6:.1f}MB"
+                s[section].update({"cpu dRSS":cpu/1e6})
+
+        return s

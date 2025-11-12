@@ -13,9 +13,9 @@ class ETTh1Dataset(TimeSeriesDataset):
         task_cfg,
         split,
         forecast_horizon: Optional[int] = 192,
-        data_split: str = "train",
         data_stride_len: int = 1,
         random_seed: int = 13,
+        target_col: Optional[str] = "OT",
     ):
         """
         Parameters
@@ -40,6 +40,7 @@ class ETTh1Dataset(TimeSeriesDataset):
         self.data_stride_len = data_stride_len
         self.task_name = self.task_cfg['task_type']
         self.random_seed = random_seed
+        self.target_col = target_col  
 
         # Read data
         self._read_data()
@@ -67,6 +68,9 @@ class ETTh1Dataset(TimeSeriesDataset):
         df.drop(columns=["date"], inplace=True)
         df = df.infer_objects().interpolate(method="cubic")
 
+        df = df[[self.target_col]]
+        self.n_channels = 1
+        
         data_splits = self._get_borders()
 
         train_data = df[data_splits[0]]
@@ -96,7 +100,10 @@ class ETTh1Dataset(TimeSeriesDataset):
             timeseries = self.data[seq_start:seq_end, :].T
             forecast = self.data[seq_end:pred_end, :].T
 
-            return timeseries, forecast
+            return {
+                'x':timeseries,
+                'y':forecast,
+            }
 
         elif self.task_name == "imputation":
             if seq_end > self.length_timeseries:
@@ -105,7 +112,10 @@ class ETTh1Dataset(TimeSeriesDataset):
 
             timeseries = self.data[seq_start:seq_end, :].T
 
-            return timeseries, input_mask
+            return {
+                'x':timeseries,
+                'mask':input_mask,
+            }
 
     def __len__(self):
         if self.task_name == "imputation":

@@ -26,18 +26,18 @@ class PapageiModel(BaseModel):
                 'n_block': 18,
                 'n_classes': 512}
         if model_name=='papagei_p':
-            model_path = os.path.join(base_dir, '../../../../weights', 'papagei_p.pt')
+            model_path = os.path.join(base_dir, '../../../weights', 'papagei_p.pt')
             model = ResNet1D(**model_config)
         elif model_name=='papagei_s':
-            model_path = os.path.join(base_dir, '../../../../weights', 'papagei_s.pt')
+            model_path = os.path.join(base_dir, '../../../weights', 'papagei_s.pt')
             model = ResNet1DMoE(**model_config)
         elif model_name=='papagei_s_svri':
-            model_path = os.path.join(base_dir, '../../../../weights', 'papagei_s_svri.pt')
+            model_path = os.path.join(base_dir, '../../../weights', 'papagei_s_svri.pt')
             model = ResNet1D(**model_config)                       
         self.model = self.load_model_without_module_prefix(model,model_path )
         self.model.to(self.device)
 
-    def preprocess(self,batch):
+    def preprocess(self,batch_x,mask=None):
         """
         Match the shape and preprocess before sending it to model.
         Args:
@@ -46,24 +46,18 @@ class PapageiModel(BaseModel):
             x: input
             y: output
         """
-        if len(batch)==3:
-            x, mask, y = batch
-            x=x.float()
-            self.B, self.S, self.L = x.shape
-            x = x.view(-1, 1, self.L).to(self.device)
-            return x, mask, y
-        elif len(batch)==2:
-            x, y = batch
-            x=x.float()
-            self.B, self.S, self.L = x.shape
-            x = x.view(-1, 1, self.L).to(self.device)
-            return x, None, y           
+        if mask is not None:
+            mask=mask.to(self.device)
+        x=batch_x.float()
+        self.B, self.S, self.L = x.shape
+        x = x.view(-1, 1, self.L).to(self.device)
+        return x, None           
 
-    def forward(self, batch):
-        x, mask, y = self.preprocess(batch)
+    def forward(self,batch_x, mask=None):
+        x, mask = self.preprocess(batch_x, mask)
         embedding = self.model(x) 
         output=self.postprocess(embedding)
-        return output,y
+        return output
 
     def postprocess(self,embedding):
         embeddings = embedding[0]
@@ -88,8 +82,13 @@ class PapageiModel(BaseModel):
 
         # with torch.inference_mode():
         for batch in dataloader:
+            if len(batch)==3:
+                x,mask,y= batch
+            else:
+                x,y= batch
+                mask=None
             with torch.no_grad():
-                output,y = self.forward(batch) 
+                output= self.forward(x) 
             all_embeddings.append(output.cpu().numpy())
             all_labels.append(y)
 

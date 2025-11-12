@@ -1,4 +1,4 @@
-from fmtk.components.base import BaseModel
+from timeseries.components.base import BaseModel
 from chronos import ChronosPipeline
 import torch
 import numpy as np
@@ -6,7 +6,7 @@ import pandas as pd
 from tqdm import tqdm
 
 class ChronosModel(BaseModel):
-    def __init__(self,device,model_name=None):
+    def __init__(self,device,model_name=None,model_config=None):
         super().__init__()
         self.device=device
         if model_name=='large':
@@ -30,25 +30,21 @@ class ChronosModel(BaseModel):
             torch_dtype=torch.bfloat16
         )
     
-    def preprocess(self,batch):
-        if len(batch)==3:
-            x, mask, y = batch
-            self.B, self.S, self.L = x.shape
-            x = x.view(-1, self.L)
-            x = x.float()
-            return x, mask, y
-        elif len(batch)==2:
-            x, y = batch
-            self.B, self.S, self.L = x.shape
-            x = x.view(-1, self.L)
-            x = x.float()
-            return x,None, y      
+    def preprocess(self,batch_x,mask=None):
+
+        if mask is not None:
+            mask=mask.to(self.device)
+        
+        x=batch_x.float()        
+        self.B, self.S, self.L = x.shape
+        x = x.view(-1, self.L)
+        return x,None      
     
-    def forward(self, batch):
-        x, mask, y=self.preprocess(batch)
+    def forward(self, batch_x, mask=None):
+        x, mask=self.preprocess(batch_x)
         embedding, _ = self.model.embed(x)
         output=self.postprocess(embedding)
-        return output,y
+        return output
     
     def postprocess(self,embedding):
         _,E,_=embedding.shape #[batch size*segment size,token size, length]
@@ -72,8 +68,13 @@ class ChronosModel(BaseModel):
         self.model.model.eval()
         all_embeddings,all_labels = [],[]
         for batch in tqdm(dataloader,total=len(dataloader)):
+            if len(batch)==3:
+                x,mask,y= batch
+            else:
+                x,y= batch
+                mask=None
             with torch.no_grad():
-                output,y=self.forward(batch)   
+                output,y=self.forward(x)   
             all_embeddings.append(output.cpu().detach().float().numpy())
             all_labels.append(y)
         embeddings_np = np.vstack(all_embeddings)

@@ -8,4 +8,12 @@ def get_mae(y_test, y_pred):
     return mean_absolute_error(y_test, y_pred)
 
 def get_accuracy(y_test, y_pred):
+    def normalize(x):
+        if isinstance(x, str):
+            return x.lower()
+        return x
+
+    y_test = [normalize(y) for y in y_test]
+    y_pred = [normalize(y) for y in y_pred]
+
     return accuracy_score(y_test, y_pred)
