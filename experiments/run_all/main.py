@@ -1,5 +1,5 @@
 from config import *
-from timeseries.experiments.run_all.inference_pipeline import InferencePipeline
+from fmtk.experiments.run_all.inference_pipeline import InferencePipeline
 import csv
 import os
 import json

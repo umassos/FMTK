@@ -1,12 +1,12 @@
-from timeseries.datasets.ppg import PPGDataset
-from timeseries.datasets.redd import REDDDataset
-from timeseries.datasets.ecg5000 import ECG5000Dataset
-from timeseries.datasets.etth1 import ETTh1Dataset
-from timeseries.datasets.uwavegesture import UWaveGestureLibraryALLDataset
-from timeseries.datasets.ecl import ECLDataset
-from timeseries.datasets.weather import WeatherDataset
-from timeseries.datasets.traffic import TrafficDataset
-from timeseries.datasets.exchange import ExchangeDataset
+from fmtk.datasets.ppg import PPGDataset
+from fmtk.datasets.redd import REDDDataset
+from fmtk.datasets.ecg5000 import ECG5000Dataset
+from fmtk.datasets.etth1 import ETTh1Dataset
+from fmtk.datasets.uwavegesture import UWaveGestureLibraryALLDataset
+from fmtk.datasets.ecl import ECLDataset
+from fmtk.datasets.weather import WeatherDataset
+from fmtk.datasets.traffic import TrafficDataset
+from fmtk.datasets.exchange import ExchangeDataset
 
 def get_dataset_class(dataset_type):
     if dataset_type == 'PPG-data':
@@ -28,7 +28,7 @@ def get_dataset_class(dataset_type):
     elif dataset_type=='exchange':
         return ExchangeDataset
     elif dataset_type=='illness':
-        from timeseries.datasets.illness import IllnessDataset
+        from fmtk.datasets.illness import IllnessDataset
         return IllnessDataset
     
     raise ValueError(f"Unknown dataset type: {dataset_type}")

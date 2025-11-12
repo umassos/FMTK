@@ -1,14 +1,14 @@
-from timeseries.experiments.run_all.component_loader import get_model_class, get_decoder_class, get_encoder_class,get_adapter_class
-from timeseries.experiments.run_all.dataset_loader import get_dataset_class
+from fmtk.experiments.run_all.component_loader import get_model_class, get_decoder_class, get_encoder_class,get_adapter_class
+from fmtk.experiments.run_all.dataset_loader import get_dataset_class
 from sklearn.model_selection import train_test_split, GridSearchCV
-from timeseries.metrics import get_mae, get_accuracy
+from fmtk.metrics import get_mae, get_accuracy
 from torch.utils.data import DataLoader,ConcatDataset
 import psutil, os
-from timeseries.pipeline import Pipeline
+from fmtk.pipeline import Pipeline
 from config import *
-from timeseries.metrics import get_mae, get_accuracy
-from timeseries.utils import control_randomness
-from timeseries.logger import Logger
+from fmtk.metrics import get_mae, get_accuracy
+from fmtk.utils import control_randomness
+from fmtk.logger import Logger
 import csv
 import json
 
