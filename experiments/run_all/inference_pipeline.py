@@ -82,14 +82,14 @@ class InferencePipeline:
                 P.add_adapter(adapter_instance)
             else:
                 P.unload_adapter()
-            # P.train(self.dataloader_train,parts_to_train=path['parts_to_train'],cfg=self.task_cfg['train_config'],path=path['path'])
-            # print("Training complete")     
+            P.train(self.dataloader_train,parts_to_train=path['parts_to_train'],cfg=self.task_cfg['train_config'],path=path['path'])
+            print("Training complete")     
             y_test,y_pred=P.predict(self.dataloader_test,cfg=self.task_cfg['inference_config'])   
             summary=logger.summary()
-            base_dir = os.path.dirname(__file__)
-            with open(f"{base_dir}/../../saved/{path['path']}/pipeline.json", 'r') as file:
-                data = json.load(file)
-            summary.update({'train':data['train']})
+            # base_dir = os.path.dirname(__file__)
+            # with open(f"{base_dir}/../../saved/{path['path']}/pipeline.json", 'r') as file:
+            #     data = json.load(file)
+            # summary.update({'train':data['train']})
             if self.task_cfg['task_type']=='regression' or self.task_cfg['task_type']=='forecasting':
                     metrics = {
                             "backbone": self.pipeline['backbone'],
