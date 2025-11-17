@@ -3,14 +3,17 @@ from timeseries.datasets.base import TimeSeriesDataset
 from sklearn.preprocessing import StandardScaler
 from fmtk.utils import load_from_tsfile
 
+import os
+
+root_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../")
+dataset_path = os.path.join(root_dir, "dataset/UWaveGestureLibraryAll")
 
 class UWaveGestureLibraryALLDataset(TimeSeriesDataset):
     def __init__(self, dataset_cfg, task_cfg, split):
         super().__init__(dataset_cfg, task_cfg, split)
         self.seq_len = 945
-        base = self.dataset_cfg["dataset_path"]
-        self.train_file_path_and_name = f"{base}/UWaveGestureLibraryAll_TRAIN.ts"
-        self.test_file_path_and_name = f"{base}/UWaveGestureLibraryAll_TEST.ts"
+        self.train_file_path_and_name = f"{dataset_path}/UWaveGestureLibraryAll_TRAIN.ts"
+        self.test_file_path_and_name = f"{dataset_path}/UWaveGestureLibraryAll_TEST.ts"
 
         self._read_data()
 

@@ -3,6 +3,10 @@ from fmtk.datasets.base import TimeSeriesDataset
 from sklearn.preprocessing import StandardScaler
 
 from fmtk.utils import load_from_tsfile
+import os
+
+root_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../")
+dataset_path = os.path.join(root_dir, "dataset/ECG5000")
 
 
 class ECG5000Dataset(TimeSeriesDataset):
@@ -15,8 +19,8 @@ class ECG5000Dataset(TimeSeriesDataset):
         """
         super().__init__(dataset_cfg, task_cfg, split)
         self.seq_len = 512
-        self.train_file_path_and_name = f"{self.dataset_cfg['dataset_path']}/ECG5000_TRAIN.ts"
-        self.test_file_path_and_name = f"{self.dataset_cfg['dataset_path']}/ECG5000_TEST.ts"
+        self.train_file_path_and_name = f"{dataset_path}/ECG5000_TRAIN.ts"
+        self.test_file_path_and_name = f"{dataset_path}/ECG5000_TEST.ts"
 
         # Read data
         self._read_data()
@@ -69,7 +73,7 @@ class ECG5000Dataset(TimeSeriesDataset):
         #     'x':self.data,
         #     'y':self.labels,
         # }
-        return self.data,self.labels
+        return self.data, self.labels
 
     def __getitem__(self, index):
         assert index < self.__len__()
@@ -83,9 +87,9 @@ class ECG5000Dataset(TimeSeriesDataset):
         timeseries = np.pad(timeseries, (self.seq_len - timeseries_len, 0))
 
         return {
-            'x':np.expand_dims(timeseries, axis=0),
-            'mask':input_mask,
-            'y':labels,
+            "x": np.expand_dims(timeseries, axis=0),
+            "mask": input_mask,
+            "y": labels,
         }
 
     def preprocess(self):

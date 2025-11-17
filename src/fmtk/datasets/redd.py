@@ -6,6 +6,11 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.utils import shuffle
 from sklearn.model_selection import train_test_split
 
+import os
+
+root_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../")
+dataset_path = os.path.join(root_dir, "dataset/REDD")
+
 # class REDDDataset(TimeSeriesDataset):
 #     def __init__(self, dataset_cfg, task_cfg):
 #         super().__init__(dataset_cfg, task_cfg)
@@ -20,7 +25,7 @@ from sklearn.model_selection import train_test_split
 #     def load_data(self):
 #         train= self.task_cfg['train']
 #         test= self.task_cfg['test']
-#         base=self.dataset_cfg['dataset_path']
+#         base=dataset_path
 #         n= self.dataset_cfg['n']
 #         split_factor = self.dataset_cfg['split_factor']
 #         appliance=self.task_cfg['label']
@@ -130,7 +135,7 @@ class REDDDataset(TimeSeriesDataset):
     def load_data(self):
         train_cfg = self.task_cfg['train']
         test_cfg = self.task_cfg['test']
-        base_path = self.dataset_cfg['dataset_path']
+        base_path = dataset_path
         n = self.dataset_cfg['n']
         split_factor = self.dataset_cfg['split_factor']
         appliance = self.task_cfg['label']

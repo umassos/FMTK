@@ -10,6 +10,11 @@ from dotmap import DotMap
 from scipy.signal import filtfilt, resample_poly
 from torch_ecg._preprocessors import Normalize
 
+import os
+
+root_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../")
+dataset_path = os.path.join(root_dir, "dataset/PPG-data")
+
 class PPGDataset(TimeSeriesDataset):
     def __init__(self, dataset_cfg, task_cfg, split):
         super().__init__(dataset_cfg, task_cfg, split)
@@ -22,7 +27,7 @@ class PPGDataset(TimeSeriesDataset):
 
     def load_data(self):
         # Load the dataset of ground truth from the specified path in the config
-        base = self.dataset_cfg['dataset_path']
+        base = dataset_path
         df = pd.read_excel(f"{base}/PPG-BP dataset.xlsx", header=1)
         df = df.rename(columns={"Sex(M/F)": "sex",
                    "Age(year)": "age",
