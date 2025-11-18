@@ -1,0 +1,5 @@
+backbone,decoder,encoder,adapter,dataset_name,device,task_name,metric,result,backbone memory,decoder memory,train time,train mem peak,train energy,inference time,inference mem peak,inference energy
+chronos-t5-tiny,mlp_chronostiny_class,,,ecg5000,cuda:0,ecg classification,accuracy,0.8271111111111111,16.789504,16.92416,56956.140625,489.074176,3308.098,3.871072354475657,50.43302388622222,0.0835888888888889
+chronos-t5-tiny,mlp_chronostiny_class,,,ecg5000,cuda:0,ecg classification,accuracy,0.8271111111111111,16.789504,16.92416,56856.8203125,489.074176,3297.175,3.866804323143429,50.43302388622222,0.11517577777777778
+chronos-t5-tiny,mlp_chronostiny_class,,,ecg5000,cuda:0,ecg classification,accuracy,0.8271111111111111,16.789504,16.92416,56663.7578125,489.074176,3294.103,3.8725293362405564,50.43302388622222,0.09239844444444445
+chronos-t5-tiny,mlp_chronostiny_class,,,ecg5000,cuda:0,ecg classification,accuracy,0.8271111111111111,16.789504,16.92416,56663.7578125,489.074176,3294.103,3.9263383932643467,41.77868788622222,0.0779611111111111

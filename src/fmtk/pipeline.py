@@ -50,11 +50,11 @@ class Pipeline:
     def unload_encoder(self):
         self.active_encoder=None
     
-    def add_decoder(self,decoder_obj,load=True,trained=False,path=None):
+    def add_decoder(self,decoder_obj,load=True,train=False,path=None):
         """Adds a named decoder to the manager."""
         decoder_name=f"decoder_{self.decoder_id}"
         with (self.logger.measure("add_decoder", device=self.logger.device) if self.logger else nullcontext()):
-            if trained:
+            if not train:
                 self.decoders[decoder_name]= decoder_obj
                 self.decoders[decoder_name].model.load_state_dict(torch.load(f"{self.base_dir}/saved/{path}/decoder.pth"))
                 
@@ -132,9 +132,9 @@ class Pipeline:
                 for batch in tqdm(train_loader):
                         optimizer.zero_grad()
                         if len(batch)==3:
-                            x,mask,y=batch
+                            x, mask, y = batch["x"], batch["mask"], batch["y"]
                         else:
-                            x,y=batch
+                            x, y = batch["x"], batch["y"]
                             mask=None
 
                         if self.active_encoder is not None:
@@ -181,12 +181,25 @@ class Pipeline:
         else:
             return
 
-    def predict_one_batch(self,batch):
-        if len(batch)==3:
-            x,mask,y=batch
-        else:
-            x,y=batch
-            mask=None
+    # def predict_one_batch(self,batch):
+    #     if len(batch)==3:
+    #         x,mask,y=batch
+    #     else:
+    #         x,y=batch
+    #         mask=None
+    #     if self.active_encoder is not None:
+    #         x,y= self.active_encoder.forward(batch)
+    #         batch=(x,y)
+    #     self.set_eval_mode()
+    #     feats=self.model_instance.forward(x,mask)
+    #     logits = self.active_decoder.forward((feats))
+    #     if isinstance(self.active_decoder.criterion, (nn.CrossEntropyLoss)):
+    #         logits = torch.argmax(logits, dim=1)
+    #     if (hasattr(self.active_decoder, "requires_model") and self.active_decoder.requires_model and hasattr(self.model_instance.model, "normalizer")):
+    #         logits = self.model_instance.model.normalizer(x=logits, mode="denorm")
+    #     return logits,y
+    
+    def forward(self,x,mask=None):
         if self.active_encoder is not None:
             x,y= self.active_encoder.forward(batch)
             batch=(x,y)
@@ -197,7 +210,7 @@ class Pipeline:
             logits = torch.argmax(logits, dim=1)
         if (hasattr(self.active_decoder, "requires_model") and self.active_decoder.requires_model and hasattr(self.model_instance.model, "normalizer")):
             logits = self.model_instance.model.normalizer(x=logits, mode="denorm")
-        return logits,y
+        return logits 
 
     def predict(self, test_loader, cfg):
         if self.active_decoder is not None:
@@ -216,15 +229,19 @@ class Pipeline:
                 preds=[]
                 labels=[]
                 for batch in tqdm(test_loader):
+                    if len(batch)==3:
+                        x, mask, y = batch["x"], batch["mask"], batch["y"]
+                    else:
+                        x, y = batch["x"], batch["y"]
+                        mask=None
                     with (self.logger.measure("predict", device=self.logger.device) if self.logger else nullcontext()):
-                        logits,y=self.predict_one_batch(batch)
+                        logits=self.forward(x,mask)
                     preds.append(logits.detach().cpu().numpy())
                     labels.append(y.numpy())
                 return np.concatenate(labels), np.concatenate(preds)
         else:
             preds,labels=self.model_instance.predict(test_loader)
             return np.concatenate(labels), np.concatenate(preds)
-
 
     def _encoder_loader(self, dataloader, cfg):
         xs=[]

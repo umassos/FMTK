@@ -1,5 +1,5 @@
 from config import *
-from fmtk.experiments.run_all.inference_pipeline import InferencePipeline
+from inference_pipeline import InferencePipeline
 import csv
 import os
 import json
@@ -8,7 +8,7 @@ if __name__ == "__main__":
         print(f"Running task: {task_name}")
         for p in task_info['pipelines']:
             print(f"Running inference for model: {p['backbone']} on dataset: {task_info['datasets'][0]}")
-            pipeline = InferencePipeline(task_name,task_info, p)
+            pipeline = InferencePipeline(task_name, task_info, p)
             pipeline.run()
  
             #save results to a file

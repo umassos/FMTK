@@ -1,5 +1,6 @@
 
 device="cuda:0"
+Train=False
 backbones={
     'papagei_p': {
         'model_type': 'papagei',
@@ -458,6 +459,7 @@ tasks = {
     #     'task_type': 'regression',
     #     'datasets': ['PPG-data'],
     #     'label': 'diasbp',
+    #      'train': Train,
     #     'pipelines':[
     #         {
     #         'backbone':'MOMENT-1-large',
@@ -555,6 +557,7 @@ tasks = {
     #     'task_type': 'regression',
     #     'datasets': ['PPG-data'],
     #     'label': 'sysbp',
+    #     'train': Train,
     #     'pipelines':[
     #         {
     #         'backbone':'MOMENT-1-large',
@@ -652,6 +655,7 @@ tasks = {
     #     'task_type': 'regression',
     #     'datasets': ['PPG-data'],
     #     'label': 'hr',
+    #     'train': Train,
     #     'pipelines':[
     #         {
     #         'backbone':'MOMENT-1-large',
@@ -745,92 +749,93 @@ tasks = {
     #         'lr':1e-2
     #     },
     # },
-    # 'ecg classification': {
-    # 'task_type': 'classification',
-    # 'datasets': ['ecg5000'],
-    # 'pipelines':[
-    #         {
-    #         'backbone':'MOMENT-1-large',
-    #         'paths':[
-    #             {'decoder':'mlp_momentlarge_class','parts_to_train':['decoder'],'path':'ecgclass_momentlarge_mlp'},
-    #             ]
-    #         },
-    #         {
-    #         'backbone':'MOMENT-1-small',
-    #         'paths':[
-    #             {'decoder':'mlp_momentsmall_class','parts_to_train':['decoder'],'path':'ecgclass_momentsmall_mlp'},
-    #             ]
-    #         },
-    #         {
-    #         'backbone':'MOMENT-1-base',
-    #         'paths':[
-    #             {'decoder':'mlp_momentbase_class','parts_to_train':['decoder'],'path':'ecgclass_momentbase_mlp'},
-    #             ]
-    #         },
-    #         {
-    #         'backbone':'chronos-t5-tiny',
-    #         'paths':[
-    #             {'decoder':'mlp_chronostiny_class','parts_to_train':['decoder'],'path':'ecgclass_chronostiny_mlp'},
-    #             ]
-    #         },
-    #         {
-    #         'backbone':'chronos-t5-mini',
-    #         'paths':[
-    #             {'decoder':'mlp_chronosmini_class','parts_to_train':['decoder'],'path':'ecgclass_chronosmini_mlp'},
-    #             ]
-    #         },
-    #         {
-    #         'backbone':'chronos-t5-small',
-    #         'paths':[
-    #             {'decoder':'mlp_chronossmall_class','parts_to_train':['decoder'],'path':'ecgclass_chronossmall_mlp'},
-    #             ]
-    #         },
-    #         {
-    #         'backbone':'chronos-t5-base',
-    #         'paths':[
-    #             {'decoder':'mlp_chronosbase_class','parts_to_train':['decoder'],'path':'ecgclass_chronosbase_mlp'},
-    #             ]
-    #         },
-    #         {
-    #         'backbone':'chronos-t5-large',
-    #         'paths':[
-    #             {'decoder':'mlp_chronoslarge_class','parts_to_train':['decoder'],'path':'ecgclass_chronoslarge_mlp'},
-    #             ]
-    #         },
-    #         {
-    #         'backbone':'papagei_s',
-    #         'paths':[
-    #             {'decoder':'mlp_papageis_class','parts_to_train':['decoder'],'path':'ecgclass_papageis_mlp'},
-    #             ]   
-    #         },
-    #         {
-    #         'backbone':'papagei_p',
-    #         'paths':[
-    #             {'decoder':'mlp_papageip_class','parts_to_train':['decoder'],'path':'ecgclass_papageip_mlp'},
-    #             ]   
-    #         },
-    #         {
-    #         'backbone':'papagei_s_svri',
-    #         'paths':[       
-    #             {'decoder':'mlp_papageissvri_class','parts_to_train':['decoder'],'path':'ecgclass_papageissvri_mlp'},
-    #             ]   
-    #         }
-    #         ],    
-    # 'inference_config': {
-    #     'batch_size': 1,
-    #     'shuffle':False
-    #     },
-    # 'train_config': {
-    #     'batch_size': 32,
-    #     'shuffle':False,
-    #     'epochs':50,
-    #     'lr':1e-2,
-    #     'save_cfg':{'decoder':True,'encoder':False,'adapter':False,'path':'ecgclass_momentlarge_mlp'}
-    #     },
-    # },
+    'ecg classification': {
+    'task_type': 'classification',
+    'datasets': ['ecg5000'],
+    'train': Train,
+    'pipelines':[
+            # {
+            # 'backbone':'MOMENT-1-large',
+            # 'paths':[
+            #     {'decoder':'mlp_momentlarge_class','parts_to_train':['decoder'],'path':'ecgclass_momentlarge_mlp'},
+            #     ]
+            # },
+            # {
+            # 'backbone':'MOMENT-1-small',
+            # 'paths':[
+            #     {'decoder':'mlp_momentsmall_class','parts_to_train':['decoder'],'path':'ecgclass_momentsmall_mlp'},
+            #     ]
+            # },
+            # {
+            # 'backbone':'MOMENT-1-base',
+            # 'paths':[
+            #     {'decoder':'mlp_momentbase_class','parts_to_train':['decoder'],'path':'ecgclass_momentbase_mlp'},
+            #     ]
+            # },
+            {
+            'backbone':'chronos-t5-tiny',
+            'paths':[
+                {'decoder':'mlp_chronostiny_class','parts_to_train':['decoder'],'path':'ecgclass_chronostiny_mlp'},
+                ]
+            },
+            # {
+            # 'backbone':'chronos-t5-mini',
+            # 'paths':[
+            #     {'decoder':'mlp_chronosmini_class','parts_to_train':['decoder'],'path':'ecgclass_chronosmini_mlp'},
+            #     ]
+            # },
+            # {
+            # 'backbone':'chronos-t5-small',
+            # 'paths':[
+            #     {'decoder':'mlp_chronossmall_class','parts_to_train':['decoder'],'path':'ecgclass_chronossmall_mlp'},
+            #     ]
+            # },
+            # {
+            # 'backbone':'chronos-t5-base',
+            # 'paths':[
+            #     {'decoder':'mlp_chronosbase_class','parts_to_train':['decoder'],'path':'ecgclass_chronosbase_mlp'},
+            #     ]
+            # },
+            # {
+            # 'backbone':'chronos-t5-large',
+            # 'paths':[
+            #     {'decoder':'mlp_chronoslarge_class','parts_to_train':['decoder'],'path':'ecgclass_chronoslarge_mlp'},
+            #     ]
+            # },
+            # {
+            # 'backbone':'papagei_s',
+            # 'paths':[
+            #     {'decoder':'mlp_papageis_class','parts_to_train':['decoder'],'path':'ecgclass_papageis_mlp'},
+            #     ]   
+            # },
+            # {
+            # 'backbone':'papagei_p',
+            # 'paths':[
+            #     {'decoder':'mlp_papageip_class','parts_to_train':['decoder'],'path':'ecgclass_papageip_mlp'},
+            #     ]   
+            # },
+            # {
+            # 'backbone':'papagei_s_svri',
+            # 'paths':[       
+            #     {'decoder':'mlp_papageissvri_class','parts_to_train':['decoder'],'path':'ecgclass_papageissvri_mlp'},
+            #     ]   
+            # }
+            ],    
+    'inference_config': {
+        'batch_size': 1,
+        'shuffle':False
+        },
+    'train_config': {
+        'batch_size': 32,
+        'shuffle':False,
+        'epochs':50,
+        'lr':1e-2,
+        },
+    },
     # 'gesture classification': {
     #     'task_type': 'classification',
     #     'datasets': ['UWaveGestureLibraryAll'],
+    #     'train': Train,
     #     'pipelines':[
     #         {
     #         'backbone':'MOMENT-1-large',
@@ -937,63 +942,65 @@ tasks = {
     #         'lr':1e-4,
     #         },
     # },
-    'weather forecasting': {
-        'task_type': 'forecasting',
-        'datasets': ['weather'],
-        'pipelines':[
-        {'backbone':'chronos-t5-base','paths':[{'decoder':'mlp_chronosbase_forecasting','parts_to_train':['decoder'],'path':'weather_fore_chronosbase_mlp'}]},
-        {'backbone':'chronos-t5-small','paths':[{'decoder':'mlp_chronossmall_forecasting','parts_to_train':['decoder'],'path':'weather_fore_chronossmall_mlp'}]},
-        {'backbone':'chronos-t5-mini','paths':[{'decoder':'mlp_chronosmini_forecasting','parts_to_train':['decoder'],'path':'weather_fore_chronosmini_mlp'}]},
-        {'backbone':'chronos-t5-tiny','paths':[{'decoder':'mlp_chronostiny_forecasting','parts_to_train':['decoder'],'path':'weather_fore_chronostiny_mlp'}]},
-        {'backbone':'chronos-t5-large','paths':[{'decoder':'mlp_chronoslarge_forecasting','parts_to_train':['decoder'],'path':'weather_fore_chronoslarge_mlp'}]},
-        {'backbone':'MOMENT-1-large','paths':[{'decoder':'mlp_momentlarge_forecasting','parts_to_train':['decoder'],'path':'weather_fore_momentlarge_mlp'}]},
-        {'backbone':'MOMENT-1-base','paths':[{'decoder':'mlp_momentbase_forecasting','parts_to_train':['decoder'],'path':'weather_fore_momentbase_mlp'}]},
-        {'backbone':'MOMENT-1-small','paths':[{'decoder':'mlp_momentsmall_forecasting','parts_to_train':['decoder'],'path':'weather_fore_momentsmall_mlp'}]},
-        {'backbone':'papagei_s','paths':[{'decoder':'mlp_papageis_forecasting','parts_to_train':['decoder'],'path':'weather_fore_papageis_mlp'}]},
-        {'backbone':'papagei_p','paths':[{'decoder':'mlp_papageip_forecasting','parts_to_train':['decoder'],'path':'weather_fore_papageip_mlp'}]},
-        {'backbone':'papagei_s_svri','paths':[{'decoder':'mlp_papageissvri_forecasting','parts_to_train':['decoder'],'path':'weather_fore_papageissvri_mlp'}]},
-        ],
-        'inference_config': {
-            'batch_size': 1,
-            'shuffle':False
-            },
-        'train_config': {
-            'batch_size': 8,
-            'shuffle':True,
-            'epochs':1,
-            'lr': 5e-5,
-            },
-    },
-    'Exchange rate forecasting': {
-        'task_type': 'forecasting',
-        'datasets': ['exchange'],
-        'pipelines':[
-                {'backbone':'chronos-t5-base','paths':[{'decoder':'mlp_chronosbase_forecasting','parts_to_train':['decoder'],'path':'exchange_fore_chronosbase_mlp'}]},
-                {'backbone':'chronos-t5-small','paths':[{'decoder':'mlp_chronossmall_forecasting','parts_to_train':['decoder'], 'path':'exchange_fore_chronossmall_mlp'}]},
-                {'backbone':'chronos-t5-mini','paths':[{'decoder':'mlp_chronosmini_forecasting','parts_to_train':['decoder'], 'path':'exchange_fore_chronosmini_mlp'}]},
-                {'backbone':'chronos-t5-tiny','paths':[{'decoder':'mlp_chronostiny_forecasting','parts_to_train':['decoder'], 'path':'exchange_fore_chronostiny_mlp'}]},
-                {'backbone':'chronos-t5-large','paths':[{'decoder':'mlp_chronoslarge_forecasting','parts_to_train':['decoder'], 'path':'exchange_fore_chronoslarge_mlp'}]},
-                {'backbone':'MOMENT-1-large','paths':[{'decoder':'mlp_momentlarge_forecasting','parts_to_train':['decoder'],'path':'exchange_fore_momentlarge_mlp'}]},
-                {'backbone':'MOMENT-1-base','paths':[{'decoder':'mlp_momentbase_forecasting','parts_to_train':['decoder'],'path':'exchange_fore_momentbase_mlp'}]},
-                {'backbone':'MOMENT-1-small','paths':[{'decoder':'mlp_momentsmall_forecasting','parts_to_train':['decoder'],'path':'exchange_fore_momentsmall_mlp'}]},
-                {'backbone':'papagei_s','paths':[{'decoder':'mlp_papageis_forecasting','parts_to_train':['decoder'],'path':'exchange_fore_papageis_mlp'}]},
-                {'backbone':'papagei_p','paths':[{'decoder':'mlp_papageip_forecasting','parts_to_train':['decoder'],'path':'exchange_fore_papageip_mlp'}]},
-                {'backbone':'papagei_s_svri','paths':[{'decoder':'mlp_papageissvri_forecasting','parts_to_train':['decoder'],'path':'exchange_fore_papageissvri_mlp'}]},
-            ],
-        'inference_config': {
-            'batch_size': 1,
-            'shuffle':False         
-            },
-        'train_config': {
-            'batch_size': 8,
-            'shuffle':True,     
-            'epochs':1,
-            'lr': 5e-5
-            },
-    }, 
+    # 'weather forecasting': {
+    #     'task_type': 'forecasting',
+    #     'datasets': ['weather'],
+    #     'train': Train,
+    #     'pipelines':[
+    #     {'backbone':'chronos-t5-base','paths':[{'decoder':'mlp_chronosbase_forecasting','parts_to_train':['decoder'],'path':'weather_fore_chronosbase_mlp'}]},
+    #     {'backbone':'chronos-t5-small','paths':[{'decoder':'mlp_chronossmall_forecasting','parts_to_train':['decoder'],'path':'weather_fore_chronossmall_mlp'}]},
+    #     {'backbone':'chronos-t5-mini','paths':[{'decoder':'mlp_chronosmini_forecasting','parts_to_train':['decoder'],'path':'weather_fore_chronosmini_mlp'}]},
+    #     {'backbone':'chronos-t5-tiny','paths':[{'decoder':'mlp_chronostiny_forecasting','parts_to_train':['decoder'],'path':'weather_fore_chronostiny_mlp'}]},
+    #     {'backbone':'chronos-t5-large','paths':[{'decoder':'mlp_chronoslarge_forecasting','parts_to_train':['decoder'],'path':'weather_fore_chronoslarge_mlp'}]},
+    #     {'backbone':'MOMENT-1-large','paths':[{'decoder':'mlp_momentlarge_forecasting','parts_to_train':['decoder'],'path':'weather_fore_momentlarge_mlp'}]},
+    #     {'backbone':'MOMENT-1-base','paths':[{'decoder':'mlp_momentbase_forecasting','parts_to_train':['decoder'],'path':'weather_fore_momentbase_mlp'}]},
+    #     {'backbone':'MOMENT-1-small','paths':[{'decoder':'mlp_momentsmall_forecasting','parts_to_train':['decoder'],'path':'weather_fore_momentsmall_mlp'}]},
+    #     {'backbone':'papagei_s','paths':[{'decoder':'mlp_papageis_forecasting','parts_to_train':['decoder'],'path':'weather_fore_papageis_mlp'}]},
+    #     {'backbone':'papagei_p','paths':[{'decoder':'mlp_papageip_forecasting','parts_to_train':['decoder'],'path':'weather_fore_papageip_mlp'}]},
+    #     {'backbone':'papagei_s_svri','paths':[{'decoder':'mlp_papageissvri_forecasting','parts_to_train':['decoder'],'path':'weather_fore_papageissvri_mlp'}]},
+    #     ],
+    #     'inference_config': {
+    #         'batch_size': 1,
+    #         'shuffle':False
+    #         },
+    #     'train_config': {
+    #         'batch_size': 8,
+    #         'shuffle':True,
+    #         'epochs':1,
+    #         'lr': 5e-5,
+    #         },
+    # },
+    # 'Exchange rate forecasting': {
+    #     'task_type': 'forecasting',
+    #     'datasets': ['exchange'],
+    #     'pipelines':[
+    #             {'backbone':'chronos-t5-base','paths':[{'decoder':'mlp_chronosbase_forecasting','parts_to_train':['decoder'],'path':'exchange_fore_chronosbase_mlp'}]},
+    #             {'backbone':'chronos-t5-small','paths':[{'decoder':'mlp_chronossmall_forecasting','parts_to_train':['decoder'], 'path':'exchange_fore_chronossmall_mlp'}]},
+    #             {'backbone':'chronos-t5-mini','paths':[{'decoder':'mlp_chronosmini_forecasting','parts_to_train':['decoder'], 'path':'exchange_fore_chronosmini_mlp'}]},
+    #             {'backbone':'chronos-t5-tiny','paths':[{'decoder':'mlp_chronostiny_forecasting','parts_to_train':['decoder'], 'path':'exchange_fore_chronostiny_mlp'}]},
+    #             {'backbone':'chronos-t5-large','paths':[{'decoder':'mlp_chronoslarge_forecasting','parts_to_train':['decoder'], 'path':'exchange_fore_chronoslarge_mlp'}]},
+    #             {'backbone':'MOMENT-1-large','paths':[{'decoder':'mlp_momentlarge_forecasting','parts_to_train':['decoder'],'path':'exchange_fore_momentlarge_mlp'}]},
+    #             {'backbone':'MOMENT-1-base','paths':[{'decoder':'mlp_momentbase_forecasting','parts_to_train':['decoder'],'path':'exchange_fore_momentbase_mlp'}]},
+    #             {'backbone':'MOMENT-1-small','paths':[{'decoder':'mlp_momentsmall_forecasting','parts_to_train':['decoder'],'path':'exchange_fore_momentsmall_mlp'}]},
+    #             {'backbone':'papagei_s','paths':[{'decoder':'mlp_papageis_forecasting','parts_to_train':['decoder'],'path':'exchange_fore_papageis_mlp'}]},
+    #             {'backbone':'papagei_p','paths':[{'decoder':'mlp_papageip_forecasting','parts_to_train':['decoder'],'path':'exchange_fore_papageip_mlp'}]},
+    #             {'backbone':'papagei_s_svri','paths':[{'decoder':'mlp_papageissvri_forecasting','parts_to_train':['decoder'],'path':'exchange_fore_papageissvri_mlp'}]},
+    #         ],
+    #     'inference_config': {
+    #         'batch_size': 1,
+    #         'shuffle':False         
+    #         },
+    #     'train_config': {
+    #         'batch_size': 8,
+    #         'shuffle':True,     
+    #         'epochs':1,
+    #         'lr': 5e-5
+    #         },
+    # }, 
     # 'Illness forecasting': {
     #     'task_type': 'forecasting',
     #     'datasets': ['illness'],
+    #     'train': Train,
     #     'pipelines':[{
     #         'backbone':'MOMENT-1-large',            
     #         'paths':[
@@ -1009,63 +1016,63 @@ tasks = {
     #         'shuffle':True,     
     #         'epochs':1,
     #         'lr': 5e-5,
-    #         'save_cfg':{'decoder':True,'encoder':False,'adapter':False,'path':'illness_fore_momentlarge_mlp'}
     #         },
     # }, 
-    'electricity consumption forecasting': {
-        'task_type': 'forecasting',
-        'datasets': ['ecl'],
-        'pipelines':[
-                {'backbone':'chronos-t5-base','paths':[{'decoder':'mlp_chronosbase_forecasting','parts_to_train':['decoder'],'path':'ecl_fore_chronosbase_mlp'}]},
-                {'backbone':'chronos-t5-small','paths':[{'decoder':'mlp_chronossmall_forecasting','parts_to_train':['decoder'], 'path':'ecl_fore_chronossmall_mlp'}]},
-                {'backbone':'chronos-t5-mini','paths':[{'decoder':'mlp_chronosmini_forecasting','parts_to_train':['decoder'], 'path':'ecl_fore_chronosmini_mlp'}]},
-                {'backbone':'chronos-t5-tiny','paths':[{'decoder':'mlp_chronostiny_forecasting','parts_to_train':['decoder'], 'path':'ecl_fore_chronostiny_mlp'}]},
-                {'backbone':'chronos-t5-large','paths':[{'decoder':'mlp_chronoslarge_forecasting','parts_to_train':['decoder'], 'path':'ecl_fore_chronoslarge_mlp'}]},
-                {'backbone':'MOMENT-1-large','paths':[{'decoder':'mlp_momentlarge_forecasting','parts_to_train':['decoder'],'path':'ecl_fore_momentlarge_mlp'}]},
-                {'backbone':'MOMENT-1-base','paths':[{'decoder':'mlp_momentbase_forecasting','parts_to_train':['decoder'],'path':'ecl_fore_momentbase_mlp'}]},
-                {'backbone':'MOMENT-1-small','paths':[{'decoder':'mlp_momentsmall_forecasting','parts_to_train':['decoder'],'path':'ecl_fore_momentsmall_mlp'}]},
-                {'backbone':'papagei_s','paths':[{'decoder':'mlp_papageis_forecasting','parts_to_train':['decoder'],'path':'ecl_fore_papageis_mlp'}]},
-                {'backbone':'papagei_p','paths':[{'decoder':'mlp_papageip_forecasting','parts_to_train':['decoder'],'path':'ecl_fore_papageip_mlp'}]},
-                {'backbone':'papagei_s_svri','paths':[{'decoder':'mlp_papageissvri_forecasting','parts_to_train':['decoder'],'path':'ecl_fore_papageissvri_mlp'}]},
-            ],
-        'inference_config': {
-            'batch_size': 1,
-            'shuffle':False
-            },
-        'train_config': {
-            'batch_size': 4,
-            'shuffle':True,
-            'epochs':1,
-            'lr': 5e-5,
-            },
-    },
-    'traffic forecasting': {
-        'task_type': 'forecasting',
-        'datasets': ['traffic'],
-        'pipelines':[
-                {'backbone':'chronos-t5-base','paths':[{'decoder':'mlp_chronosbase_forecasting','parts_to_train':['decoder'],'path':'traffic_fore_chronosbase_mlp'}]},
-                {'backbone':'chronos-t5-small','paths':[{'decoder':'mlp_chronossmall_forecasting','parts_to_train':['decoder'],'path':'traffic_fore_chronossmall_mlp'}]},
-                {'backbone':'chronos-t5-mini','paths':[{'decoder':'mlp_chronosmini_forecasting','parts_to_train':['decoder'],'path':'traffic_fore_chronosmini_mlp'}]},
-                {'backbone':'chronos-t5-tiny','paths':[{'decoder':'mlp_chronostiny_forecasting','parts_to_train':['decoder'],'path':'traffic_fore_chronostiny_mlp'}]},
-                {'backbone':'chronos-t5-large','paths':[{'decoder':'mlp_chronoslarge_forecasting','parts_to_train':['decoder'],'path':'traffic_fore_chronoslarge_mlp'}]},
-                {'backbone':'MOMENT-1-large','paths':[{'decoder':'mlp_momentlarge_forecasting','parts_to_train':['decoder'],'path':'traffic_fore_momentlarge_mlp'}]},
-                {'backbone':'MOMENT-1-base','paths':[{'decoder':'mlp_momentbase_forecasting','parts_to_train':['decoder'],'path':'traffic_fore_momentbase_mlp'}]},
-                {'backbone':'MOMENT-1-small','paths':[{'decoder':'mlp_momentsmall_forecasting','parts_to_train':['decoder'],'path':'traffic_fore_momentsmall_mlp'}]},
-                {'backbone':'papagei_s','paths':[{'decoder':'mlp_papageis_forecasting','parts_to_train':['decoder'],'path':'traffic_fore_papageis_mlp'}]},
-                {'backbone':'papagei_p','paths':[{'decoder':'mlp_papageip_forecasting','parts_to_train':['decoder'],'path':'traffic_fore_papageip_mlp'}]},
-                {'backbone':'papagei_s_svri','paths':[{'decoder':'mlp_papageissvri_forecasting','parts_to_train':['decoder'],'path':'traffic_fore_papageissvri_mlp'}]},
-            ],
-        'inference_config': {
-            'batch_size': 1,
-            'shuffle':False
-            },
-        'train_config': {
-            'batch_size': 2,
-            'shuffle':True,
-            'epochs':1,
-            'lr': 5e-5,
-            },
-    },
+    # 'electricity consumption forecasting': {
+    #     'task_type': 'forecasting',
+    #     'datasets': ['ecl'],
+    #     'pipelines':[
+    #             {'backbone':'chronos-t5-base','paths':[{'decoder':'mlp_chronosbase_forecasting','parts_to_train':['decoder'],'path':'ecl_fore_chronosbase_mlp'}]},
+    #             {'backbone':'chronos-t5-small','paths':[{'decoder':'mlp_chronossmall_forecasting','parts_to_train':['decoder'], 'path':'ecl_fore_chronossmall_mlp'}]},
+    #             {'backbone':'chronos-t5-mini','paths':[{'decoder':'mlp_chronosmini_forecasting','parts_to_train':['decoder'], 'path':'ecl_fore_chronosmini_mlp'}]},
+    #             {'backbone':'chronos-t5-tiny','paths':[{'decoder':'mlp_chronostiny_forecasting','parts_to_train':['decoder'], 'path':'ecl_fore_chronostiny_mlp'}]},
+    #             {'backbone':'chronos-t5-large','paths':[{'decoder':'mlp_chronoslarge_forecasting','parts_to_train':['decoder'], 'path':'ecl_fore_chronoslarge_mlp'}]},
+    #             {'backbone':'MOMENT-1-large','paths':[{'decoder':'mlp_momentlarge_forecasting','parts_to_train':['decoder'],'path':'ecl_fore_momentlarge_mlp'}]},
+    #             {'backbone':'MOMENT-1-base','paths':[{'decoder':'mlp_momentbase_forecasting','parts_to_train':['decoder'],'path':'ecl_fore_momentbase_mlp'}]},
+    #             {'backbone':'MOMENT-1-small','paths':[{'decoder':'mlp_momentsmall_forecasting','parts_to_train':['decoder'],'path':'ecl_fore_momentsmall_mlp'}]},
+    #             {'backbone':'papagei_s','paths':[{'decoder':'mlp_papageis_forecasting','parts_to_train':['decoder'],'path':'ecl_fore_papageis_mlp'}]},
+    #             {'backbone':'papagei_p','paths':[{'decoder':'mlp_papageip_forecasting','parts_to_train':['decoder'],'path':'ecl_fore_papageip_mlp'}]},
+    #             {'backbone':'papagei_s_svri','paths':[{'decoder':'mlp_papageissvri_forecasting','parts_to_train':['decoder'],'path':'ecl_fore_papageissvri_mlp'}]},
+    #         ],
+    #     'inference_config': {
+    #         'batch_size': 1,
+    #         'shuffle':False
+    #         },
+    #     'train_config': {
+    #         'batch_size': 4,
+    #         'shuffle':True,
+    #         'epochs':1,
+    #         'lr': 5e-5,
+    #         },
+    # },
+    # 'traffic forecasting': {
+    #     'task_type': 'forecasting',
+    #     'datasets': ['traffic'],
+    #     'train': Train,
+    #     'pipelines':[
+    #             {'backbone':'chronos-t5-base','paths':[{'decoder':'mlp_chronosbase_forecasting','parts_to_train':['decoder'],'path':'traffic_fore_chronosbase_mlp'}]},
+    #             {'backbone':'chronos-t5-small','paths':[{'decoder':'mlp_chronossmall_forecasting','parts_to_train':['decoder'],'path':'traffic_fore_chronossmall_mlp'}]},
+    #             {'backbone':'chronos-t5-mini','paths':[{'decoder':'mlp_chronosmini_forecasting','parts_to_train':['decoder'],'path':'traffic_fore_chronosmini_mlp'}]},
+    #             {'backbone':'chronos-t5-tiny','paths':[{'decoder':'mlp_chronostiny_forecasting','parts_to_train':['decoder'],'path':'traffic_fore_chronostiny_mlp'}]},
+    #             {'backbone':'chronos-t5-large','paths':[{'decoder':'mlp_chronoslarge_forecasting','parts_to_train':['decoder'],'path':'traffic_fore_chronoslarge_mlp'}]},
+    #             {'backbone':'MOMENT-1-large','paths':[{'decoder':'mlp_momentlarge_forecasting','parts_to_train':['decoder'],'path':'traffic_fore_momentlarge_mlp'}]},
+    #             {'backbone':'MOMENT-1-base','paths':[{'decoder':'mlp_momentbase_forecasting','parts_to_train':['decoder'],'path':'traffic_fore_momentbase_mlp'}]},
+    #             {'backbone':'MOMENT-1-small','paths':[{'decoder':'mlp_momentsmall_forecasting','parts_to_train':['decoder'],'path':'traffic_fore_momentsmall_mlp'}]},
+    #             {'backbone':'papagei_s','paths':[{'decoder':'mlp_papageis_forecasting','parts_to_train':['decoder'],'path':'traffic_fore_papageis_mlp'}]},
+    #             {'backbone':'papagei_p','paths':[{'decoder':'mlp_papageip_forecasting','parts_to_train':['decoder'],'path':'traffic_fore_papageip_mlp'}]},
+    #             {'backbone':'papagei_s_svri','paths':[{'decoder':'mlp_papageissvri_forecasting','parts_to_train':['decoder'],'path':'traffic_fore_papageissvri_mlp'}]},
+    #         ],
+    #     'inference_config': {
+    #         'batch_size': 1,
+    #         'shuffle':False
+    #         },
+    #     'train_config': {
+    #         'batch_size': 2,
+    #         'shuffle':True,
+    #         'epochs':1,
+    #         'lr': 5e-5,
+    #         },
+    # },
 }
 
 log_file= "combined_metrics.csv"

@@ -1,5 +1,5 @@
-from fmtk.experiments.run_all.component_loader import get_model_class, get_decoder_class, get_encoder_class,get_adapter_class
-from fmtk.experiments.run_all.dataset_loader import get_dataset_class
+from component_loader import get_model_class, get_decoder_class, get_encoder_class,get_adapter_class
+from dataset_loader import get_dataset_class
 from sklearn.model_selection import train_test_split, GridSearchCV
 from fmtk.metrics import get_mae, get_accuracy
 from torch.utils.data import DataLoader,ConcatDataset
@@ -17,6 +17,7 @@ class InferencePipeline:
 
         self.backbone_cfg = backbones[pipeline['backbone']]
         self.dataset_cfg = datasets[task_info['datasets'][0]]
+        self.train=task_info['train']
         self.task_cfg = task_info
         self.task_name=task_name
         self.pipeline=pipeline
@@ -57,9 +58,8 @@ class InferencePipeline:
                         decoder_instance = decoder_class(**decoders[path['decoder']]['decoder_config'])
                     else:
                         decoder_instance = decoder_class()
-                    # P.add_decoder(decoder_instance,load=True)
-                    print(path)
-                    P.add_decoder(decoder_instance,load=True,trained=True,path=path['path'])
+
+                    P.add_decoder(decoder_instance,load=True,train=self.train,path=path['path'])
             else:
                 P.unload_decoder()     
 
@@ -82,14 +82,17 @@ class InferencePipeline:
                 P.add_adapter(adapter_instance)
             else:
                 P.unload_adapter()
-            P.train(self.dataloader_train,parts_to_train=path['parts_to_train'],cfg=self.task_cfg['train_config'],path=path['path'])
-            print("Training complete")     
+            if self.train:
+                P.train(self.dataloader_train,parts_to_train=path['parts_to_train'],cfg=self.task_cfg['train_config'],path=path['path'])
+                print("Training complete")     
             y_test,y_pred=P.predict(self.dataloader_test,cfg=self.task_cfg['inference_config'])   
             summary=logger.summary()
-            # base_dir = os.path.dirname(__file__)
-            # with open(f"{base_dir}/../../saved/{path['path']}/pipeline.json", 'r') as file:
-            #     data = json.load(file)
-            # summary.update({'train':data['train']})
+            if not self.train:
+                base_dir = os.path.dirname(__file__)
+                with open(f"{base_dir}/../../src/fmtk/saved/{path['path']}/pipeline.json", 'r') as file:
+                    data = json.load(file)
+                summary.update({'train':data['train']})
+
             if self.task_cfg['task_type']=='regression' or self.task_cfg['task_type']=='forecasting':
                     metrics = {
                             "backbone": self.pipeline['backbone'],
