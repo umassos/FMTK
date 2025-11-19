@@ -26,13 +26,13 @@ class PapageiModel(BaseModel):
                 'n_block': 18,
                 'n_classes': 512}
         if model_name=='papagei_p':
-            model_path = os.path.join(base_dir, '../../../weights', 'papagei_p.pt')
+            model_path = os.path.join(base_dir, '../../../../weights', 'papagei_p.pt')
             model = ResNet1D(**model_config)
         elif model_name=='papagei_s':
-            model_path = os.path.join(base_dir, '../../../weights', 'papagei_s.pt')
+            model_path = os.path.join(base_dir, '../../../../weights', 'papagei_s.pt')
             model = ResNet1DMoE(**model_config)
         elif model_name=='papagei_s_svri':
-            model_path = os.path.join(base_dir, '../../../weights', 'papagei_s_svri.pt')
+            model_path = os.path.join(base_dir, '../../../../weights', 'papagei_s_svri.pt')
             model = ResNet1D(**model_config)                       
         self.model = self.load_model_without_module_prefix(model,model_path )
         self.model.to(self.device)

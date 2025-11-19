@@ -96,27 +96,27 @@ class InferencePipeline:
             if self.task_cfg['task_type']=='regression' or self.task_cfg['task_type']=='forecasting':
                     metrics = {
                             "backbone": self.pipeline['backbone'],
-                            "decoder": path.get('decoder',None),
+                            "decoder": decoders[path.get('decoder',None)]['decoder_type'],
                             "encoder": path.get('encoder',None),
                             "adapter": path.get('adapter',None),
                             "dataset_name": self.task_cfg['datasets'][0],
                             "device": device ,
-                            "task_name": self.task_name,
+                            "task_name":self.task_name ,
                             "metric":'mae',
                             "result": get_mae(y_test, y_pred),
                             "backbone memory": summary['backbone']['gpu peak'],
-                            "decoder memory": summary['decoder']['gpu peak'],
+                            "decoder memory": summary['decoder']['gpu peak']-summary['backbone']['gpu peak'],
                             "train time":summary['train']['gpu time'],
                             "train mem peak":summary['train']['gpu peak'],
                             "train energy":summary['train']['gpu energy'],
                             "inference time":summary['predict']['gpu time'],
-                            "inference mem peak":summary['predict']['gpu peak'],
+                            "inference mem peak":summary['predict']['gpu peak']-summary['decoder']['gpu peak'],
                             "inference energy":summary['predict']['gpu energy'],
                             } 
             elif self.task_cfg['task_type']=='classification':
                 metrics = {
                         "backbone": self.pipeline['backbone'],
-                        "decoder": path.get('decoder',None),
+                        "decoder": decoders[path.get('decoder',None)]['decoder_type'],
                         "encoder": path.get('encoder',None),
                         "adapter": path.get('adapter',None),
                         "dataset_name": self.task_cfg['datasets'][0],
@@ -125,12 +125,12 @@ class InferencePipeline:
                         "metric":'accuracy',
                         "result": get_accuracy(y_test, y_pred),
                         "backbone memory": summary['backbone']['gpu peak'],
-                        "decoder memory": summary['decoder']['gpu peak'],
+                        "decoder memory": summary['decoder']['gpu peak']-summary['backbone']['gpu peak'],
                         "train time":summary['train']['gpu time'],
                         "train mem peak":summary['train']['gpu peak'],
                         "train energy":summary['train']['gpu energy'],
                         "inference time":summary['predict']['gpu time'],
-                        "inference mem peak":summary['predict']['gpu peak'],
+                        "inference mem peak":summary['predict']['gpu peak']-summary['decoder']['gpu peak'],
                         "inference energy":summary['predict']['gpu energy'],
                         } 
                         
