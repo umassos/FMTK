@@ -136,6 +136,7 @@ class Pipeline:
                         else:
                             x, y = batch["x"], batch["y"]
                             mask=None
+            
 
                         if self.active_encoder is not None:
                             x,y= self.active_encoder.forward(batch)
@@ -180,24 +181,6 @@ class Pipeline:
             model.eval()
         else:
             return
-
-    # def predict_one_batch(self,batch):
-    #     if len(batch)==3:
-    #         x,mask,y=batch
-    #     else:
-    #         x,y=batch
-    #         mask=None
-    #     if self.active_encoder is not None:
-    #         x,y= self.active_encoder.forward(batch)
-    #         batch=(x,y)
-    #     self.set_eval_mode()
-    #     feats=self.model_instance.forward(x,mask)
-    #     logits = self.active_decoder.forward((feats))
-    #     if isinstance(self.active_decoder.criterion, (nn.CrossEntropyLoss)):
-    #         logits = torch.argmax(logits, dim=1)
-    #     if (hasattr(self.active_decoder, "requires_model") and self.active_decoder.requires_model and hasattr(self.model_instance.model, "normalizer")):
-    #         logits = self.model_instance.model.normalizer(x=logits, mode="denorm")
-    #     return logits,y
     
     def forward(self,x,mask=None):
         if self.active_encoder is not None:

@@ -1,5 +1,5 @@
 import numpy as np
-from timeseries.datasets.base import TimeSeriesDataset
+from fmtk.datasets.base import TimeSeriesDataset
 from sklearn.preprocessing import StandardScaler
 from fmtk.utils import load_from_tsfile
 
