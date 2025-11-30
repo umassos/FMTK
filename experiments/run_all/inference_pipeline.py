@@ -11,6 +11,7 @@ from fmtk.utils import control_randomness
 from fmtk.logger import Logger
 import csv
 import json
+import torch
 
 class InferencePipeline:
     def __init__(self,task_name,task_info, pipeline):
@@ -100,7 +101,7 @@ class InferencePipeline:
                             "encoder": path.get('encoder',None),
                             "adapter": path.get('adapter',None),
                             "dataset_name": self.task_cfg['datasets'][0],
-                            "device": device ,
+                            "device": torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'cpu',
                             "task_name":self.task_name ,
                             "metric":'mae',
                             "result": get_mae(y_test, y_pred),
@@ -120,7 +121,7 @@ class InferencePipeline:
                         "encoder": path.get('encoder',None),
                         "adapter": path.get('adapter',None),
                         "dataset_name": self.task_cfg['datasets'][0],
-                        "device": device ,
+                        "device": torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'cpu',
                         "task_name":self.task_name ,
                         "metric":'accuracy',
                         "result": get_accuracy(y_test, y_pred),

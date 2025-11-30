@@ -137,13 +137,7 @@ class Pipeline:
                             x, y = batch["x"], batch["y"]
                             mask=None
             
-
-                        if self.active_encoder is not None:
-                            x,y= self.active_encoder.forward(batch)
-                            batch=(x,y)
-                        self.set_eval_mode()
-                        feats=self.model_instance.forward(x,mask)
-                        logits = self.active_decoder.forward((feats))
+                        logits=self.forward(x,mask)
                         if (hasattr(self.active_decoder, "requires_model") and self.active_decoder.requires_model and hasattr(self.model_instance.model, "normalizer")):
                             logits = self.model_instance.model.normalizer(x=logits, mode="denorm")
                         if isinstance(criterion, (nn.MSELoss, nn.L1Loss, nn.SmoothL1Loss)): 
@@ -189,10 +183,6 @@ class Pipeline:
         self.set_eval_mode()
         feats=self.model_instance.forward(x,mask)
         logits = self.active_decoder.forward((feats))
-        if isinstance(self.active_decoder.criterion, (nn.CrossEntropyLoss)):
-            logits = torch.argmax(logits, dim=1)
-        if (hasattr(self.active_decoder, "requires_model") and self.active_decoder.requires_model and hasattr(self.model_instance.model, "normalizer")):
-            logits = self.model_instance.model.normalizer(x=logits, mode="denorm")
         return logits 
 
     def predict(self, test_loader, cfg):
@@ -219,6 +209,10 @@ class Pipeline:
                         mask=None
                     with (self.logger.measure("predict", device=self.logger.device) if self.logger else nullcontext()):
                         logits=self.forward(x,mask)
+                        if isinstance(self.active_decoder.criterion, (nn.CrossEntropyLoss)):
+                            logits = torch.argmax(logits, dim=1)
+                        if (hasattr(self.active_decoder, "requires_model") and self.active_decoder.requires_model and hasattr(self.model_instance.model, "normalizer")):
+                            logits = self.model_instance.model.normalizer(x=logits, mode="denorm")
                     preds.append(logits.detach().cpu().numpy())
                     labels.append(y.numpy())
                 return np.concatenate(labels), np.concatenate(preds)
