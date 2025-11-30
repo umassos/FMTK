@@ -25,17 +25,17 @@ class LinearChannelCombiner(BaseModel,nn.Module):
         self.new_num_channels = new_num_channels
         self.model = nn.Linear(num_channels, new_num_channels)
 
-    def preprocess(self,batch):
-        x,y=batch
+    def preprocess(self,batch_x):
+        x=batch_x
         x=x.to(torch.float32)
         # transpose time and channel dimensions to apply linear layer
         x_transposed = x.transpose(1, 2)
-        return x_transposed,y
+        return x_transposed
 
-    def forward(self, batch):
-        x_transposed,y=self.preprocess(batch)
+    def forward(self, batch_x):
+        x_transposed=self.preprocess(batch_x)
         x_transformed = self.model(x_transposed)
-        return self.postprocess(x_transformed), y
+        return self.postprocess(x_transformed)
     
     def postprocess(self,embedding):
         # return the output transposing back the dimensions

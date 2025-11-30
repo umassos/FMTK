@@ -178,8 +178,7 @@ class Pipeline:
     
     def forward(self,x,mask=None):
         if self.active_encoder is not None:
-            x,y= self.active_encoder.forward(batch)
-            batch=(x,y)
+            x= self.active_encoder.forward(x)
         self.set_eval_mode()
         feats=self.model_instance.forward(x,mask)
         logits = self.active_decoder.forward((feats))
