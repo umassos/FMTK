@@ -1,4 +1,4 @@
-from timeseries.components.base import BaseModel
+from fmtk.components.base import BaseModel
 from chronos import ChronosPipeline
 import torch
 import numpy as np
