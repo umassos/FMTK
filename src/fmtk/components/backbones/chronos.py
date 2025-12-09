@@ -69,12 +69,12 @@ class ChronosModel(BaseModel):
         all_embeddings,all_labels = [],[]
         for batch in tqdm(dataloader,total=len(dataloader)):
             if len(batch)==3:
-                x,mask,y= batch
+                x, mask, y = batch["x"], batch["mask"], batch["y"]
             else:
-                x,y= batch
+                x, y = batch["x"], batch["y"]
                 mask=None
             with torch.no_grad():
-                output,y=self.forward(x)   
+                output=self.forward(x)   
             all_embeddings.append(output.cpu().detach().float().numpy())
             all_labels.append(y)
         embeddings_np = np.vstack(all_embeddings)

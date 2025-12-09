@@ -83,9 +83,9 @@ class PapageiModel(BaseModel):
         # with torch.inference_mode():
         for batch in dataloader:
             if len(batch)==3:
-                x,mask,y= batch
+                x, mask, y = batch["x"], batch["mask"], batch["y"]
             else:
-                x,y= batch
+                x, y = batch["x"], batch["y"]
                 mask=None
             with torch.no_grad():
                 output= self.forward(x) 

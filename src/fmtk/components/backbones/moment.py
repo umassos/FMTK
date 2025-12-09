@@ -70,7 +70,11 @@ class MomentModel(BaseModel):
         self.model.eval()
         all_embeddings, all_labels = [], []
         for batch in tqdm(dataloader, total=len(dataloader)):
-            x,y=batch
+            if len(batch)==3:
+                x, mask, y = batch["x"], batch["mask"], batch["y"]
+            else:
+                x, y = batch["x"], batch["y"]
+                mask=None
             with torch.no_grad():
                 output=self.forward(x)   
             all_embeddings.append(output.cpu().float().numpy())

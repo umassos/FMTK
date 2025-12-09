@@ -21,7 +21,7 @@ dataloader_train = DataLoader(PPGDataset(dataset_cfg,task_cfg,split='train'), ba
 dataloader_test = DataLoader(PPGDataset(dataset_cfg, task_cfg,split='test') , batch_size=inference_config['batch_size'], shuffle=inference_config['shuffle'])
 
 P=Pipeline(MomentModel(device,'base'))
-mlp_decoder=P.add_decoder(MLPDecoder(device,cfg={'input_dim':768,'output_dim':1,'hidden_dim':128},lr=train_config['lr']),load=True)
+mlp_decoder=P.add_decoder(MLPDecoder(device,cfg={'input_dim':768,'output_dim':1,'hidden_dim':128}),load=True)
 encoder=P.add_encoder(LinearChannelCombiner(num_channels=3,new_num_channels=1),load=True)
 peft_adapter=P.add_adapter(lora_config)
 P.train(dataloader_train,parts_to_train=['encoder','decoder','adapter'],cfg=train_config)

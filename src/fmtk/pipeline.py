@@ -50,7 +50,7 @@ class Pipeline:
     def unload_encoder(self):
         self.active_encoder=None
     
-    def add_decoder(self,decoder_obj,load=True,train=False,path=None):
+    def add_decoder(self,decoder_obj,load=True,train=True,path=None):
         """Adds a named decoder to the manager."""
         decoder_name=f"decoder_{self.decoder_id}"
         with (self.logger.measure("add_decoder", device=self.logger.device) if self.logger else nullcontext()):
@@ -83,7 +83,6 @@ class Pipeline:
         self.active_decoder=None
 
     def train(self, train_loader, val_loader=None, parts_to_train=['decoder'],cfg=None,path=None):
-
         trains_decoder = 'decoder' in parts_to_train
         trains_adapter = 'adapter' in parts_to_train
         trains_encoder = 'encoder' in parts_to_train

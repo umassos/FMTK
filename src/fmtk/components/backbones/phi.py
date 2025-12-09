@@ -76,7 +76,7 @@ class PhiModel(BaseModel):
         embeddings_np=[]
         labels_np=[]
         for batch in tqdm(dataloader,total=len(dataloader)):
-            image,question,gt = batch 
+            image,question,gt = batch['x'],batch['question'],batch['y'] 
             with torch.no_grad():
                 embeddings=self.forward((image,question))
                 answer=self.postprocess(embeddings)
