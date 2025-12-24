@@ -106,3 +106,46 @@ result = get_mae(y_test, y_pred)
 ```
 
 For this example we use Moment-base backbone with LoRA adapter, linear encoder to change number of channels from 3 to 1 and MLP decoder. Based on [PEFT](https://huggingface.co/docs/peft/en/index) library we set the LORA adapter configuration. We joint train all the components and get the prediction. 
+
+## FordA Classification Example with FMTK ([exp4](./examples/exp4.py))
+This example demonstrates how to use FMTK for univariate time series classification using the FordA dataset and Moment foundation model. First step is to download the 
+[FordA dataset](https://www.timeseriesclassification.com/description.php?Dataset=FordA) and place it in ./dataset/FordA directory containing:
+- FordA_TRAIN.txt
+- FordA_TEST.txt
+
+### Build and Train Pipeline
+
+```python
+
+task_cfg = {'task_type': 'classification'}
+dataset_cfg = {'dataset_path': '../dataset/FordA'}
+inference_config = {'batch_size': 2, 'shuffle': False}
+train_config = {'batch_size': 2, 'shuffle': True, 'epochs': 50, 'lr': 1e-2}
+
+dataloader_train = DataLoader(
+    FordADataset(dataset_cfg, task_cfg, split='train'),
+    batch_size=train_config['batch_size'],
+    shuffle=train_config['shuffle']
+)
+
+dataloader_test = DataLoader(
+    FordADataset(dataset_cfg, task_cfg, split='test'),
+    batch_size=inference_config['batch_size'],
+    shuffle=inference_config['shuffle']
+)
+
+# Initialize pipeline with Moment backbone
+P = Pipeline(MomentModel(device, 'base'))
+
+# Add SVM decoder
+svm_decoder = P.add_decoder(SVMDecoder(), load=True)
+
+# Train the decoder
+P.train(dataloader_train, parts_to_train=['decoder'], cfg=train_config)
+
+# Make predictions
+y_test, y_pred = P.predict(dataloader_test, cfg=inference_config)
+
+# Calculate accuracy
+result = get_accuracy(y_test, y_pred)
+print(result)
