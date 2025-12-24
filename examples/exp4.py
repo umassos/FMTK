@@ -5,7 +5,7 @@ from fmtk.components.decoders.classification.svm import SVMDecoder
 from fmtk.metrics import get_accuracy
 from torch.utils.data import DataLoader
 
-device = 'cpu'
+device = 'cuda:0'
 
 task_cfg = {'task_type': 'classification'}
 inference_config = {'batch_size': 2, 'shuffle': False} #shuffle data
