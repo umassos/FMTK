@@ -1,0 +1,37 @@
+name: "fmtk_chronos"
+backend: "python"
+max_batch_size: 16
+
+# Define Inputs
+input [
+  {
+    name: "input_signal"
+    data_type: TYPE_FP32
+    # [-1, 1] corresponds to [Time, Channel]. 
+    # Triton adds the Batch dim automatically because max_batch_size > 0.
+    dims: [ -1, 1 ] 
+  }
+]
+
+# Define Outputs
+output [
+  {
+    name: "output_prediction"
+    data_type: TYPE_FP32
+    # Assuming output_dim=5 from your MLPDecoder config.
+    dims: [ 5 ]
+  }
+]
+
+# Optimization: Use Dynamic Batching to combine multiple requests
+dynamic_batching { 
+  preferred_batch_size: [ 4, 8, 16 ]
+  max_queue_delay_microseconds: 1000
+}
+
+instance_group [
+  {
+    count: 1
+    kind: KIND_GPU
+  }
+]
