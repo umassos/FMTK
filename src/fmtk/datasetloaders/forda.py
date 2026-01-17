@@ -10,8 +10,6 @@ class FordADataset(TimeSeriesDataset):
         dataset_cfg,
         task_cfg,
         split,
-        data_stride_len: int = 1,
-        random_seed: int = 13,
     ):
         """
         FordA Dataset for binary classification.
@@ -20,8 +18,9 @@ class FordADataset(TimeSeriesDataset):
         """
         super().__init__(dataset_cfg, task_cfg, split)
         self.seq_len = 500
-        self.data_stride_len = data_stride_len
-        self.random_seed = random_seed
+        # moved into dataset_cfg for convention consistency
+        self.data_stride_len = dataset_cfg.get("data_stride_len", 1)
+        self.random_seed = dataset_cfg.get("random_seed", 13)
         self.task_name = self.task_cfg["task_type"]
         self.full_file_path_and_name = (
             f"{self.dataset_cfg['dataset_path']}/FordA_{split.upper()}.txt"
@@ -32,7 +31,7 @@ class FordADataset(TimeSeriesDataset):
         data = np.loadtxt(self.full_file_path_and_name)
         np.random.seed(self.random_seed)
 
-        #shuffle only training set for better generalization
+        # shuffle only training set for better generalization
         if self.split == "train":
             np.random.shuffle(data)
 
@@ -42,12 +41,12 @@ class FordADataset(TimeSeriesDataset):
         # mapping because -1 caused issues
         self.labels = np.where(y == 1, 1, 0)
 
-        #paths to save or load scaling statistics
+        # paths to save or load scaling statistics
         mean_path = os.path.join(self.dataset_cfg["dataset_path"], "forda_mean.npy")
         scale_path = os.path.join(self.dataset_cfg["dataset_path"], "forda_scale.npy")
 
-        #fit scaler only on training data
-        if self.split == "train":
+        # fit scaler only on training data, but compute if missing
+        if self.split == "train" or not (os.path.exists(mean_path) and os.path.exists(scale_path)):
             self.scaler = StandardScaler()
             self.scaler.fit(X)
             np.save(mean_path, self.scaler.mean_)
@@ -67,9 +66,8 @@ class FordADataset(TimeSeriesDataset):
         Each sample = one 500-length univariate time series.
         Returns (1, 500) tensor-like array and corresponding label.
         """
-        #each index returns one complete ts as in one row, with each row corresponding to one label, these were missaligned previously
-        timeseries = self.data[index].reshape(1, self.seq_len) 
-        #pper-series normalization
+        timeseries = self.data[index].reshape(1, self.seq_len)
+        # per-series normalization
         timeseries = (timeseries - timeseries.mean()) / (timeseries.std() + 1e-8)
         label = self.labels[index]
         return {
