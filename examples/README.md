@@ -134,8 +134,11 @@ dataloader_test = DataLoader(
     shuffle=inference_config['shuffle']
 )
 
-# Initialize pipeline with Moment backbone
-P = Pipeline(MomentModel(device, 'base'))
+# Initialize pipeline with Moment (1) OR Mantis (2) backbone
+
+P = Pipeline(MomentModel(device, 'base')) # 1
+
+P = Pipeline(MantisModel(device, '8M')) # 2
 
 # Add SVM decoder
 svm_decoder = P.add_decoder(SVMDecoder(), load=True)
