@@ -7,6 +7,7 @@ import time
 import os
 from contextlib import nullcontext
 import json
+from fmtk.cache import EmbeddingCache
 
 class Pipeline:
     def __init__(self, model_instance,logger=None):
@@ -20,13 +21,23 @@ class Pipeline:
         self.adapter_id=0
         self.encoder_id=0
         self.base_dir = os.path.dirname(__file__)
-        
-    def add_adapter(self,peft_cfg):
+        self.embedding_cache = EmbeddingCache(embed_dim=self.model_instance.embed_dim, cache_device='cpu', to_device=self.model_instance.device)
+        self.decoder_training_only = False
+
+    def add_adapter(self,peft_cfg, path=None):
         adapter_name=f'adapter_{self.adapter_id}'
         self.adapter_id+=1
+        print("here", path)
         if self.model_instance.peft_enable:
+            print("here2")
             with (self.logger.measure("add_adapter", device=self.logger.device) if self.logger else nullcontext()):
-                self.model_instance.model.add_adapter(adapter_name=adapter_name, peft_config=peft_cfg)
+                print("here3")
+                if path is not None:
+                    print(f"Loading adapter from ... ")
+                    self.model_instance.model.load_adapter(f"{self.base_dir}/saved/{path}/adapter.pth", adapter_name=adapter_name)
+                else:
+                    print("here4")
+                    self.model_instance.model.add_adapter(adapter_name=adapter_name, peft_config=peft_cfg)
             return adapter_name
         else:
             self.model_instance.enable_peft(peft_cfg)
@@ -111,6 +122,7 @@ class Pipeline:
             if hasattr(self.active_decoder,'fit'):
                 print("[Trainer] Extracting test embeddings...")
                 with (self.logger.measure("train", device=self.logger.device) if self.logger else nullcontext()):
+                    print("Before embed loader")
                     train_loader = self._embed_loader(train_loader, cfg)
                     if hasattr(self.active_decoder, "requires_model") and self.active_decoder.requires_model:
                         self.active_decoder.fit(self.model_instance.model, train_loader,cfg)
@@ -124,19 +136,24 @@ class Pipeline:
                 if len(dec_params):
                     param_groups.append({"params": dec_params, "lr": cfg['lr']})   
 
+        if len(parts_to_train) == 1 and 'decoder' in parts_to_train:
+            self.decoder_training_only = True
+
         with (self.logger.measure("train", device=self.logger.device) if self.logger else nullcontext()):
             optimizer = torch.optim.Adam(param_groups)
             criterion = getattr(self.active_decoder, "criterion")
             for _ in range(cfg['epochs']):
+                total_loss = 0
                 for batch in tqdm(train_loader):
                         optimizer.zero_grad()
-                        if len(batch)==3:
+                        idx = batch.get("idx", None)
+                        if "mask" in batch:
                             x, mask, y = batch["x"], batch["mask"], batch["y"]
                         else:
                             x, y = batch["x"], batch["y"]
                             mask=None
-            
-                        logits=self.forward(x,mask)
+                        
+                        logits=self.forward(x,mask,idx)
                         if (hasattr(self.active_decoder, "requires_model") and self.active_decoder.requires_model and hasattr(self.model_instance.model, "normalizer")):
                             logits = self.model_instance.model.normalizer(x=logits, mode="denorm")
                         if isinstance(criterion, (nn.MSELoss, nn.L1Loss, nn.SmoothL1Loss)): 
@@ -145,9 +162,13 @@ class Pipeline:
                         elif isinstance(criterion, (nn.CrossEntropyLoss)): 
                             y = y.to(self.active_decoder.device)            
                         loss = criterion(logits, y)
+                        total_loss += loss.item()
                         loss.backward()
                         optimizer.step()
+
+                print("Current loss: ", total_loss/len(train_loader))
         
+        print("making dirs")
         os.makedirs(f"{self.base_dir}/saved/{path}",exist_ok=True)
         if trains_decoder:
             torch.save(self.active_decoder.model.state_dict(), f"{self.base_dir}/saved/{path}/decoder.pth")
@@ -155,11 +176,11 @@ class Pipeline:
             torch.save(self.active_encoder.model.state_dict(), f"{self.base_dir}/saved/{path}/encoder.pth")
         if trains_adapter:
             self.model_instance.model.save_pretrained(f"{self.base_dir}/saved/{path}/adapter.pth")
-        if path is not None:
-            summary_metrics = self.logger.summary()
-            summary_path = f"{self.base_dir}/saved/{path}/pipeline.json"
-            with open(summary_path, 'w') as f:
-                json.dump(summary_metrics,f, indent=2)
+        # if path is not None:
+            # summary_metrics = self.logger.summary()
+            # summary_path = f"{self.base_dir}/saved/{path}/pipeline.json"
+            # with open(summary_path, 'w') as f:
+            #     json.dump(summary_metrics,f, indent=2)
 
     def set_eval_mode(self):
         model = self.model_instance
@@ -175,12 +196,26 @@ class Pipeline:
         else:
             return
     
-    def forward(self,x,mask=None):
+    def forward(self,x,mask=None, idx=None, use_cache=False):
         if self.active_encoder is not None:
             x= self.active_encoder.forward(x)
         self.set_eval_mode()
-        feats=self.model_instance.forward(x,mask)
-        logits = self.active_decoder.forward((feats))
+
+        if use_cache: 
+            # TODO: Add function to partially use cache 
+            # if only some of the idx are present
+            if self.embedding_cache.contains(idx):    # currently all idx need to be present in the cache
+                feats = self.embedding_cache.get(idx)
+            else:
+                feats = self.model_instance.forward(x,mask)
+                self.embedding_cache.put(idx, feats)
+        else:
+            feats = self.model_instance.forward(x,mask)
+
+        if self.active_decoder:
+            logits = self.active_decoder.forward((feats))
+        else:
+            logits = feats
         return logits 
 
     def predict(self, test_loader, cfg):
@@ -200,11 +235,10 @@ class Pipeline:
                 preds=[]
                 labels=[]
                 for batch in tqdm(test_loader):
-                    if len(batch)==3:
-                        x, mask, y = batch["x"], batch["mask"], batch["y"]
-                    else:
-                        x, y = batch["x"], batch["y"]
-                        mask=None
+                    x = batch["x"]
+                    y = batch["y"]
+                    mask = batch.get("mask", None)
+                    idx = batch.get("idx", None)
                     with (self.logger.measure("predict", device=self.logger.device) if self.logger else nullcontext()):
                         logits=self.forward(x,mask)
                         if isinstance(self.active_decoder.criterion, (nn.CrossEntropyLoss)):
@@ -233,7 +267,6 @@ class Pipeline:
         Uses model_instance.predict() to extract embedding tensors and wraps them into a DataLoader.
         Returns: new DataLoader with (embedding, label) tensors
         """
-
         x, y = self.model_instance.predict(dataloader)
         tensor_dataset = torch.utils.data.TensorDataset(torch.tensor(x),torch.tensor(y))
         return torch.utils.data.DataLoader(tensor_dataset, batch_size=cfg['batch_size'], shuffle=cfg['shuffle'])

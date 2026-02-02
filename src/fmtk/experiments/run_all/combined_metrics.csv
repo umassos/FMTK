@@ -1,0 +1,3 @@
+backbone,decoder,encoder,adapter,dataset_name,device,task_name,metric,result,backbone memory,decoder memory,train time,train mem peak,train energy,inference time,inference mem peak,inference energy
+MOMENT-1-small,mlp_momentsmall_class,,,ecg5000,cuda:0,ecg classification,accuracy,0.9257777777777778,151.835648,152.101376,13066.3837890625,230.811648,2641.89,10.763244577619764,172.1379838862222,0.7874813333333333
+MOMENT-1-small,mlp_momentsmall_class,,,ecg5000,cuda:0,ecg classification,accuracy,0.9257777777777778,151.835648,152.101376,12009.583984375,230.811648,2570.436,8.536047619713678,172.1379838862222,0.7747928888888889

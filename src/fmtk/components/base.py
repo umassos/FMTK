@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
 
+# K: abstractmethod wrapper is imported but not used
 class BaseModel(ABC):
     def __init__(self):
         super().__init__()
