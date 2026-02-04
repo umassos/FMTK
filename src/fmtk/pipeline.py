@@ -53,7 +53,7 @@ class Pipeline:
     def add_decoder(self,decoder_obj,load=True,train=True,path=None):
         """Adds a named decoder to the manager."""
         decoder_name=f"decoder_{self.decoder_id}"
-        with (self.logger.measure("add_decoder", device=self.logger.device) if self.logger else nullcontext()):
+        with (self.logger.measure(f"add_decoder_{path}", device=self.logger.device) if self.logger else nullcontext()):
             if not train:
                 self.decoders[decoder_name]= decoder_obj
                 self.decoders[decoder_name].model.load_state_dict(torch.load(f"{self.base_dir}/saved/{path}/decoder.pth"))
@@ -211,7 +211,7 @@ class Pipeline:
                             logits = torch.argmax(logits, dim=1)
                         if (hasattr(self.active_decoder, "requires_model") and self.active_decoder.requires_model and hasattr(self.model_instance.model, "normalizer")):
                             logits = self.model_instance.model.normalizer(x=logits, mode="denorm")
-                    preds.append(logits.detach().cpu().numpy())
+                        preds.append(logits.detach().cpu().numpy())
                     labels.append(y.numpy())
                 return np.concatenate(labels), np.concatenate(preds)
         else:
