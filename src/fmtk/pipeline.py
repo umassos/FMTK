@@ -65,7 +65,7 @@ class Pipeline:
         """Adds a named decoder to the manager."""
         decoder_name=f"decoder_{self.decoder_id}"
         with (self.logger.measure("add_decoder", device=self.logger.device) if self.logger else nullcontext()):
-            if not train:
+            if path is not None:
                 self.decoders[decoder_name]= decoder_obj
                 self.decoders[decoder_name].model.load_state_dict(torch.load(f"{self.base_dir}/saved/{path}/decoder.pth"))
                 
@@ -122,7 +122,6 @@ class Pipeline:
             if hasattr(self.active_decoder,'fit'):
                 print("[Trainer] Extracting test embeddings...")
                 with (self.logger.measure("train", device=self.logger.device) if self.logger else nullcontext()):
-                    print("Before embed loader")
                     train_loader = self._embed_loader(train_loader, cfg)
                     if hasattr(self.active_decoder, "requires_model") and self.active_decoder.requires_model:
                         self.active_decoder.fit(self.model_instance.model, train_loader,cfg)
@@ -136,24 +135,19 @@ class Pipeline:
                 if len(dec_params):
                     param_groups.append({"params": dec_params, "lr": cfg['lr']})   
 
-        if len(parts_to_train) == 1 and 'decoder' in parts_to_train:
-            self.decoder_training_only = True
-
         with (self.logger.measure("train", device=self.logger.device) if self.logger else nullcontext()):
             optimizer = torch.optim.Adam(param_groups)
             criterion = getattr(self.active_decoder, "criterion")
             for _ in range(cfg['epochs']):
-                total_loss = 0
                 for batch in tqdm(train_loader):
                         optimizer.zero_grad()
-                        idx = batch.get("idx", None)
-                        if "mask" in batch:
+                        if len(batch)==3:
                             x, mask, y = batch["x"], batch["mask"], batch["y"]
                         else:
                             x, y = batch["x"], batch["y"]
                             mask=None
-                        
-                        logits=self.forward(x,mask,idx)
+            
+                        logits=self.forward(x,mask)
                         if (hasattr(self.active_decoder, "requires_model") and self.active_decoder.requires_model and hasattr(self.model_instance.model, "normalizer")):
                             logits = self.model_instance.model.normalizer(x=logits, mode="denorm")
                         if isinstance(criterion, (nn.MSELoss, nn.L1Loss, nn.SmoothL1Loss)): 
@@ -162,13 +156,9 @@ class Pipeline:
                         elif isinstance(criterion, (nn.CrossEntropyLoss)): 
                             y = y.to(self.active_decoder.device)            
                         loss = criterion(logits, y)
-                        total_loss += loss.item()
                         loss.backward()
                         optimizer.step()
-
-                print("Current loss: ", total_loss/len(train_loader))
         
-        print("making dirs")
         os.makedirs(f"{self.base_dir}/saved/{path}",exist_ok=True)
         if trains_decoder:
             torch.save(self.active_decoder.model.state_dict(), f"{self.base_dir}/saved/{path}/decoder.pth")
@@ -176,11 +166,122 @@ class Pipeline:
             torch.save(self.active_encoder.model.state_dict(), f"{self.base_dir}/saved/{path}/encoder.pth")
         if trains_adapter:
             self.model_instance.model.save_pretrained(f"{self.base_dir}/saved/{path}/adapter.pth")
-        # if path is not None:
-            # summary_metrics = self.logger.summary()
-            # summary_path = f"{self.base_dir}/saved/{path}/pipeline.json"
-            # with open(summary_path, 'w') as f:
-            #     json.dump(summary_metrics,f, indent=2)
+        if path is not None:
+            summary_metrics = self.logger.summary()
+            summary_path = f"{self.base_dir}/saved/{path}/pipeline.json"
+            with open(summary_path, 'w') as f:
+                json.dump(summary_metrics,f, indent=2)
+
+    def train_eval(self, train_loader, test_loader, val_loader=None, parts_to_train=['decoder'], cfg=None, path=None, metric_fn=None):
+        """
+        Same as train(), but additionally runs predict() on test_loader after every epoch
+        and prints the accuracy (or custom metric). 
+
+        Parameters
+        ----------
+        train_loader : DataLoader
+        test_loader : DataLoader
+            Used for evaluation after each epoch.
+        val_loader : DataLoader, optional
+        parts_to_train : list[str]
+        cfg : dict
+            Must contain 'epochs', 'lr', 'batch_size', 'shuffle'.
+        path : str, optional
+            Save path for model artifacts.
+        metric_fn : callable, optional
+            metric_fn(y_true, y_pred) -> float. Defaults to accuracy
+            (fraction of matching labels).
+        """
+        if metric_fn is None:
+            def metric_fn(y_true, y_pred):
+                return (y_true == y_pred).mean()
+
+        trains_decoder = 'decoder' in parts_to_train
+        trains_adapter = 'adapter' in parts_to_train
+        trains_encoder = 'encoder' in parts_to_train
+
+        param_groups = []
+        if self.active_encoder is not None:
+            if trains_encoder:
+                if hasattr(self.active_encoder, 'fit'):
+                    train_loader = self.active_encoder.fit(train_loader)
+                else:
+                    encoder_params = list(self.active_encoder.trainable_parameters())
+                    if len(encoder_params):
+                        param_groups.append({"params": encoder_params, "lr": cfg['lr']})
+                    if hasattr(self.active_decoder, 'fit'):
+                        raise ValueError("Need differentiable decoder as attached encoder.")
+            else:
+                train_loader = self._encoder_loader(train_loader, cfg)
+        if trains_adapter:
+            adapter_params = list(self.model_instance.adapter_trainable_parameters())
+            param_groups.append({"params": adapter_params, "lr": cfg['lr']})
+            if hasattr(self.active_decoder, 'fit'):
+                raise ValueError("Need differentiable decoder as attached adapter.")
+        if trains_decoder:
+            if hasattr(self.active_decoder, 'fit'):
+                print("[Trainer] Extracting embeddings...")
+                with (self.logger.measure("train", device=self.logger.device) if self.logger else nullcontext()):
+                    train_loader = self._embed_loader(train_loader, cfg)
+                    if hasattr(self.active_decoder, "requires_model") and self.active_decoder.requires_model:
+                        self.active_decoder.fit(self.model_instance.model, train_loader, cfg)
+                        return
+                    else:
+                        self.active_decoder.fit(train_loader, cfg)
+                        return
+            else:
+                dec_params = list(self.active_decoder.trainable_parameters())
+                if len(dec_params):
+                    param_groups.append({"params": dec_params, "lr": cfg['lr']})
+
+        if len(parts_to_train) == 1 and 'decoder' in parts_to_train:
+            self.decoder_training_only = True
+
+        inference_cfg = {"batch_size": cfg.get("batch_size", 32), "shuffle": False}
+
+        with (self.logger.measure("train", device=self.logger.device) if self.logger else nullcontext()):
+            optimizer = torch.optim.Adam(param_groups)
+            criterion = getattr(self.active_decoder, "criterion")
+            for epoch in range(cfg['epochs']):
+                total_loss = 0
+                for batch in tqdm(train_loader, desc=f"Epoch {epoch+1}/{cfg['epochs']}"):
+                    optimizer.zero_grad()
+                    idx = batch.get("idx", None)
+                    if "mask" in batch:
+                        x, mask, y = batch["x"], batch["mask"], batch["y"]
+                    else:
+                        x, y = batch["x"], batch["y"]
+                        mask = None
+
+                    logits = self.forward(x, mask, idx)
+                    if (hasattr(self.active_decoder, "requires_model") and self.active_decoder.requires_model and hasattr(self.model_instance.model, "normalizer")):
+                        logits = self.model_instance.model.normalizer(x=logits, mode="denorm")
+                    if isinstance(criterion, (nn.MSELoss, nn.L1Loss, nn.SmoothL1Loss)):
+                        logits = logits.float()
+                        y = y.to(self.active_decoder.device).float()
+                    elif isinstance(criterion, (nn.CrossEntropyLoss)):
+                        y = y.to(self.active_decoder.device)
+                    loss = criterion(logits, y)
+                    total_loss += loss.item()
+                    loss.backward()
+                    optimizer.step()
+
+                avg_loss = total_loss / len(train_loader)
+
+                # --- Evaluate after this epoch ---
+                y_true, y_pred = self.predict(test_loader, cfg=inference_cfg)
+                score = metric_fn(y_true, y_pred)
+                print(f"Epoch {epoch+1}/{cfg['epochs']}  loss: {avg_loss:.4f}  metric: {score:.4f}")
+
+        if path is not None:
+            print("making dirs")
+            os.makedirs(f"{self.base_dir}/saved/{path}", exist_ok=True)
+            if trains_decoder:
+                torch.save(self.active_decoder.model.state_dict(), f"{self.base_dir}/saved/{path}/decoder.pth")
+            if trains_encoder:
+                torch.save(self.active_encoder.model.state_dict(), f"{self.base_dir}/saved/{path}/encoder.pth")
+            if trains_adapter:
+                self.model_instance.model.save_pretrained(f"{self.base_dir}/saved/{path}/adapter.pth")
 
     def set_eval_mode(self):
         model = self.model_instance
@@ -196,12 +297,12 @@ class Pipeline:
         else:
             return
     
-    def forward(self,x,mask=None, idx=None, use_cache=False):
+    def forward(self,x,mask=None, idx=None, use_cache=True):
         if self.active_encoder is not None:
             x= self.active_encoder.forward(x)
         self.set_eval_mode()
 
-        if use_cache: 
+        if use_cache and idx is not None: 
             # TODO: Add function to partially use cache 
             # if only some of the idx are present
             if self.embedding_cache.contains(idx):    # currently all idx need to be present in the cache
@@ -240,7 +341,7 @@ class Pipeline:
                     mask = batch.get("mask", None)
                     idx = batch.get("idx", None)
                     with (self.logger.measure("predict", device=self.logger.device) if self.logger else nullcontext()):
-                        logits=self.forward(x,mask)
+                        logits=self.forward(x,mask,idx,use_cache=False)
                         if isinstance(self.active_decoder.criterion, (nn.CrossEntropyLoss)):
                             logits = torch.argmax(logits, dim=1)
                         if (hasattr(self.active_decoder, "requires_model") and self.active_decoder.requires_model and hasattr(self.model_instance.model, "normalizer")):

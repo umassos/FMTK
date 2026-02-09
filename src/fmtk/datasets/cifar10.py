@@ -58,7 +58,7 @@ class CIFAR10Dataset(VisionDataset):
             "y": torch.tensor(label, dtype=torch.long),
         }
 
-    def preprocess(self):
+    def preprocess(self, image= None):
         
         self.dataset.transform = transforms.Compose(
             [

@@ -6,18 +6,18 @@ from torch.utils.data import ConcatDataset
 
 start_time = timeit.default_timer()
 from fmtk.pipeline import Pipeline
-import argparse
+
 end_time = timeit.default_timer()
 print(f"Time taken to import fmtk pipeline: {end_time - start_time} seconds")
 
-from fmtk.components.backbones.dinov2 import DinoV2Model, EMBED_DIMS
+from fmtk.components.backbones.mae import MAEModel, EMBED_DIMS as MAE_EMBED_DIMS
 from fmtk.components.decoders.classification.linear import LinearDecoder
 from fmtk.components.encoders.diff import LinearChannelCombiner
 from fmtk.metrics import get_accuracy
 from torch.utils.data import DataLoader, Subset
 from peft import LoraConfig
 from fmtk.datasets.EuroSAT import EuroSATDataset
-
+import traceback
 
 device = "cuda:0"
 seed = 42
@@ -35,25 +35,25 @@ def train_model(
     device,
 ):
 
-    backbone = DinoV2Model(device, model_id, model_cfg)
+    backbone = MAEModel(device, model_id, model_cfg)
     P = Pipeline(backbone)
     linear_decoder = P.add_decoder(
         LinearDecoder(
-            device, cfg={"input_dim": EMBED_DIMS[model_id], "output_dim": 10}
+            device, cfg={"input_dim": MAE_EMBED_DIMS[model_id], "output_dim": 10}
         ),
         load=True,
-        path="repa/imgclass_dinosmall_eurosat",
-        train=True,
     )
     end_time = timeit.default_timer()
     print(f"Time taken to load model: {end_time - start_time} seconds")
 
     print("Training...")
-    P.train(
-        dataloader_train,
+    P.train_eval(
+        train_loader=dataloader_train,
+        test_loader=dataloader_test,
         parts_to_train=["decoder"],
         cfg=train_config,
-        path="repa/imgclass_dinosmall_eurosat",
+        path="imgclass_maebase_eurosat",
+        metric_fn=get_accuracy,
     )
 
     y_test, y_pred = P.predict(dataloader_test, cfg=inference_config)
@@ -66,7 +66,7 @@ def train_model(
     return result
 
 
-def run_multiple_subsets(
+def run_multiple(
     epochs,
     samples_per_class,
     model_id,
@@ -106,43 +106,31 @@ def run_multiple_subsets(
                 results["accuracy"].append(result)
             except Exception as e:
                 print(f"Error: {e}")
+                traceback.print_exc()
                 results["samples_per_class"].append(n_samples)
                 results["accuracy"].append(None)
 
         # df = pd.DataFrame(results)
-        # df.to_csv(f"results/dino_small_eurosat_accuracy_epochs_{i}.csv", index=False)
-
-
-def run_repa_training(dataloader_train, dataloader_test, model_id_from, model_id_to, model_cfg, train_config, inference_config, device):
-    # backbone_from = DinoV2Model(device, model_id_from, model_cfg)
-    # P_from = Pipeline(backbone_from)
-    # for batch in dataloader_train:
-    #     x, y, idx = batch['x'], batch['y'], batch['idx']
-    #     feats = P_from.forward(x, idx=idx, use_cache=True)
-    
-    # backbone_to = DinoV2Model(device, model_id_to, model_cfg)
-    # P_to = Pipeline(backbone_to)
-    pass
-
+        # df.to_csv(f"results/mae_base_eurosat_accuracy_epochs_{i}.csv", index=False)
 
 
 if __name__ == "__main__":
-
     task_cfg = {"task_type": "classification"}
     train_config = {
         "batch_size": 32,
         "shuffle": False,
-        "epochs": 1,
+        "epochs": 20,
         "lr": 1e-3,
         "scheduler": {"type": "cosine", "T_max": 10, "eta_min": 0},
     }
     inference_config = {"batch_size": 32, "shuffle": False}
     dataset_cfg = {
-        "dataset_path": "/work/pi_shenoy_umass_edu/kgudipaty/datasets/EuroSAT"
+        "dataset_path": "/work/pi_shenoy_umass_edu/kgudipaty/datasets/EuroSAT",
+        "model_id": "facebook/vit-mae-base",
     }
     model_cfg = {"return_all_tokens": False}
 
-    model_id = "small"
+    model_id = "base"
     samples_per_class = [1000]
     train_data = EuroSATDataset(dataset_cfg, task_cfg, split="train")
     test_data = EuroSATDataset(dataset_cfg, task_cfg, split="test")
@@ -155,14 +143,14 @@ if __name__ == "__main__":
         generator=generator,
     )
     print("Loading train dataloader...")
-    # subsets = []
-    # for label in range(train_data.num_classes):
-    #     subsets.append(
-    #         Subset(
-    #             train_data,
-    #             indices=train_data.indices[train_data.labels == label].tolist(),
-    #         )
-    #     )
+    subsets = []
+    for label in range(train_data.num_classes):
+        subsets.append(
+            Subset(
+                train_data,
+                indices=train_data.indices[train_data.labels == label].tolist(),
+            )
+        )
     dataloader_train = DataLoader(
         train_data,
         batch_size=train_config["batch_size"],
@@ -172,7 +160,6 @@ if __name__ == "__main__":
 
     accuracy = train_model(dataloader_train, dataloader_test, model_id, model_cfg, train_config, inference_config, device)
     print("Accuracy: ", accuracy)
-    
     # run_multiple(
     #     [10],
     #     samples_per_class,

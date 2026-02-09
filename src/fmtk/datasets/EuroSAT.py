@@ -5,6 +5,7 @@ from torchvision import datasets, transforms
 from PIL import Image
 from fmtk.datasets.base import VisionDataset
 import json
+from transformers import AutoImageProcessor
 
 
 class EuroSATDataset(VisionDataset):
@@ -18,10 +19,10 @@ class EuroSATDataset(VisionDataset):
 
         self.mean = dataset_cfg.get("mean", [0.485, 0.456, 0.406])
         self.std = dataset_cfg.get("std", [0.229, 0.224, 0.225])
-        self.target_size = dataset_cfg.get("target_size", (224, 224))
+        self.target_size = dataset_cfg.get("target_size", 224)
         self.image_size = 64  # EuroSAT patch size
         self.num_channels = 3
-        self.transform = None  # Set in preprocess()
+        self.transform = None
 
         dataset_path = dataset_cfg.get("dataset_path", "./data")
         csv_path = os.path.join(dataset_path, f"{split}.csv")
@@ -68,6 +69,7 @@ class EuroSATDataset(VisionDataset):
                     interpolation=transforms.InterpolationMode.BICUBIC,
                     antialias=True,
                 ),
+                transforms.CenterCrop(self.target_size),
                 transforms.ToTensor(),
                 transforms.Normalize(self.mean, self.std),
             ]

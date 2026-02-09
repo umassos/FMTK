@@ -17,7 +17,7 @@ from fmtk.metrics import get_accuracy
 from torch.utils.data import DataLoader, Subset
 from peft import LoraConfig
 from fmtk.datasets.EuroSAT import EuroSATDataset
-
+import traceback
 
 device = "cuda:0"
 seed = 42
@@ -42,8 +42,6 @@ def train_model(
             device, cfg={"input_dim": EMBED_DIMS[model_id], "output_dim": 10}
         ),
         load=True,
-        path="imgclass_dinosmall_eurosat",
-        train=True,
     )
     end_time = timeit.default_timer()
     print(f"Time taken to load model: {end_time - start_time} seconds")
@@ -53,7 +51,7 @@ def train_model(
         dataloader_train,
         parts_to_train=["decoder"],
         cfg=train_config,
-        path="imgclass_dinobase_eurosat",
+        path="imgclass_dinobase_eurosat_wrong",
     )
 
     y_test, y_pred = P.predict(dataloader_test, cfg=inference_config)
@@ -106,6 +104,7 @@ def run_multiple(
                 results["accuracy"].append(result)
             except Exception as e:
                 print(f"Error: {e}")
+                traceback.print_exc()
                 results["samples_per_class"].append(n_samples)
                 results["accuracy"].append(None)
 
@@ -118,17 +117,18 @@ if __name__ == "__main__":
     train_config = {
         "batch_size": 32,
         "shuffle": False,
-        "epochs": 1,
+        "epochs": 20,
         "lr": 1e-3,
         "scheduler": {"type": "cosine", "T_max": 10, "eta_min": 0},
     }
     inference_config = {"batch_size": 32, "shuffle": False}
     dataset_cfg = {
-        "dataset_path": "/work/pi_shenoy_umass_edu/kgudipaty/datasets/EuroSAT"
+        "dataset_path": "/work/pi_shenoy_umass_edu/kgudipaty/datasets/EuroSAT",
+        "model_id": "facebook/dinov2-base",
     }
     model_cfg = {"return_all_tokens": False}
 
-    model_id = "small"
+    model_id = "base"
     samples_per_class = [1000]
     train_data = EuroSATDataset(dataset_cfg, task_cfg, split="train")
     test_data = EuroSATDataset(dataset_cfg, task_cfg, split="test")
@@ -149,23 +149,23 @@ if __name__ == "__main__":
                 indices=train_data.indices[train_data.labels == label].tolist(),
             )
         )
-    # dataloader_train = DataLoader(
-    #     train_data,
-    #     batch_size=train_config["batch_size"],
-    #     shuffle=train_config["shuffle"],
-    #     generator=generator,
-    # )
-
-    # accuracy = train_model(dataloader_train, dataloader_test, model_id, model_cfg, train_config, inference_config, device)
-    # print("Accuracy: ", accuracy)
-    run_multiple(
-        [10],
-        samples_per_class,
-        model_id,
-        subsets,
-        dataloader_test,
-        model_cfg,
-        train_config,
-        inference_config,
-        device,
+    dataloader_train = DataLoader(
+        train_data,
+        batch_size=train_config["batch_size"],
+        shuffle=train_config["shuffle"],
+        generator=generator,
     )
+
+    accuracy = train_model(dataloader_train, dataloader_test, model_id, model_cfg, train_config, inference_config, device)
+    print("Accuracy: ", accuracy)
+    # run_multiple(
+    #     [10],
+    #     samples_per_class,
+    #     model_id,
+    #     subsets,
+    #     dataloader_test,
+    #     model_cfg,
+    #     train_config,
+    #     inference_config,
+    #     device,
+    # )

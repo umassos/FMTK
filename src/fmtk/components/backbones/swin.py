@@ -7,98 +7,82 @@ from transformers import AutoModel, AutoImageProcessor
 from peft import get_peft_model, PeftModel
 from functools import singledispatchmethod
 
-# import torch.nn as nn
-
-
 MODEL_MAPPING = {
-    "giant": "facebook/dinov2-giant",
-    "large": "facebook/dinov2-large",
-    "base": "facebook/dinov2-base",
-    "small": "facebook/dinov2-small",
-    "dinov2-giant": "facebook/dinov2-giant",
-    "dinov2-large": "facebook/dinov2-large",
-    "dinov2-base": "facebook/dinov2-base",
-    "dinov2-small": "facebook/dinov2-small",
+    "tiny": "microsoft/swin-tiny-patch4-window7-224",
+    "small": "microsoft/swin-small-patch4-window7-224",
+    "base": "microsoft/swin-base-patch4-window7-224",
+    "large": "microsoft/swin-large-patch4-window7-224",
+    "swin-tiny": "microsoft/swin-tiny-patch4-window7-224",
+    "swin-small": "microsoft/swin-small-patch4-window7-224",
+    "swin-base": "microsoft/swin-base-patch4-window7-224",
+    "swin-large": "microsoft/swin-large-patch4-window7-224",
 }
 
 EMBED_DIMS = {
-    "facebook/dinov2-giant": 1536,
-    "facebook/dinov2-large": 1024,
-    "facebook/dinov2-base": 768,
-    "facebook/dinov2-small": 384,
-    "dinov2-giant": 1536,
-    "dinov2-large": 1024,
-    "dinov2-base": 768,
-    "dinov2-small": 384,
-    "small": 384,
-    "base": 768,
-    "large": 1024,
-    "giant": 1536,
+    "microsoft/swin-tiny-patch4-window7-224": 768,
+    "microsoft/swin-small-patch4-window7-224": 768,
+    "microsoft/swin-base-patch4-window7-224": 1024,
+    "microsoft/swin-large-patch4-window7-224": 1536,
+    "tiny": 768,
+    "small": 768,
+    "base": 1024,
+    "large": 1536,
 }
 
 
-class DinoV2Model(BaseModel):
+class SwinModel(BaseModel):
     """
-    DINOv2 model for vision tasks.
+    Swin Transformer backbone for vision tasks.
+    Uses Hugging Face transformers (SwinModel with pooling).
     """
 
     def __init__(self, device, model_name="base", model_config=None):
         super().__init__()
         self.device = device
         self.return_all_tokens = model_config.get("return_all_tokens", False)
-        # Default to base model if not specified or not recognized
+
         if model_name in MODEL_MAPPING:
             model_id = MODEL_MAPPING[model_name]
         else:
-            model_id = model_name
+            model_id = model_name    
 
         embed_dim = EMBED_DIMS[model_id]
 
-        print(f"[DINO] Loading {model_id} on device {device}")
+        print(f"[Swin] Loading {model_id} on device {device}")
 
         self.model = AutoModel.from_pretrained(model_id)
         self.processor = AutoImageProcessor.from_pretrained(model_id)
 
         self.model.to(device)
         self.embed_dim = embed_dim
-
         self.peft_enable = False
 
     def preprocess(self, batch_x, mask=None):
-        # Expect image tensors normalized and shaped [B, C, H, W].
-        batch_x = batch_x.float()
-
+        batch_x = batch_x.float().to(self.device)
         self.B, self.C, self.H, self.W = batch_x.shape
-        batch_x = batch_x.to(self.device)
         return batch_x, mask
 
     def forward(self, batch_x, mask=None, adapters=[]):
         x, mask = self.preprocess(batch_x, mask)
 
-        # The model returns a BaseModelOutputWithPooling object
         if isinstance(self.model, PeftModel) and len(adapters) > 0:
             outputs = self.model(x, adapters=adapters)
         else:
             outputs = self.model(x)
 
         if self.return_all_tokens:
-
-            # Extract all tokens for a detr style decoder
-            embeddings = outputs.last_hidden_state[:, 1:, :]
+            embeddings = outputs.last_hidden_state
         else:
-            # Extract the pooled output (CLS token representation)
             embeddings = outputs.pooler_output
-            # If pooler_output is not available, use the last hidden state's CLS token
             if embeddings is None:
                 last_hidden_state = outputs.last_hidden_state
-                embeddings = last_hidden_state[:, 0, :]  # [batch_size, hidden_size]
+                embeddings = last_hidden_state.mean(dim=1)
 
         return embeddings
 
     @singledispatchmethod
     @torch.no_grad()
     def predict(self, data):
-        # If data is of the form batch_x
         self.model.eval()
         embeddings = self.forward(data)
         return embeddings
@@ -115,7 +99,6 @@ class DinoV2Model(BaseModel):
                 y = batch.get("y", None)
                 mask = batch.get("mask", None)
             else:
-                # Handle tuple format (x, y) or (x, mask, y)
                 if len(batch) == 2:
                     x, y = batch
                     mask = None
@@ -145,13 +128,11 @@ class DinoV2Model(BaseModel):
     def enable_peft(self, peft_cfg, load_path=None):
         if self.peft_enable:
             return
-
         self.peft_enable = True
         if load_path is None:
             self.model = get_peft_model(self.model, peft_cfg)
         else:
             self.model = PeftModel.from_pretrained(self.model, load_path)
-
         print(self.model.print_trainable_parameters())
 
     def adapter_trainable_parameters(self):
