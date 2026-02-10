@@ -12,7 +12,7 @@ import argparse
 end_time = timeit.default_timer()
 print(f"Time taken to import fmtk pipeline: {end_time - start_time} seconds")
 
-from fmtk.components.backbones.dinov2 import DinoV2Model, EMBED_DIMS as DINO_EMBED_DIMS
+from fmtk.components.backbones.dinov2 import DinoV2Model
 from fmtk.components.backbones.swin import SwinModel, EMBED_DIMS as SWIN_EMBED_DIMS
 from fmtk.components.decoders.classification.linear import LinearDecoder
 from fmtk.components.encoders.diff import LinearChannelCombiner
@@ -171,7 +171,10 @@ def run_repa_training(
     logger.info("Training RepA model...")
     best_loss = float("inf")
     for epoch in range(train_config["epochs"]):
+        start_time = timeit.default_timer()
         loss = train_one_epoch(dataloader_train, model, optimizer)
+        end_time = timeit.default_timer()
+        print(f"Time taken for epoch {epoch + 1}: {end_time - start_time} seconds")
         logger.info(f"Epoch {epoch + 1}/{train_config['epochs']} Loss: {loss:.4f}")
         model.save(last_save_path)
         if loss < best_loss:
@@ -337,8 +340,8 @@ if __name__ == "__main__":
         "model_to_name": args.model_to_name,
     }
 
-    args.input_dim = utils.get_embed_dims(args.model_from_name, args.model_from_id)
-    args.repa_output_dim = utils.get_embed_dims(args.model_to_name, args.model_to_id)
+    args.input_dim = utils.get_embed_dim(args.model_from_name, args.model_from_id)
+    args.repa_output_dim = utils.get_embed_dim(args.model_to_name, args.model_to_id)
     repa_cfg = {
         "input_dim": args.input_dim,
         "repa_output_dim": args.repa_output_dim,
@@ -346,7 +349,7 @@ if __name__ == "__main__":
         "normalize": args.normalize,
     }
 
-    model_features_path = f"{args.model_from_id}_to_{args.model_to_id}_features.pt"
+    model_features_path = f"../features/{args.model_from_id}_to_{args.model_to_id}_features.pt"
     print(f"Model features path: {model_features_path}")
 
     train_data = EuroSATDataset(dataset_cfg, task_cfg, split="train")
@@ -384,7 +387,8 @@ if __name__ == "__main__":
             dataloader_train, model_cfg, device, model_features_path
         )
 
-    for num_samples in [1, 5, 10, 50, 100, 500, 1000, 5000, 10000, 50000]:
+    num_samples_list = [1000]
+    for num_samples in num_samples_list:
         log_path = f"results/repa/{args.model_from_id}_to_{args.model_to_id}_accuracy_num_samples_{num_samples}.csv"
         for _ in range(10):
             x, y = data[model_cfg["model_from_id"]], data[model_cfg["model_to_id"]]

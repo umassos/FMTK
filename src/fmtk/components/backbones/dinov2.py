@@ -9,33 +9,26 @@ from functools import singledispatchmethod
 
 # import torch.nn as nn
 
+def get_dinov2_model_id(model_name):
+    if model_name in ['small', 'dinov2-small', 'facebook/dinov2-small']:
+        return 'facebook/dinov2-small'
+    elif model_name in ['base', 'dinov2-base', 'facebook/dinov2-base']:
+        return 'facebook/dinov2-base'
+    elif model_name in ['large', 'dinov2-large', 'facebook/dinov2-large']:
+        return 'facebook/dinov2-large'
+    elif model_name in ['giant', 'dinov2-giant', 'facebook/dinov2-giant']:
+        return 'facebook/dinov2-giant'
 
-MODEL_MAPPING = {
-    "giant": "facebook/dinov2-giant",
-    "large": "facebook/dinov2-large",
-    "base": "facebook/dinov2-base",
-    "small": "facebook/dinov2-small",
-    "dinov2-giant": "facebook/dinov2-giant",
-    "dinov2-large": "facebook/dinov2-large",
-    "dinov2-base": "facebook/dinov2-base",
-    "dinov2-small": "facebook/dinov2-small",
-}
 
-EMBED_DIMS = {
-    "facebook/dinov2-giant": 1536,
-    "facebook/dinov2-large": 1024,
-    "facebook/dinov2-base": 768,
-    "facebook/dinov2-small": 384,
-    "dinov2-giant": 1536,
-    "dinov2-large": 1024,
-    "dinov2-base": 768,
-    "dinov2-small": 384,
-    "small": 384,
-    "base": 768,
-    "large": 1024,
-    "giant": 1536,
-}
-
+def get_dinov2_embed_dim(model_id):
+    if model_id in ['small', 'dinov2-small', 'facebook/dinov2-small']:
+        return 384
+    elif model_id in ['base', 'dinov2-base', 'facebook/dinov2-base']:
+        return 768
+    elif model_id in ['large', 'dinov2-large', 'facebook/dinov2-large']:
+        return 1024
+    elif model_id in ['giant', 'dinov2-giant', 'facebook/dinov2-giant']:
+        return 1536
 
 class DinoV2Model(BaseModel):
     """
@@ -47,20 +40,15 @@ class DinoV2Model(BaseModel):
         self.device = device
         self.return_all_tokens = model_config.get("return_all_tokens", False)
         # Default to base model if not specified or not recognized
-        if model_name in MODEL_MAPPING:
-            model_id = MODEL_MAPPING[model_name]
-        else:
-            model_id = model_name
+        self.model_id = get_dinov2_model_id(model_name)
 
-        embed_dim = EMBED_DIMS[model_id]
+        print(f"[DINO] Loading {self.model_id} on device {device}")
 
-        print(f"[DINO] Loading {model_id} on device {device}")
-
-        self.model = AutoModel.from_pretrained(model_id)
-        self.processor = AutoImageProcessor.from_pretrained(model_id)
+        self.model = AutoModel.from_pretrained(self.model_id)
+        self.processor = AutoImageProcessor.from_pretrained(self.model_id)
 
         self.model.to(device)
-        self.embed_dim = embed_dim
+        self.embed_dim = get_dinov2_embed_dim(self.model_id)
 
         self.peft_enable = False
 

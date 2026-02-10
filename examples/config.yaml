@@ -1,7 +1,8 @@
 output_dim: 10
 normalize: true
-model_from_id: dinov2-small
+dataset_path: /home/violet/FMTK/dataset/EuroSAT
+model_from_id: resnet18
 model_to_id: dinov2-base
-model_from_name: dinov2
+model_from_name: resnet
 model_to_name: dinov2
 return_all_tokens: false

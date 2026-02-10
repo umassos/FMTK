@@ -21,6 +21,11 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
+
+from transformers import ResNetModel
+from fmtk.components.base import BaseModel
+from functools import singledispatchmethod
+from peft import get_peft_model, PeftModel
     
 class MyConv1dPadSame(nn.Module):
     """
@@ -611,3 +616,140 @@ class TFCResNet(nn.Module):
         z_freq = self.projector_f(h_freq)
 
         return h_time, z_time, h_freq, z_freq
+
+
+def get_resnet_vision_model_id(model_name):
+    if model_name in ['resnet18', 'resnet-18','microsoft/resnet-18']:
+        return 'microsoft/resnet-18'
+    elif model_name in ['resnet34', 'resnet-34','microsoft/resnet-34']:
+        return 'microsoft/resnet-34'
+    elif model_name in ['resnet50', 'resnet-50','microsoft/resnet-50']:
+        return 'microsoft/resnet-50'
+    elif model_name in ['resnet101', 'resnet-101','microsoft/resnet-101']:
+        return 'microsoft/resnet-101'
+
+def get_resnet_vision_embed_dim(model_id):
+    if model_id in ['microsoft/resnet-18']:
+        return 512
+    elif model_id in ['microsoft/resnet-34']:
+        return 512
+    elif model_id in ['microsoft/resnet-50']:
+        return 2048
+    elif model_id in ['microsoft/resnet-101']:
+        return 2048
+
+class ResNetVisionModel(BaseModel):
+    """
+    ResNet model for vision tasks.
+    """
+
+    def __init__(self, device, model_name="base", model_config=None):
+        super().__init__()
+        self.device = device
+        self.model_id = get_resnet_vision_model_id(model_name)
+
+        # embed_dim = EMBED_DIMS[model_id]
+
+        print(f"[ResNet Vision] Loading {self.model_id} on device {self.device}")
+        self.model = ResNetModel.from_pretrained(self.model_id)
+
+        self.model.to(device)
+        self.embed_dim = get_resnet_vision_embed_dim(self.model_id)
+
+        self.peft_enable = False
+
+    def preprocess(self, batch_x, mask=None):
+        # Expect image tensors normalized and shaped [B, C, H, W].
+        batch_x = batch_x.float()
+
+        self.B, self.C, self.H, self.W = batch_x.shape
+        batch_x = batch_x.to(self.device)
+        return batch_x, mask
+
+    def forward(self, batch_x, mask=None, adapters=[]):
+        x, mask = self.preprocess(batch_x, mask)
+        
+        # The model returns a BaseModelOutputWithPooling object
+        if isinstance(self.model, PeftModel) and len(adapters) > 0:
+            outputs = self.model(x, adapters=adapters)
+        else:
+            outputs = self.model(x)
+
+        embeddings = outputs.pooler_output
+        embeddings = embeddings.flatten(1)
+
+        return embeddings
+
+    @singledispatchmethod
+    @torch.no_grad()
+    def predict(self, data):
+        # If data is of the form batch_x
+        self.model.eval()
+        embeddings = self.forward(data)
+        return embeddings
+
+    @predict.register
+    @torch.no_grad()
+    def _predict_from_dataloader(self, data: DataLoader):
+        self.model.eval()
+        all_embeddings, all_labels = [], []
+
+        for batch in tqdm(data, total=len(data)):
+            if isinstance(batch, dict):
+                x = batch["x"]
+                y = batch.get("y", None)
+                mask = batch.get("mask", None)
+            else:
+                # Handle tuple format (x, y) or (x, mask, y)
+                if len(batch) == 2:
+                    x, y = batch
+                    mask = None
+                elif len(batch) == 3:
+                    x, mask, y = batch
+                else:
+                    x = batch[0]
+                    y = None
+                    mask = None
+
+            embeddings = self.forward(x, mask)
+            all_embeddings.append(embeddings.cpu().detach().float().numpy())
+            if y is not None:
+                if isinstance(y, torch.Tensor):
+                    all_labels.append(y.cpu().numpy())
+                else:
+                    all_labels.append(np.array(y))
+
+        embeddings_np = np.vstack(all_embeddings)
+        if all_labels:
+            labels_np = np.concatenate(all_labels)
+        else:
+            labels_np = None
+
+        return embeddings_np, labels_np
+
+    def enable_peft(self, peft_cfg, load_path=None):
+        if self.peft_enable:
+            return
+
+        self.peft_enable = True
+        if load_path is None:
+            self.model = get_peft_model(self.model, peft_cfg)
+        else:
+            self.model = PeftModel.from_pretrained(self.model, load_path)
+
+        print(self.model.print_trainable_parameters())
+
+    def adapter_trainable_parameters(self):
+        if not self.peft_enable:
+            return []
+        return (p for p in self.model.parameters() if p.requires_grad)
+
+    def save_adapter(self, path):
+        if not self.peft_enable:
+            return
+        print(f"Saving adapter to {path}")
+        self.model.save_pretrained(path)
+
+    def set_adapter(self, adapter_name: str):
+        assert self.peft_enable, "Backbone must be PEFT enabled for using adapters"
+        self.model.set_adapter(adapter_name)
