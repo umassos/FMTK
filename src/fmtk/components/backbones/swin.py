@@ -7,83 +7,73 @@ from transformers import AutoModel, AutoImageProcessor
 from peft import get_peft_model, PeftModel
 from functools import singledispatchmethod
 
-def get_dinov2_model_id(model_name):
-    if model_name in ['small', 'dinov2-small', 'facebook/dinov2-small']:
-        return 'facebook/dinov2-small'
-    elif model_name in ['base', 'dinov2-base', 'facebook/dinov2-base']:
-        return 'facebook/dinov2-base'
-    elif model_name in ['large', 'dinov2-large', 'facebook/dinov2-large']:
-        return 'facebook/dinov2-large'
-    elif model_name in ['giant', 'dinov2-giant', 'facebook/dinov2-giant']:
-        return 'facebook/dinov2-giant'
 
-def get_dinov2_embed_dim(model_id):
-    if model_id in ['small', 'dinov2-small', 'facebook/dinov2-small']:
-        return 384
-    elif model_id in ['base', 'dinov2-base', 'facebook/dinov2-base']:
+def get_mae_model_id(model_name):
+    if model_name in ["base", "mae-base", "facebook/vit-mae-base"]:
+        return "facebook/vit-mae-base"
+    elif model_name in ["large", "mae-large", "facebook/vit-mae-large"]:
+        return "facebook/vit-mae-large"
+    elif model_name in ["huge", "mae-huge", "facebook/vit-mae-huge"]:
+        return "facebook/vit-mae-huge"
+
+
+def get_mae_embed_dim(model_id):
+    if model_id in ["base", "mae-base", "facebook/vit-mae-base"]:
         return 768
-    elif model_id in ['large', 'dinov2-large', 'facebook/dinov2-large']:
+    elif model_id in ["large", "mae-large", "facebook/vit-mae-large"]:
         return 1024
-    elif model_id in ['giant', 'dinov2-giant', 'facebook/dinov2-giant']:
-        return 1536
+    elif model_id in ["huge", "mae-huge", "facebook/vit-mae-huge"]:
+        return 1280
 
-class DinoV2Model(BaseModel):
+
+class MAEModel(BaseModel):
     """
-    DINOv2 model for vision tasks.
+    ViT-MAE (Masked Autoencoder) backbone for vision tasks.
+    Uses Hugging Face transformers ViTMAEModel; returns encoder [CLS] or all patch tokens.
     """
 
     def __init__(self, device, model_name="base", model_config={}):
         super().__init__()
+        model_config = model_config or {}
         self.device = device
         self.return_all_tokens = model_config.get("return_all_tokens", False)
-        # Default to base model if not specified or not recognized
-        self.model_id = get_dinov2_model_id(model_name)
 
-        print(f"[DINO] Loading {self.model_id} on device {device}")
+        self.model_id = get_mae_model_id(model_name)
+        self.embed_dim = get_mae_embed_dim(self.model_id)
+        print(f"[MAE] Loading {self.model_id} on device {device}")
 
         self.model = AutoModel.from_pretrained(self.model_id)
         self.processor = AutoImageProcessor.from_pretrained(self.model_id)
 
         self.model.to(device)
-        self.embed_dim = get_dinov2_embed_dim(self.model_id)
-
         self.peft_enable = False
 
     def preprocess(self, batch_x, mask=None):
-        # Expect image tensors normalized and shaped [B, C, H, W].
-        batch_x = batch_x.float()
-
+        batch_x = batch_x.float().to(self.device)
         self.B, self.C, self.H, self.W = batch_x.shape
-        batch_x = batch_x.to(self.device)
         return batch_x, mask
 
     def forward(self, batch_x, mask=None, adapters=[]):
         x, mask = self.preprocess(batch_x, mask)
 
-        # The model returns a BaseModelOutputWithPooling object
         if isinstance(self.model, PeftModel) and len(adapters) > 0:
             outputs = self.model(x, adapters=adapters)
         else:
             outputs = self.model(x)
 
-        if self.return_all_tokens:
+        last_hidden_state = outputs.last_hidden_state
 
-            # Extract all tokens for a detr style decoder
-            embeddings = outputs.last_hidden_state[:, 1:, :]
+        if self.return_all_tokens:
+            embeddings = last_hidden_state[:, 1:, :]
         else:
-            # Extract the pooled output (CLS token representation)
-            embeddings = outputs.pooler_output
-            # If pooler_output is not available, use the last hidden state's CLS token
-            if embeddings is None:
-                last_hidden_state = outputs.last_hidden_state
-                embeddings = last_hidden_state[:, 0, :]  # [batch_size, hidden_size]
+            embeddings = last_hidden_state[:, 0, :]
 
         return embeddings
 
+    # TODO: This should be moved to the abstract class
     @singledispatchmethod
     @torch.no_grad()
     def predict(self, data):
-        # If data is of the form batch_x
         self.model.eval()
         embeddings = self.forward(data)
         return embeddings
@@ -100,7 +90,6 @@ class DinoV2Model(BaseModel):
                 y = batch.get("y", None)
                 mask = batch.get("mask", None)
             else:
-                # Handle tuple format (x, y) or (x, mask, y)
                 if len(batch) == 2:
                     x, y = batch
                     mask = None
@@ -130,13 +119,11 @@ class DinoV2Model(BaseModel):
     def enable_peft(self, peft_cfg, load_path=None):
         if self.peft_enable:
             return
-
         self.peft_enable = True
         if load_path is None:
             self.model = get_peft_model(self.model, peft_cfg)
         else:
             self.model = PeftModel.from_pretrained(self.model, load_path)
-
         print(self.model.print_trainable_parameters())
 
     def adapter_trainable_parameters(self):

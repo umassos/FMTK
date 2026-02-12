@@ -130,12 +130,8 @@ class Pipeline:
             for _ in range(cfg['epochs']):
                 for batch in tqdm(train_loader):
                         optimizer.zero_grad()
-                        if len(batch)==3:
-                            x, mask, y = batch["x"], batch["mask"], batch["y"]
-                        else:
-                            x, y = batch["x"], batch["y"]
-                            mask=None
-            
+                        x, y = batch["x"], batch["y"]
+                        mask = batch.get("mask", None)
                         logits=self.forward(x,mask)
                         if (hasattr(self.active_decoder, "requires_model") and self.active_decoder.requires_model and hasattr(self.model_instance.model, "normalizer")):
                             logits = self.model_instance.model.normalizer(x=logits, mode="denorm")
@@ -200,11 +196,8 @@ class Pipeline:
                 preds=[]
                 labels=[]
                 for batch in tqdm(test_loader):
-                    if len(batch)==3:
-                        x, mask, y = batch["x"], batch["mask"], batch["y"]
-                    else:
-                        x, y = batch["x"], batch["y"]
-                        mask=None
+                    x, y = batch["x"], batch["y"]
+                    mask = batch.get("mask", None)
                     with (self.logger.measure("predict", device=self.logger.device) if self.logger else nullcontext()):
                         logits=self.forward(x,mask)
                         if isinstance(self.active_decoder.criterion, (nn.CrossEntropyLoss)):
