@@ -21,6 +21,11 @@ import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 from torch.utils.data import Dataset, DataLoader
+
+from transformers import ResNetModel
+from fmtk.components.base import BaseModel
+from functools import singledispatchmethod
+from peft import get_peft_model, PeftModel
     
 class MyConv1dPadSame(nn.Module):
     """
@@ -611,3 +616,112 @@ class TFCResNet(nn.Module):
         z_freq = self.projector_f(h_freq)
 
         return h_time, z_time, h_freq, z_freq
+
+
+def get_resnet_vision_model_id(model_name):
+    if model_name in ['resnet18', 'resnet-18','microsoft/resnet-18']:
+        return 'microsoft/resnet-18'
+    elif model_name in ['resnet34', 'resnet-34','microsoft/resnet-34']:
+        return 'microsoft/resnet-34'
+    elif model_name in ['resnet50', 'resnet-50','microsoft/resnet-50']:
+        return 'microsoft/resnet-50'
+    elif model_name in ['resnet101', 'resnet-101','microsoft/resnet-101']:
+        return 'microsoft/resnet-101'
+
+def get_resnet_vision_embed_dim(model_id):
+    if model_id in ['microsoft/resnet-18']:
+        return (512, 7, 7)
+    elif model_id in ['microsoft/resnet-34']:
+        return (512, 7, 7)
+    elif model_id in ['microsoft/resnet-50']:
+        return (2048, 7, 7)
+    elif model_id in ['microsoft/resnet-101']:
+        return (2048, 7, 7)
+
+class ResNetVisionModel(BaseModel):
+    """
+    ResNet model for vision tasks.
+    """
+
+    def __init__(self, device, model_name="base", model_config={}):
+        super().__init__()
+        self.device = device
+        self.model_id = get_resnet_vision_model_id(model_name)
+        self.output_hidden_states = model_config.get("output_hidden_states", False)
+
+        # embed_dim = EMBED_DIMS[model_id]
+
+        print(f"[ResNet Vision] Loading {self.model_id} on device {self.device}")
+        self.model = ResNetModel.from_pretrained(self.model_id)
+
+        self.model.to(device)
+        self.embed_dim = get_resnet_vision_embed_dim(self.model_id)
+
+        self.peft_enable = False
+
+    def preprocess(self, batch_x, mask=None):
+        # Expect image tensors normalized and shaped [B, C, H, W].
+        batch_x = batch_x.float()
+
+        self.B, self.C, self.H, self.W = batch_x.shape
+        batch_x = batch_x.to(self.device)
+        return batch_x, mask
+
+    def forward(self, batch_x, mask=None):
+        x, mask = self.preprocess(batch_x, mask)
+        outputs = self.model(x, output_hidden_states=self.output_hidden_states)
+
+        if self.output_hidden_states:
+            # Tuple of (B, C, H, W)
+            embeddings = outputs.hidden_states 
+        else:
+            embeddings = outputs.pooler_output.flatten(1) # (B, D)
+        
+        return embeddings
+
+    @singledispatchmethod
+    @torch.no_grad()
+    def predict(self, data):
+        # If data is of the form batch_x
+        self.model.eval()
+        embeddings = self.forward(data)
+        return embeddings
+
+    @predict.register
+    @torch.no_grad()
+    def _predict_from_dataloader(self, data: DataLoader):
+        self.model.eval()
+        all_embeddings, all_labels = [], []
+
+        for batch in tqdm(data, total=len(data)):
+            if isinstance(batch, dict):
+                x = batch["x"]
+                y = batch.get("y", None)
+                mask = batch.get("mask", None)
+            else:
+                # Handle tuple format (x, y) or (x, mask, y)
+                if len(batch) == 2:
+                    x, y = batch
+                    mask = None
+                elif len(batch) == 3:
+                    x, mask, y = batch
+                else:
+                    x = batch[0]
+                    y = None
+                    mask = None
+
+            embeddings = self.forward(x, mask)
+            all_embeddings.append(embeddings.cpu().detach().float().numpy())
+            if y is not None:
+                if isinstance(y, torch.Tensor):
+                    all_labels.append(y.cpu().numpy())
+                else:
+                    all_labels.append(np.array(y))
+
+        embeddings_np = np.vstack(all_embeddings)
+        if all_labels:
+            labels_np = np.concatenate(all_labels)
+        else:
+            labels_np = None
+
+        return embeddings_np, labels_np
