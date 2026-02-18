@@ -1,0 +1,19 @@
+{
+  "run_name": "vlm_llama-vision_gesture",
+  "records": [
+    {
+      "section": "inference_total",
+      "wall_time_sec": 24.978974432917312,
+      "gpu_time_ms": 24985.48828125,
+      "gpu_alloc_before": 21352817152,
+      "gpu_alloc_peak": 21385748480,
+      "gpu_reserved_before": 21701328896,
+      "gpu_reserved_peak": 21703426048,
+      "gpu_energy_mJ": 6702998,
+      "cpu_rss_before": 2998460416,
+      "cpu_rss_after": 2999640064,
+      "cpu_rss_delta": 1179648
+    }
+  ],
+  "scalars": {}
+}

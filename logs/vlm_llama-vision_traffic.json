@@ -1,0 +1,19 @@
+{
+  "run_name": "vlm_llama-vision_traffic",
+  "records": [
+    {
+      "section": "inference_total",
+      "wall_time_sec": 23.02773786196485,
+      "gpu_time_ms": 23034.193359375,
+      "gpu_alloc_before": 21344297472,
+      "gpu_alloc_peak": 21383649792,
+      "gpu_reserved_before": 21646802944,
+      "gpu_reserved_peak": 21701328896,
+      "gpu_energy_mJ": 6581774,
+      "cpu_rss_before": 2889146368,
+      "cpu_rss_after": 2998460416,
+      "cpu_rss_delta": 109314048
+    }
+  ],
+  "scalars": {}
+}

@@ -1,0 +1,19 @@
+{
+  "run_name": "vlm_phi_crowd",
+  "records": [
+    {
+      "section": "inference_total",
+      "wall_time_sec": 61.54343993286602,
+      "gpu_time_ms": 61549.5625,
+      "gpu_alloc_before": 8302029824,
+      "gpu_alloc_peak": 8646168576,
+      "gpu_reserved_before": 8317304832,
+      "gpu_reserved_peak": 8984199168,
+      "gpu_energy_mJ": 18149183,
+      "cpu_rss_before": 2570727424,
+      "cpu_rss_after": 2653327360,
+      "cpu_rss_delta": 82599936
+    }
+  ],
+  "scalars": {}
+}

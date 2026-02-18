@@ -7,6 +7,19 @@ from fmtk.components.base import BaseModel
 from tqdm import tqdm
 from torchvision import transforms
 
+# ── PyTorch 2.0 compat: torch.all() doesn't support dim=tuple ──
+_orig_torch_all = torch.all
+def _patched_torch_all(input, *args, **kwargs):
+    dim = kwargs.get('dim', args[0] if args else None)
+    if isinstance(dim, tuple):
+        keepdim = kwargs.get('keepdim', False)
+        result = input
+        for d in sorted(dim, reverse=True):
+            result = _orig_torch_all(result, dim=d, keepdim=keepdim)
+        return result
+    return _orig_torch_all(input, *args, **kwargs)
+torch.all = _patched_torch_all
+
 class MolmoModel(BaseModel):
     def __init__(self,device,model_name=None,model_config=None):
         super().__init__()

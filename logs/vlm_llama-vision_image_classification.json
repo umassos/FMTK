@@ -1,0 +1,19 @@
+{
+  "run_name": "vlm_llama-vision_image_classification",
+  "records": [
+    {
+      "section": "inference_total",
+      "wall_time_sec": 42.591036387952045,
+      "gpu_time_ms": 42597.328125,
+      "gpu_alloc_before": 21352817152,
+      "gpu_alloc_peak": 21382861312,
+      "gpu_reserved_before": 21703426048,
+      "gpu_reserved_peak": 21703426048,
+      "gpu_energy_mJ": 11105278,
+      "cpu_rss_before": 2986094592,
+      "cpu_rss_after": 3016261632,
+      "cpu_rss_delta": 30167040
+    }
+  ],
+  "scalars": {}
+}

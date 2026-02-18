@@ -1,0 +1,19 @@
+{
+  "run_name": "vlm_minicpm_ocr",
+  "records": [
+    {
+      "section": "inference_total",
+      "wall_time_sec": 9.924246876966208,
+      "gpu_time_ms": 9924.2392578125,
+      "gpu_alloc_before": 16333386752,
+      "gpu_alloc_peak": 16520793088,
+      "gpu_reserved_before": 16483614720,
+      "gpu_reserved_peak": 16701718528,
+      "gpu_energy_mJ": 2871760,
+      "cpu_rss_before": 4746117120,
+      "cpu_rss_after": 4758700032,
+      "cpu_rss_delta": 12582912
+    }
+  ],
+  "scalars": {}
+}

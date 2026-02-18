@@ -22,10 +22,10 @@ class LlavaModel(BaseModel):
 
         if model_name in ("llava-1.5-7b", "llava-1.5-13b"):
             self.processor = AutoProcessor.from_pretrained(model_id, cache_dir=models_directory)
-            self.model = LlavaForConditionalGeneration.from_pretrained(model_id, cache_dir=models_directory, torch_dtype=torch.float16, device_map={"": self.device})
+            self.model = LlavaForConditionalGeneration.from_pretrained(model_id, cache_dir=models_directory, torch_dtype=torch.float16, attn_implementation="flash_attention_2", device_map={"": self.device})
         elif model_name=="llava-v1.6-13b":
             self.processor = AutoProcessor.from_pretrained(model_id, cache_dir=models_directory, trust_remote_code=True)
-            self.model = LlavaNextForConditionalGeneration.from_pretrained(model_id, cache_dir=models_directory, torch_dtype=torch.float16, trust_remote_code=True, low_cpu_mem_usage=True, device_map={"": self.device})
+            self.model = LlavaNextForConditionalGeneration.from_pretrained(model_id, cache_dir=models_directory, torch_dtype=torch.float16, trust_remote_code=True, low_cpu_mem_usage=True, attn_implementation="flash_attention_2", device_map={"": self.device})
 
     def preprocess(self,batch_x,mask=None):
         pass

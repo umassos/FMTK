@@ -16,7 +16,7 @@ class MinicpmModel(BaseModel):
         if model_name=="minicpm":
             model_id='openbmb/MiniCPM-V-2_6'
         tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True, cache_dir=models_directory)
-        self.model = AutoModel.from_pretrained(model_id, trust_remote_code=True, torch_dtype=torch.bfloat16, cache_dir=models_directory).eval().to(self.device)
+        self.model = AutoModel.from_pretrained(model_id, trust_remote_code=True, torch_dtype=torch.bfloat16, cache_dir=models_directory, attn_implementation="flash_attention_2").eval().to(self.device)
         self.processor = tokenizer
 
     def preprocess(self,batch_x,mask=None):
@@ -29,12 +29,20 @@ class MinicpmModel(BaseModel):
             if isinstance(image, torch.Tensor):
                 to_pil = transforms.ToPILImage()
                 image = to_pil(image)
+            # Resize very small images to avoid NaN in MiniCPM's image processor
+            w, h = image.size
+            if w < 32 or h < 32:
+                image = image.resize((max(w, 32), max(h, 32)))
             msgs = [{"role": "user", "content": [image, question]}]
-            response = self.model.chat(
-                image=None,
-                msgs=msgs,
-                tokenizer=self.processor,
-            )
+            try:
+                response = self.model.chat(
+                    image=None,
+                    msgs=msgs,
+                    tokenizer=self.processor,
+                )
+            except (RuntimeError, ValueError) as e:
+                print(f"  MiniCPM sample error ({w}x{h}): {e}")
+                response = ""
             responses.append(response)
         return responses
 

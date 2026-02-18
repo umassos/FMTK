@@ -227,13 +227,34 @@ if __name__ == "__main__":
         os.remove(VLM_METRICS_CSV)
         print("Cleared previous CSV.")
 
+    # ── Resume: read completed (model_hf_id, dataset_path) pairs from CSV ──
+    completed_pairs = set()
+    if os.path.isfile(VLM_METRICS_CSV):
+        with open(VLM_METRICS_CSV, "r") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                completed_pairs.add((row["model_name"], row["dataset_name"]))
+        print(f"Resume: found {len(completed_pairs)} completed (model, task) pairs in CSV.")
+
     all_results = []
 
     for model_name in models_to_run:
         _, _, model_hf_id = VLM_MODELS[model_name]
 
+        # ── Check which tasks still need to run for this model ──
+        remaining_tasks = []
+        for task_name in ALL_TASKS:
+            dataset_cfg, _ = get_vlm_dataset_config(task_name)
+            if (model_hf_id, dataset_cfg["dataset_path"]) not in completed_pairs:
+                remaining_tasks.append(task_name)
+
+        if not remaining_tasks:
+            print(f"\n  SKIP: {model_name} — all {len(ALL_TASKS)} tasks already done.")
+            continue
+
         print(f"\n{'#'*60}")
         print(f"  MODEL: {model_name} ({model_hf_id})")
+        print(f"  Remaining tasks: {remaining_tasks} ({len(remaining_tasks)}/{len(ALL_TASKS)})")
         print(f"{'#'*60}")
 
         # ── load model ────────────────────────────────────
@@ -254,9 +275,9 @@ if __name__ == "__main__":
             traceback.print_exc()
             continue
 
-        # ── run all tasks ─────────────────────────────────
+        # ── run remaining tasks ────────────────────────────
         model_results = []
-        for task_name in ALL_TASKS:
+        for task_name in remaining_tasks:
             try:
                 row = run_task(task_name, model, model_hf_id, model_name,
                                model_load_duration_sec, gpu_load_memory_mb)

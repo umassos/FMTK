@@ -16,7 +16,7 @@ class PhiModel(BaseModel):
         if model_name=="phi":
             model_id='microsoft/Phi-3.5-vision-instruct'
         self.processor = AutoProcessor.from_pretrained(model_id, cache_dir=models_directory, trust_remote_code=True)
-        self.model = AutoModelForCausalLM.from_pretrained(model_id, cache_dir=models_directory, trust_remote_code=True, torch_dtype=torch.float16, device_map={"": self.device})
+        self.model = AutoModelForCausalLM.from_pretrained(model_id, cache_dir=models_directory, trust_remote_code=True, torch_dtype=torch.float16, attn_implementation="flash_attention_2", device_map={"": self.device})
 
     def preprocess(self,batch_x,mask=None):
         pass

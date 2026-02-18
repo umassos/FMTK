@@ -1,0 +1,19 @@
+{
+  "run_name": "vlm_phi_scene",
+  "records": [
+    {
+      "section": "inference_total",
+      "wall_time_sec": 46.24391390103847,
+      "gpu_time_ms": 46250.265625,
+      "gpu_alloc_before": 8302046208,
+      "gpu_alloc_peak": 8646168576,
+      "gpu_reserved_before": 8984199168,
+      "gpu_reserved_peak": 8984199168,
+      "gpu_energy_mJ": 13235977,
+      "cpu_rss_before": 2653327360,
+      "cpu_rss_after": 2611404800,
+      "cpu_rss_delta": -41922560
+    }
+  ],
+  "scalars": {}
+}

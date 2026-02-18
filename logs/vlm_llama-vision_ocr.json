@@ -1,0 +1,19 @@
+{
+  "run_name": "vlm_llama-vision_ocr",
+  "records": [
+    {
+      "section": "inference_total",
+      "wall_time_sec": 6.629824285861105,
+      "gpu_time_ms": 6629.8515625,
+      "gpu_alloc_before": 21353603584,
+      "gpu_alloc_peak": 21382206464,
+      "gpu_reserved_before": 21682454528,
+      "gpu_reserved_peak": 21682454528,
+      "gpu_energy_mJ": 1763649,
+      "cpu_rss_before": 3096821760,
+      "cpu_rss_after": 3096821760,
+      "cpu_rss_delta": 0
+    }
+  ],
+  "scalars": {}
+}
