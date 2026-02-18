@@ -1,0 +1,32 @@
+{
+  "run_name": "vlm_llava-1.5-7b_crowd",
+  "records": [
+    {
+      "section": "inference_total",
+      "wall_time_sec": 24.17905923211947,
+      "gpu_time_ms": 24185.681640625,
+      "gpu_alloc_before": 14128160256,
+      "gpu_alloc_peak": 14619997184,
+      "gpu_reserved_before": 14145290240,
+      "gpu_reserved_peak": 14677966848,
+      "gpu_energy_mJ": 6304271,
+      "cpu_rss_before": 1144594432,
+      "cpu_rss_after": 1800318976,
+      "cpu_rss_delta": 655724544
+    },
+    {
+      "section": "inference_total",
+      "wall_time_sec": 24.42410571500659,
+      "gpu_time_ms": 24433.87109375,
+      "gpu_alloc_before": 14136548864,
+      "gpu_alloc_peak": 14620687360,
+      "gpu_reserved_before": 14145290240,
+      "gpu_reserved_peak": 14663286784,
+      "gpu_energy_mJ": 6632354,
+      "cpu_rss_before": 2914131968,
+      "cpu_rss_after": 3005947904,
+      "cpu_rss_delta": 91815936
+    }
+  ],
+  "scalars": {}
+}

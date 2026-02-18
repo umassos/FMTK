@@ -1,0 +1,32 @@
+{
+  "run_name": "vlm_llava-1.5-7b_gesture",
+  "records": [
+    {
+      "section": "inference_total",
+      "wall_time_sec": 21.056858316995203,
+      "gpu_time_ms": 21063.380859375,
+      "gpu_alloc_before": 14136679936,
+      "gpu_alloc_peak": 14619682304,
+      "gpu_reserved_before": 14677966848,
+      "gpu_reserved_peak": 14677966848,
+      "gpu_energy_mJ": 6145748,
+      "cpu_rss_before": 1703444480,
+      "cpu_rss_after": 1703444480,
+      "cpu_rss_delta": 0
+    },
+    {
+      "section": "inference_total",
+      "wall_time_sec": 21.361452798824757,
+      "gpu_time_ms": 21367.951171875,
+      "gpu_alloc_before": 14136548864,
+      "gpu_alloc_peak": 14620347904,
+      "gpu_reserved_before": 14663286784,
+      "gpu_reserved_peak": 14663286784,
+      "gpu_energy_mJ": 6095064,
+      "cpu_rss_before": 3011870720,
+      "cpu_rss_after": 3011870720,
+      "cpu_rss_delta": 0
+    }
+  ],
+  "scalars": {}
+}

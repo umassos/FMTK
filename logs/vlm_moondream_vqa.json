@@ -1,0 +1,110 @@
+{
+  "run_name": "vlm_moondream_vqa",
+  "records": [
+    {
+      "section": "inference_total",
+      "wall_time_sec": 21.181745518930256,
+      "gpu_time_ms": 21182.103515625,
+      "gpu_alloc_before": 4282149888,
+      "gpu_alloc_peak": 4501998592,
+      "gpu_reserved_before": 4924112896,
+      "gpu_reserved_peak": 4924112896,
+      "gpu_energy_mJ": 7974947,
+      "cpu_rss_before": 2752356352,
+      "cpu_rss_after": 2752552960,
+      "cpu_rss_delta": 196608
+    },
+    {
+      "section": "inference_total",
+      "wall_time_sec": 21.00974241795484,
+      "gpu_time_ms": 21009.873046875,
+      "gpu_alloc_before": 4282149888,
+      "gpu_alloc_peak": 4501998592,
+      "gpu_reserved_before": 4924112896,
+      "gpu_reserved_peak": 4924112896,
+      "gpu_energy_mJ": 7883614,
+      "cpu_rss_before": 2744741888,
+      "cpu_rss_after": 2744938496,
+      "cpu_rss_delta": 196608
+    },
+    {
+      "section": "inference_total",
+      "wall_time_sec": 18.96544719999656,
+      "gpu_time_ms": 18972.17578125,
+      "gpu_alloc_before": 4282149888,
+      "gpu_alloc_peak": 4501998592,
+      "gpu_reserved_before": 4924112896,
+      "gpu_reserved_peak": 4924112896,
+      "gpu_energy_mJ": 5317278,
+      "cpu_rss_before": 2840690688,
+      "cpu_rss_after": 2840887296,
+      "cpu_rss_delta": 196608
+    },
+    {
+      "section": "inference_total",
+      "wall_time_sec": 18.992559654987417,
+      "gpu_time_ms": 18999.166015625,
+      "gpu_alloc_before": 4282149888,
+      "gpu_alloc_peak": 4501998592,
+      "gpu_reserved_before": 4924112896,
+      "gpu_reserved_peak": 4924112896,
+      "gpu_energy_mJ": 5309415,
+      "cpu_rss_before": 2839388160,
+      "cpu_rss_after": 2839584768,
+      "cpu_rss_delta": 196608
+    },
+    {
+      "section": "inference_total",
+      "wall_time_sec": 18.970854577957653,
+      "gpu_time_ms": 18982.2265625,
+      "gpu_alloc_before": 4282149888,
+      "gpu_alloc_peak": 4501998592,
+      "gpu_reserved_before": 4924112896,
+      "gpu_reserved_peak": 4924112896,
+      "gpu_energy_mJ": 5306230,
+      "cpu_rss_before": 2892640256,
+      "cpu_rss_after": 2892836864,
+      "cpu_rss_delta": 196608
+    },
+    {
+      "section": "inference_total",
+      "wall_time_sec": 19.289374512038194,
+      "gpu_time_ms": 19299.6875,
+      "gpu_alloc_before": 4282149888,
+      "gpu_alloc_peak": 4501998592,
+      "gpu_reserved_before": 4924112896,
+      "gpu_reserved_peak": 4924112896,
+      "gpu_energy_mJ": 5404488,
+      "cpu_rss_before": 2895585280,
+      "cpu_rss_after": 2895781888,
+      "cpu_rss_delta": 196608
+    },
+    {
+      "section": "inference_total",
+      "wall_time_sec": 18.93046988500282,
+      "gpu_time_ms": 18940.64453125,
+      "gpu_alloc_before": 4282149888,
+      "gpu_alloc_peak": 4501998592,
+      "gpu_reserved_before": 4924112896,
+      "gpu_reserved_peak": 4924112896,
+      "gpu_energy_mJ": 5305798,
+      "cpu_rss_before": 2839420928,
+      "cpu_rss_after": 2839617536,
+      "cpu_rss_delta": 196608
+    },
+    {
+      "section": "inference_total",
+      "wall_time_sec": 19.147106290096417,
+      "gpu_time_ms": 19153.65625,
+      "gpu_alloc_before": 4282149888,
+      "gpu_alloc_peak": 4501998592,
+      "gpu_reserved_before": 4924112896,
+      "gpu_reserved_peak": 4924112896,
+      "gpu_energy_mJ": 5370681,
+      "cpu_rss_before": 2914402304,
+      "cpu_rss_after": 2914598912,
+      "cpu_rss_delta": 196608
+    }
+  ],
+  "scalars": {}
+}

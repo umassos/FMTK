@@ -29,5 +29,8 @@ def get_dataset_class(dataset_type):
     elif dataset_type=='illness':
         from fmtk.datasets.illness import IllnessDataset
         return IllnessDataset
-    
+    elif dataset_type=='vlm':
+        from fmtk.datasets.vlm_dataset import VLMDataset
+        return VLMDataset
+
     raise ValueError(f"Unknown dataset type: {dataset_type}")

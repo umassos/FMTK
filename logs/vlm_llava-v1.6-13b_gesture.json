@@ -1,0 +1,19 @@
+{
+  "run_name": "vlm_llava-v1.6-13b_gesture",
+  "records": [
+    {
+      "section": "inference_total",
+      "wall_time_sec": 124.0638908711262,
+      "gpu_time_ms": 124070.046875,
+      "gpu_alloc_before": 26840886784,
+      "gpu_alloc_peak": 32347007488,
+      "gpu_reserved_before": 33632026624,
+      "gpu_reserved_peak": 35068575744,
+      "gpu_energy_mJ": 36335982,
+      "cpu_rss_before": 1817759744,
+      "cpu_rss_after": 1817759744,
+      "cpu_rss_delta": 0
+    }
+  ],
+  "scalars": {}
+}

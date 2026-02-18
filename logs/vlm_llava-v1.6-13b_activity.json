@@ -1,0 +1,19 @@
+{
+  "run_name": "vlm_llava-v1.6-13b_activity",
+  "records": [
+    {
+      "section": "inference_total",
+      "wall_time_sec": 5.307759426068515,
+      "gpu_time_ms": 5307.837890625,
+      "gpu_alloc_before": 26840886784,
+      "gpu_alloc_peak": 29326522368,
+      "gpu_reserved_before": 35068575744,
+      "gpu_reserved_peak": 35068575744,
+      "gpu_energy_mJ": 1550488,
+      "cpu_rss_before": 1817759744,
+      "cpu_rss_after": 1817759744,
+      "cpu_rss_delta": 0
+    }
+  ],
+  "scalars": {}
+}

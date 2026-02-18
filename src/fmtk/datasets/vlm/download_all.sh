@@ -3,6 +3,11 @@
 # Usage: bash src/fmtk/datasets/vlm/download_all.sh
 #   from the FMTK project root.
 #
+# NOTE: These datasets already exist in ../FMaaS-motivation/vqa/updated/dataset/.
+#   FMTK is configured to read directly from that shared location (see
+#   experiments/run_all/config.py and src/fmtk/tasks/vlm_utils.py).
+#   You only need to run these download scripts if the shared data is unavailable.
+#
 # Excluded (require special handling):
 #   download_crowd.py              - needs ~1GB Google Drive download (gdown)
 #   download_image_classification.py - needs imagenet-1k HF terms accepted

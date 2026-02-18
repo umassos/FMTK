@@ -43,6 +43,25 @@ from fmtk.datasets.base import VisionDataset
 MAX_SAMPLES = 100
 
 
+def vlm_collate_fn(batch):
+    """Custom collate that preserves per-sample ground-truth structure.
+
+    PyTorch's default collate zips list-valued fields across the batch
+    dimension, which destroys variable-length lists (e.g. object_detection
+    categories).  This collate keeps 'y' as-is (list of str/list) and
+    stacks image tensors normally.
+    """
+    import torch
+    batch = [b for b in batch if b is not None]
+    if not batch:
+        return {}
+    return {
+        'x':        torch.stack([b['x'] for b in batch]),
+        'question': [b['question'] for b in batch],
+        'y':        [b['y'] for b in batch],
+    }
+
+
 class VLMDataset(VisionDataset):
 
     def __init__(self, dataset_cfg, task_cfg, split):

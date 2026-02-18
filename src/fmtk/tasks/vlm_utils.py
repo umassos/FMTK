@@ -6,10 +6,14 @@ Each task has:
   - parser:    name of the parser function to clean raw model output
   - evaluator: name of the evaluator function to score predicted vs ground truth
 
-Dataset paths and JSON filenames live in experiments/run_all/config.py (datasets{}).
-This file is pure task logic — no filesystem paths.
+Dataset paths:
+  - Unified pipeline: experiments/run_all/config.py  (datasets{} with 'vlm_*' keys)
+  - Standalone scripts: use get_vlm_dataset_config(task_name) from this module.
+  All VLM data is sourced from FMaaS-motivation (sibling repo) to avoid duplication.
 """
+import os
 import re
+from pathlib import Path
 
 # ==================== TASK REGISTRY ====================
 # prompt    : text prompt sent to the model.
@@ -340,7 +344,7 @@ def evaluate_object_detection(predicted: str, ground_truth) -> bool:
     Ground truth is a list of valid category names for the image.
     Correct if the predicted category is in that list.
     """
-    if not isinstance(ground_truth, list):
+    if not isinstance(ground_truth, (list, tuple)):
         ground_truth = [ground_truth]
     pred_category = predicted.lower().strip()
     gt_categories = [cat.lower().strip() for cat in ground_truth]
@@ -381,3 +385,86 @@ def get_evaluator(evaluator_name: str):
     if evaluator_name not in evaluators:
         raise ValueError(f"Unknown evaluator: '{evaluator_name}'. Available: {list(evaluators)}")
     return evaluators[evaluator_name]
+
+
+# ==================== SHARED DATASET CONFIGURATION ====================
+# All VLM data is sourced from FMaaS-motivation to avoid duplicating ~hundreds of GB.
+# Resolve the shared root once (works regardless of working directory).
+
+_FMTK_ROOT = Path(__file__).resolve().parents[3]          # .../FMTK
+_VLM_DATA_ROOT = _FMTK_ROOT.parent / "FMaaS-motivation" / "vqa" / "updated" / "dataset"
+
+VLM_DATASET_CONFIGS = {
+    "activity": {
+        "dataset_path": str(_VLM_DATA_ROOT / "activity_recognition"),
+        "dataset_type": "vlm",
+        "json_file":    "labels.json",
+    },
+    "crowd": {
+        "dataset_path": str(_VLM_DATA_ROOT / "crowd_counting"),
+        "dataset_type": "vlm",
+        "json_file":    "labels.json",
+    },
+    "gesture": {
+        "dataset_path": str(_VLM_DATA_ROOT / "gesture_recognition"),
+        "dataset_type": "vlm",
+        "json_file":    "labels.json",
+    },
+    "image_classification": {
+        "dataset_path": str(_VLM_DATA_ROOT / "image_classification"),
+        "dataset_type": "vlm",
+        "json_file":    "labels.json",
+    },
+    "object_detection": {
+        "dataset_path": str(_VLM_DATA_ROOT / "object_detection"),
+        "dataset_type": "vlm",
+        "json_file":    "annotations.json",
+    },
+    "ocr": {
+        "dataset_path": str(_VLM_DATA_ROOT / "ocr"),
+        "dataset_type": "vlm",
+        "json_file":    "labels.json",
+    },
+    "scene": {
+        "dataset_path": str(_VLM_DATA_ROOT / "scene_classification"),
+        "dataset_type": "vlm",
+        "json_file":    "labels.json",
+    },
+    "traffic": {
+        "dataset_path": str(_VLM_DATA_ROOT / "traffic_classification"),
+        "dataset_type": "vlm",
+        "json_file":    "labels.json",
+    },
+    "vqa": {
+        "dataset_path": str(_VLM_DATA_ROOT / "vqa"),
+        "dataset_type": "vlm",
+        "json_file":    "val.json",
+        "image_subdir": "val2014",
+    },
+}
+
+
+def get_vlm_dataset_config(task_name: str):
+    """Return (dataset_cfg, task_cfg) for a VLM task using the shared data root.
+
+    Example usage in a standalone profiling script::
+
+        from fmtk.tasks.vlm_utils import get_vlm_dataset_config
+        from fmtk.datasets.vlm_dataset import VLMDataset
+
+        dataset_cfg, task_cfg = get_vlm_dataset_config("scene")
+        dataset = VLMDataset(dataset_cfg, task_cfg, split="test")
+    """
+    if task_name not in TASK_REGISTRY:
+        raise ValueError(
+            f"Unknown VLM task: '{task_name}'. "
+            f"Available: {sorted(TASK_REGISTRY)}"
+        )
+    if task_name not in VLM_DATASET_CONFIGS:
+        raise ValueError(
+            f"No shared dataset config for task '{task_name}'. "
+            f"Available: {sorted(VLM_DATASET_CONFIGS)}"
+        )
+    dataset_cfg = dict(VLM_DATASET_CONFIGS[task_name])
+    task_cfg = {"prompt": TASK_REGISTRY[task_name]["prompt"]}
+    return dataset_cfg, task_cfg

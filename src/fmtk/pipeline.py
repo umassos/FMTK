@@ -208,8 +208,16 @@ class Pipeline:
                     labels.append(y.numpy())
                 return np.concatenate(labels), np.concatenate(preds)
         else:
-            preds,labels=self.model_instance.predict(test_loader)
-            return np.concatenate(labels), np.concatenate(preds)
+            import inspect
+            sig = inspect.signature(self.model_instance.predict)
+            if 'logger' in sig.parameters:
+                preds,labels=self.model_instance.predict(test_loader, logger=self.logger)
+            else:
+                preds,labels=self.model_instance.predict(test_loader)
+            # VLM backbones return lists of lists; TSFM backbones return numpy arrays
+            if isinstance(preds, np.ndarray):
+                return np.concatenate(labels), np.concatenate(preds)
+            return labels, preds
 
     def _encoder_loader(self, dataloader, cfg):
         xs=[]

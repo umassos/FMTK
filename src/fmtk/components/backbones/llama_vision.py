@@ -1,5 +1,6 @@
 from transformers import MllamaForConditionalGeneration, AutoProcessor
 import os
+import time
 import torch
 import re
 from fmtk.components.base import BaseModel
@@ -11,15 +12,15 @@ class LlamaVisionModel(BaseModel):
         super().__init__()
         self.device=device
         base_dir = os.path.dirname(__file__)
-        models_directory = os.path.join(base_dir, '../../../weights')
+        models_directory = os.path.join(base_dir, '../../../../..', 'FMaaS-motivation/vqa/updated/models')
         if model_name=="llama-vision":
             model_id='meta-llama/Llama-3.2-11B-Vision-Instruct'
-        self.processor = AutoProcessor.from_pretrained(model_id, cache_dir=models_directory, trust_remote_code=True, use_fast=True)
-        self.model = MllamaForConditionalGeneration.from_pretrained(model_id, cache_dir=models_directory, torch_dtype=torch.float16, trust_remote_code=True, attn_implementation="eager", device_map={"": "cuda:0"})
-        
+        self.processor = AutoProcessor.from_pretrained(model_id, cache_dir=models_directory, trust_remote_code=True)
+        self.model = MllamaForConditionalGeneration.from_pretrained(model_id, cache_dir=models_directory, torch_dtype=torch.float16, trust_remote_code=True, attn_implementation="eager", device_map={"": self.device})
+
     def preprocess(self,batch_x,mask=None):
         pass
-    
+
     def forward(self, batch_x, mask=None):
         batch_x_image,batch_x_question=batch_x
         responses=[]
@@ -32,15 +33,19 @@ class LlamaVisionModel(BaseModel):
                 "role": "user",
                 "content": [
                     {"type": "image"},
-                    {"type": "text", "text": question + " Please answer in one word."}]}]
+                    {"type": "text", "text": question}]}]
             prompt = self.processor.apply_chat_template(messages, add_generation_prompt=True)
-            inputs = self.processor(image,prompt,add_special_tokens=False,return_tensors="pt").to(self.device)
+            inputs = self.processor(image, prompt, add_special_tokens=False, return_tensors="pt").to(self.device)
             generate_inputs = {"input_ids": inputs["input_ids"], "attention_mask": inputs["attention_mask"]}
             outputs = self.model.generate(**generate_inputs, max_new_tokens=20)
             response = self.processor.decode(outputs[0], skip_special_tokens=True).strip()
+            # Extract assistant response
+            match = re.search(r"assistant\s*:?[\s\n]*(.*?)(?:\n+user|$)", response, re.IGNORECASE | re.DOTALL)
+            if match:
+                response = match.group(1).strip()
             responses.append(response)
         return responses
-    
+
     def postprocess(self,embeddings):
         answers=[]
         for embedding in embeddings:
@@ -53,29 +58,34 @@ class LlamaVisionModel(BaseModel):
             answers.append(answer)
         return answers
 
-    
-    def predict(self,dataloader):
-        """
-        Compute embeddings for a single split using a DataLoader.
-        
-        Args:
-            dataloader: PyTorch DataLoader yielding (x, y) or just x.
-            pipeline: model or wrapper with a `.embed()` method.
-            device: torch device.
-        
-        Returns:
-            embeddings: [N, E] NumPy array (where E = embedding dimension)
-            labels: [N] NumPy array of ground truth labels (if available)
-        """
-        embeddings_np=[]
-        labels_np=[]
-        for batch in tqdm(dataloader,total=len(dataloader)):
-            image,question,gt = batch['x'],batch['question'],batch['y'] 
-            with torch.no_grad():
-                embeddings=self.forward((image,question))
-                answer=self.postprocess(embeddings)
-                embeddings_np.append(answer)
-                labels_np.append(gt)
-        return embeddings_np,labels_np               
 
-    
+    def predict(self, dataloader, logger=None):
+        """
+        Run inference over a DataLoader, optionally logging per-sample
+        VLM metrics (latency, tokens, GPU utilisation) via the FMTK Logger.
+        """
+        predictions = []
+        labels = []
+        for batch in tqdm(dataloader, total=len(dataloader)):
+            image, question, gt = batch['x'], batch['question'], batch['y']
+
+            gpu_mem_before = logger.get_gpu_mem_mb() if logger else 0
+            t0 = time.time()
+
+            with torch.no_grad():
+                answer = self.forward((image, question))
+
+            latency_ms = (time.time() - t0) * 1000
+
+            if logger:
+                logger.log_vlm_sample(
+                    latency_ms=latency_ms,
+                    prompt_tokens=len(question[0].split()),
+                    gen_tokens=len(answer[0].split()),
+                    gpu_util_pct=logger.get_gpu_util_pct(),
+                    gpu_mem_delta_mb=logger.get_gpu_mem_mb() - gpu_mem_before,
+                )
+
+            predictions.append(answer)
+            labels.append(gt)
+        return predictions, labels

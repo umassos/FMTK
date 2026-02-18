@@ -448,9 +448,59 @@ datasets={
         'dataset_path': '../../../dataset/Exchange', 
         'dataset_type': 'exchange',},
     'illness':{
-        'dataset_path': '../../../dataset/ILLNESS', 
+        'dataset_path': '../../../dataset/ILLNESS',
         'dataset_type': 'illness',
-    }
+    },
+
+    # ── VLM datasets ──────────────────────────────────────────────────
+    # Sourced from FMaaS-motivation to avoid duplicating ~hundreds of GB.
+    # Paths are relative to experiments/run_all/ (where inference_pipeline.py runs).
+    'vlm_activity_recognition': {
+        'dataset_path': '../../../FMaaS-motivation/vqa/updated/dataset/activity_recognition',
+        'dataset_type': 'vlm',
+        'json_file': 'labels.json',
+    },
+    'vlm_crowd_counting': {
+        'dataset_path': '../../../FMaaS-motivation/vqa/updated/dataset/crowd_counting',
+        'dataset_type': 'vlm',
+        'json_file': 'labels.json',
+    },
+    'vlm_gesture_recognition': {
+        'dataset_path': '../../../FMaaS-motivation/vqa/updated/dataset/gesture_recognition',
+        'dataset_type': 'vlm',
+        'json_file': 'labels.json',
+    },
+    'vlm_image_classification': {
+        'dataset_path': '../../../FMaaS-motivation/vqa/updated/dataset/image_classification',
+        'dataset_type': 'vlm',
+        'json_file': 'labels.json',
+    },
+    'vlm_object_detection': {
+        'dataset_path': '../../../FMaaS-motivation/vqa/updated/dataset/object_detection',
+        'dataset_type': 'vlm',
+        'json_file': 'annotations.json',
+    },
+    'vlm_ocr': {
+        'dataset_path': '../../../FMaaS-motivation/vqa/updated/dataset/ocr',
+        'dataset_type': 'vlm',
+        'json_file': 'labels.json',
+    },
+    'vlm_scene_classification': {
+        'dataset_path': '../../../FMaaS-motivation/vqa/updated/dataset/scene_classification',
+        'dataset_type': 'vlm',
+        'json_file': 'labels.json',
+    },
+    'vlm_traffic_classification': {
+        'dataset_path': '../../../FMaaS-motivation/vqa/updated/dataset/traffic_classification',
+        'dataset_type': 'vlm',
+        'json_file': 'labels.json',
+    },
+    'vlm_vqa': {
+        'dataset_path': '../../../FMaaS-motivation/vqa/updated/dataset/vqa',
+        'dataset_type': 'vlm',
+        'json_file': 'val.json',
+        'image_subdir': 'val2014',
+    },
     }
 
         

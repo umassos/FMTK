@@ -1,5 +1,6 @@
 from transformers import AutoModelForCausalLM
 import os
+import time
 import torch
 import re
 from fmtk.components.base import BaseModel
@@ -11,7 +12,7 @@ class MoondreamModel(BaseModel):
         super().__init__()
         self.device=device
         base_dir = os.path.dirname(__file__)
-        models_directory = os.path.join(base_dir, '../../../weights')
+        models_directory = os.path.join(base_dir, '../../../../..', 'FMaaS-motivation/vqa/updated/models')
         if model_name=="moondream":
             model_id='vikhyatk/moondream2'
         self.processor = None #AutoProcessor.from_pretrained(model_id, cache_dir=models_directory, trust_remote_code=True)
@@ -27,7 +28,7 @@ class MoondreamModel(BaseModel):
             if isinstance(image, torch.Tensor):
                 to_pil = transforms.ToPILImage()
                 image = to_pil(image)
-            response = self.model.query(image, question + " Please answer in one word.")["answer"]
+            response = self.model.query(image, question)["answer"]
             responses.append(response)
         return responses
     
@@ -35,27 +36,43 @@ class MoondreamModel(BaseModel):
         pass
 
     
-    def predict(self,dataloader):
+    def predict(self, dataloader, logger=None):
         """
-        Compute embeddings for a single split using a DataLoader.
-        
+        Run inference over a DataLoader, optionally logging per-sample
+        VLM metrics (latency, tokens, GPU utilisation) via the FMTK Logger.
+
         Args:
-            dataloader: PyTorch DataLoader yielding (x, y) or just x.
-            pipeline: model or wrapper with a `.embed()` method.
-            device: torch device.
-        
+            dataloader: PyTorch DataLoader yielding dicts with 'x', 'question', 'y'.
+            logger:     (optional) fmtk.logger.Logger instance for profiling.
+
         Returns:
-            embeddings: [N, E] NumPy array (where E = embedding dimension)
-            labels: [N] NumPy array of ground truth labels (if available)
+            predictions: list of lists of answer strings
+            labels:      list of lists/tuples of ground-truth labels
         """
-        embeddings_np=[]
-        labels_np=[]
-        for batch in tqdm(dataloader,total=len(dataloader)):
-            image,question,gt = batch['x'],batch['question'],batch['y'] 
+        predictions = []
+        labels = []
+        for batch in tqdm(dataloader, total=len(dataloader)):
+            image, question, gt = batch['x'], batch['question'], batch['y']
+
+            gpu_mem_before = logger.get_gpu_mem_mb() if logger else 0
+            t0 = time.time()
+
             with torch.no_grad():
-                answer=self.forward((image,question))
-                embeddings_np.append(answer)
-                labels_np.append(gt)
-        return embeddings_np,labels_np               
+                answer = self.forward((image, question))
+
+            latency_ms = (time.time() - t0) * 1000
+
+            if logger:
+                logger.log_vlm_sample(
+                    latency_ms=latency_ms,
+                    prompt_tokens=len(question[0].split()),
+                    gen_tokens=len(answer[0].split()),
+                    gpu_util_pct=logger.get_gpu_util_pct(),
+                    gpu_mem_delta_mb=logger.get_gpu_mem_mb() - gpu_mem_before,
+                )
+
+            predictions.append(answer)
+            labels.append(gt)
+        return predictions, labels               
 
     
