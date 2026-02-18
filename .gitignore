@@ -6,3 +6,7 @@ dist
 src/fmtk.egg-info
 notes.md
 src/fmtk/saved
+src/fmtk/datasets/vlm/hf-token.txt
+**/hf-token.txt
+**/hf-token.txt
+data/
