@@ -208,14 +208,45 @@ class Pipeline:
                     labels.append(y.numpy())
                 return np.concatenate(labels), np.concatenate(preds)
         else:
-            import inspect
-            sig = inspect.signature(self.model_instance.predict)
-            if 'logger' in sig.parameters:
-                preds,labels=self.model_instance.predict(test_loader, logger=self.logger)
-            else:
-                preds,labels=self.model_instance.predict(test_loader)
-            # VLM backbones return lists of lists; TSFM backbones return numpy arrays
-            if isinstance(preds, np.ndarray):
+            preds, labels = [], []
+            is_vlm = False
+            for batch in tqdm(test_loader):
+                is_vlm = 'question' in batch
+
+                if is_vlm:
+                    x = (batch['x'], batch['question'])
+                    y = batch['y']
+                    mask = None
+                else:
+                    x, y = batch['x'], batch['y']
+                    mask = batch.get('mask', None)
+
+                gpu_mem_before = self.logger.get_gpu_mem_mb() if (is_vlm and self.logger) else 0
+                t0 = time.time()
+
+                with (self.logger.measure("predict", device=self.logger.device) if self.logger else nullcontext()):
+                    with torch.no_grad():
+                        output = self.model_instance.forward(x, mask)
+
+                latency_ms = (time.time() - t0) * 1000
+
+                if is_vlm and self.logger:
+                    self.logger.log_vlm_sample(
+                        latency_ms=latency_ms,
+                        prompt_tokens=len(batch['question'][0].split()),
+                        gen_tokens=len(output[0].split()),
+                        gpu_util_pct=self.logger.get_gpu_util_pct(),
+                        gpu_mem_delta_mb=self.logger.get_gpu_mem_mb() - gpu_mem_before,
+                    )
+
+                if is_vlm:
+                    preds.append(output)
+                    labels.append(y)
+                else:
+                    preds.append(output.detach().cpu().numpy())
+                    labels.append(y.numpy())
+
+            if not is_vlm:
                 return np.concatenate(labels), np.concatenate(preds)
             return labels, preds
 

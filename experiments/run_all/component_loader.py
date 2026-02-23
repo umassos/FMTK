@@ -8,7 +8,28 @@ def get_model_class(model_type):
     elif model_type == 'moment':
         from fmtk.components.backbones.moment import MomentModel
         return MomentModel
-    raise ValueError(f"Unknown dataset type: {model_type}")
+    elif model_type == 'llava':
+        from fmtk.components.backbones.llava import LlavaModel
+        return LlavaModel
+    elif model_type == 'llama_vision':
+        from fmtk.components.backbones.llama_vision import LlamaVisionModel
+        return LlamaVisionModel
+    elif model_type == 'minicpm':
+        from fmtk.components.backbones.minicpm import MinicpmModel
+        return MinicpmModel
+    elif model_type == 'molmo':
+        from fmtk.components.backbones.molmo import MolmoModel
+        return MolmoModel
+    elif model_type == 'moondream':
+        from fmtk.components.backbones.moondream import MoondreamModel
+        return MoondreamModel
+    elif model_type == 'phi':
+        from fmtk.components.backbones.phi import PhiModel
+        return PhiModel
+    elif model_type == 'qwen':
+        from fmtk.components.backbones.qwen import QwenModel
+        return QwenModel
+    raise ValueError(f"Unknown model type: {model_type}")
 
 def get_decoder_class(task_type,decoder_type):
     if task_type=='regression':

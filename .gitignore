@@ -10,3 +10,4 @@ src/fmtk/datasets/vlm/hf-token.txt
 **/hf-token.txt
 **/hf-token.txt
 data/
+logs/

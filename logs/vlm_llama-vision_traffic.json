@@ -13,6 +13,19 @@
       "cpu_rss_before": 2889146368,
       "cpu_rss_after": 2998460416,
       "cpu_rss_delta": 109314048
+    },
+    {
+      "section": "inference_total",
+      "wall_time_sec": 23.654109277995303,
+      "gpu_time_ms": 23660.642578125,
+      "gpu_alloc_before": 21353603584,
+      "gpu_alloc_peak": 21384567296,
+      "gpu_reserved_before": 21682454528,
+      "gpu_reserved_peak": 21682454528,
+      "gpu_energy_mJ": 6447744,
+      "cpu_rss_before": 3187130368,
+      "cpu_rss_after": 3187130368,
+      "cpu_rss_delta": 0
     }
   ],
   "scalars": {}
