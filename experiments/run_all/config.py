@@ -472,34 +472,34 @@ adapters={
 datasets={
     'PPG-data': 
     {
-        'dataset_path': '../../../dataset/PPG-data',
+        'dataset_path': '../../src/fmtk/datasets/PPG-data',
         'dataset_type': 'PPG-data',
     },
     'ecg5000':{
-        'dataset_path': '../../../dataset/ECG5000',
+        'dataset_path': '../../src/fmtk/datasets/ECG5000',
         'dataset_type': 'ECG5000',
     },
     'ETTh1':{
-        'dataset_path': '../../../dataset/ETTh1', 
+        'dataset_path': '../../src/fmtk/datasets/ETTh1',
         'dataset_type': 'ETTh1',   
     },
     'UWaveGestureLibraryAll':{
-        'dataset_path': '../../../dataset/UWaveGestureLibraryAll', 
+        'dataset_path': '../../src/fmtk/datasets/UWaveGestureLibraryAll',
         'dataset_type': 'UWaveGestureLibraryAll',},
     'ecl':{
-        'dataset_path': '../../../dataset/ElectricityLoad-data', 
+        'dataset_path': '../../src/fmtk/datasets/ElectricityLoad-data',
         'dataset_type': 'ecl',},
     'weather':{
-        'dataset_path': '../../../dataset/Weather', 
+        'dataset_path': '../../src/fmtk/datasets/Weather',
         'dataset_type': 'weather',},
     'traffic':{
-        'dataset_path': '../../../dataset/Traffic', 
+        'dataset_path': '../../src/fmtk/datasets/Traffic',
         'dataset_type': 'traffic',},
     'exchange':{    
-        'dataset_path': '../../../dataset/Exchange', 
+        'dataset_path': '../../src/fmtk/datasets/Exchange',
         'dataset_type': 'exchange',},
     'illness':{
-        'dataset_path': '../../../dataset/ILLNESS',
+        'dataset_path': '../../src/fmtk/datasets/ILLNESS',
         'dataset_type': 'illness',
     },
 

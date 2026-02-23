@@ -90,7 +90,7 @@ if __name__ == "__main__":
 
     # 1) TSFM
     if not args.vlm_only:
-        ds_path = "../../../dataset/PPG-data"  # from config.py
+        ds_path = "../../src/fmtk/datasets/PPG-data"  # from config.py
         if check_dataset(ds_path):
             tsfm_ran = True
             ok &= run_task("TSFM", "diasbp", tsfm_task_info, tsfm_pipeline)
