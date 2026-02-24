@@ -1,5 +1,5 @@
 import numpy as np
-from fmtk.datasets.base import TimeSeriesDataset
+from fmtk.datasetloaders.base import TimeSeriesDataset
 import pandas as pd
 import os
 from tqdm import tqdm

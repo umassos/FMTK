@@ -4,7 +4,7 @@ import torch
 from torchvision import transforms
 from PIL import Image
 import scipy.io as sio
-from fmtk.datasets.base import VisionDataset
+from fmtk.datasetloaders.base import VisionDataset
 
 
 class ShanghaiTechDataset(VisionDataset):

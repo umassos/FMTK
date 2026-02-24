@@ -1,6 +1,6 @@
 import torch
 from torchvision import datasets, transforms
-from fmtk.datasets.base import VisionDataset
+from fmtk.datasetloaders.base import VisionDataset
 
 
 class CIFAR10Dataset(VisionDataset):

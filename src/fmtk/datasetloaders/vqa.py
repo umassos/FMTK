@@ -2,7 +2,7 @@ import os
 import json
 from PIL import Image, ImageFile
 from torchvision import transforms
-from fmtk.datasets.base import TimeSeriesDataset
+from fmtk.datasetloaders.base import TimeSeriesDataset
 
 import os
 

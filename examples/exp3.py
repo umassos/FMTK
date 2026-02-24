@@ -1,5 +1,5 @@
 from fmtk.pipeline import Pipeline
-from fmtk.datasets.ppg import PPGDataset
+from fmtk.datasetloaders.ppg import PPGDataset
 from fmtk.components.backbones.moment import MomentModel
 from fmtk.components.decoders.regression.mlp import MLPDecoder
 from fmtk.components.encoders.diff import LinearChannelCombiner

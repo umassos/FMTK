@@ -1,16 +1,16 @@
-from typing import Optional
-
+from typing import Optional, Tuple
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
-from fmtk.datasets.base  import TimeSeriesDataset
+from fmtk.datasetloaders.base import TimeSeriesDataset
 
 import os
 
 root_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../")
-dataset_path = os.path.join(root_dir, "dataset/ETTh1")
+dataset_path = os.path.join(root_dir, "dataset/ElectricityLoad-data")
 
-class ETTh1Dataset(TimeSeriesDataset):
+class ECLDataset(TimeSeriesDataset):
+
     def __init__(
         self,
         dataset_cfg,
@@ -19,6 +19,9 @@ class ETTh1Dataset(TimeSeriesDataset):
         forecast_horizon: Optional[int] = 192,
         data_stride_len: int = 1,
         random_seed: int = 13,
+        train_ratio: float = 0.7,
+        val_ratio: float = 0.1,
+        test_ratio: float = 0.2,
         target_col: Optional[str] = "OT",
     ):
         """
@@ -27,41 +30,45 @@ class ETTh1Dataset(TimeSeriesDataset):
         forecast_horizon : int
             Length of the prediction sequence.
         split : str
-            Split of the dataset, 'train' or 'test'.
+            'train', 'val', or 'test'.
         data_stride_len : int
-            Stride length when generating consecutive
-            time series windows.
-        task_name : str
-            The task that the dataset is used for. One of
-            'forecasting', or  'imputation'.
+            Stride for sliding windows.
         random_seed : int
-            Random seed for reproducibility.
+            For reproducibility (if needed).
+        two_year_start : str or None
+            Start of the 2-year window (YYYY-MM-DD). If None, inferred from data start.
+        hourly_agg : {'sum','mean'}
+            Aggregation when going from 15-min to hourly. For energy (kWh) use 'sum' and
+            multiply 15-min kW by 0.25 before summing.
         """
         super().__init__(dataset_cfg, task_cfg, split)
         self.seq_len = 512
         self.forecast_horizon = forecast_horizon
-        self.full_file_path_and_name = f"{dataset_path}/ETTh1.csv"
+        self.full_file_path_and_name = f"{dataset_path}/electricity.csv"
         self.data_stride_len = data_stride_len
         self.task_name = self.task_cfg['task_type']
         self.random_seed = random_seed
-        self.target_col = target_col  
-
-        # Read data
+        self.train_ratio = train_ratio
+        self.val_ratio = val_ratio
+        self.test_ratio = test_ratio     
+        self.target_col = target_col   
         self._read_data()
 
     def _get_borders(self):
-        n_train = 12 * 30 * 24
-        n_val = 4 * 30 * 24
-        n_test = 4 * 30 * 24
+        n_train = int(self.train_ratio * self.length_timeseries_original)
+        n_test = int(self.test_ratio * self.length_timeseries_original)
+        n_val = self.length_timeseries_original - n_train - n_test
+
         train_end = n_train
+        val_start = train_end - self.seq_len
         val_end = n_train + n_val
         test_start = val_end - self.seq_len
         test_end = test_start + n_test + self.seq_len
 
         train = slice(0, train_end)
+        val = slice(val_start, val_end)
         test = slice(test_start, test_end)
-
-        return train, test
+        return train, val, test
 
     def _read_data(self):
         self.scaler = StandardScaler()
@@ -74,7 +81,7 @@ class ETTh1Dataset(TimeSeriesDataset):
 
         df = df[[self.target_col]]
         self.n_channels = 1
-        
+
         data_splits = self._get_borders()
 
         train_data = df[data_splits[0]]
@@ -83,11 +90,13 @@ class ETTh1Dataset(TimeSeriesDataset):
 
         if self.split == "train":
             self.data = df[data_splits[0], :]
-        elif self.split == "test" or self.split == "val":
+        elif self.split == "val":
             self.data = df[data_splits[1], :]
-
+        elif self.split == "test":
+            self.data = df[data_splits[2], :]
+        
         self.length_timeseries = self.data.shape[0]
-
+    
     def __getitem__(self, index):
         seq_start = self.data_stride_len * index
         seq_end = seq_start + self.seq_len
@@ -120,7 +129,6 @@ class ETTh1Dataset(TimeSeriesDataset):
                 'x':timeseries,
                 'mask':input_mask,
             }
-
     def __len__(self):
         if self.task_name == "imputation":
             return (self.length_timeseries - self.seq_len) // self.data_stride_len + 1

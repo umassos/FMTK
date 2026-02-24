@@ -13,7 +13,7 @@ from fmtk.components.backbones.mae import MAEModel, get_mae_embed_dim
 from fmtk.components.decoders.classification.linear import LinearDecoder
 from fmtk.metrics import get_accuracy
 from torch.utils.data import DataLoader, Subset
-from fmtk.datasets.EuroSAT import EuroSATDataset
+from fmtk.datasetloaders.EuroSAT import EuroSATDataset
 import traceback
 
 device = "cuda:0"

@@ -1,5 +1,5 @@
 from fmtk.pipeline import Pipeline
-from fmtk.datasets.cifar10 import CIFAR10Dataset
+from fmtk.datasetloaders.cifar10 import CIFAR10Dataset
 from fmtk.components.backbones.dinov2 import DinoV2Model, EMBED_DIMS
 from fmtk.components.decoders.classification.logisticregression import (
     LogisticRegressionDecoder,

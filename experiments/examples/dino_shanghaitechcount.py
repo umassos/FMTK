@@ -14,7 +14,7 @@ print(f"Time taken to import fmtk pipeline: {end_time - start_time} seconds")
 from fmtk.components.backbones.dinov2 import DinoV2Model, get_dinov2_embed_dim
 from fmtk.metrics import get_mae
 from torch.utils.data import DataLoader, Subset
-from fmtk.datasets.ShanghaiTech import ShanghaiTechDataset
+from fmtk.datasetloaders.ShanghaiTech import ShanghaiTechDataset
 import traceback
 from fmtk.components.decoders.regression.spatial_count import SpatialCountDecoder
 

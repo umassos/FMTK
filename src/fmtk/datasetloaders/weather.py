@@ -2,14 +2,14 @@ from typing import Optional, Tuple
 import numpy as np
 import pandas as pd
 from sklearn.preprocessing import StandardScaler
-from fmtk.datasets.base import TimeSeriesDataset
+from fmtk.datasetloaders.base import TimeSeriesDataset
 
 import os
 
 root_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../")
-dataset_path = os.path.join(root_dir, "dataset/Traffic")
+dataset_path = os.path.join(root_dir, "dataset/Weather")
 
-class TrafficDataset(TimeSeriesDataset):
+class WeatherDataset(TimeSeriesDataset):
 
     def __init__(
         self,
@@ -44,7 +44,7 @@ class TrafficDataset(TimeSeriesDataset):
         super().__init__(dataset_cfg, task_cfg, split)
         self.seq_len = 512
         self.forecast_horizon = forecast_horizon
-        self.full_file_path_and_name = f"{dataset_path}/traffic.csv"
+        self.full_file_path_and_name = f"{dataset_path}/weather.csv"
         self.data_stride_len = data_stride_len
         self.task_name = self.task_cfg['task_type']
         self.random_seed = random_seed
@@ -116,7 +116,7 @@ class TrafficDataset(TimeSeriesDataset):
             return {
                 'x':timeseries,
                 'y':forecast,
-            }
+                }
 
         elif self.task_name == "imputation":
             if seq_end > self.length_timeseries:
@@ -125,7 +125,10 @@ class TrafficDataset(TimeSeriesDataset):
 
             timeseries = self.data[seq_start:seq_end, :].T
 
-            return timeseries, input_mask
+            return {
+                'x':timeseries,
+                'mask':input_mask,
+                }
 
     def __len__(self):
         if self.task_name == "imputation":

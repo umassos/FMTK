@@ -3,7 +3,7 @@ import pandas as pd
 import torch
 from torchvision import datasets, transforms
 from PIL import Image
-from fmtk.datasets.base import VisionDataset
+from fmtk.datasetloaders.base import VisionDataset
 import json
 from transformers import AutoImageProcessor
 

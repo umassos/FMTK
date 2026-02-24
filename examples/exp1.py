@@ -1,5 +1,5 @@
 from fmtk.pipeline import Pipeline
-from fmtk.datasets.ecg5000 import ECG5000Dataset
+from fmtk.datasetloaders.ecg5000 import ECG5000Dataset
 from fmtk.components.backbones.chronos import ChronosModel
 from fmtk.components.decoders.classification.svm import SVMDecoder
 from fmtk.metrics import get_accuracy

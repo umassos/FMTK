@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 from torchvision import datasets, transforms
-from fmtk.datasets.base import VisionDataset
+from fmtk.datasetloaders.base import VisionDataset
 
 
 class Food101Dataset(VisionDataset):
