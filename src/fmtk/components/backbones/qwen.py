@@ -11,8 +11,9 @@ class QwenModel(BaseModel):
     def __init__(self,device,model_name=None,model_config=None):
         super().__init__()
         self.device=device
+        self.model_category = 'vlms'
         base_dir = os.path.dirname(__file__)
-        models_directory = os.path.join(base_dir, '../../../weights')
+        models_directory = os.path.join(base_dir, '../../../../models/vlms/pretrained')
         if model_name=="qwen-3B":
             model_id='Qwen/Qwen2.5-VL-3B-Instruct'
         elif model_name=="qwen-7B":

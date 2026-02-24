@@ -1,0 +1,51 @@
+{
+  "backbone": {
+    "wall time": 2004.2494960362092,
+    "gpu time": 2005.80810546875,
+    "gpu peak": 151.835648,
+    "gpu energy": 93.292,
+    "cpu dRSS": 148.557824
+  },
+  "add_decoder_diasbp_momentsmall_mlp_mlp": {
+    "wall time": 0.2846249844878912,
+    "gpu time": 0.3164159953594208,
+    "gpu peak": 152.099328,
+    "gpu energy": 0.0,
+    "cpu dRSS": 0.0
+  },
+  "decoder": {
+    "wall time": 11.894691007910296,
+    "gpu time": 11.947455883026123,
+    "gpu peak": 160.948736,
+    "gpu energy": 0.0,
+    "cpu dRSS": 0.0
+  },
+  "add_encoder": {
+    "wall time": 0.0026644847821444273,
+    "gpu time": 0.0271360008046031,
+    "gpu peak": 160.948736,
+    "gpu energy": 0.0,
+    "cpu dRSS": 0.0
+  },
+  "train": {
+    "wall time": 10901.58997301478,
+    "gpu time": 10901.62939453125,
+    "gpu peak": 1838.063616,
+    "gpu energy": 2329.3335,
+    "cpu dRSS": 24.045568
+  },
+  "predict": {
+    "wall time": 9.682914981811603,
+    "gpu time": 9.719211717931236,
+    "gpu peak": 264.32713053658534,
+    "gpu energy": 0.9848536585365854,
+    "cpu dRSS": -0.047953170731707316
+  },
+  "add_decoder_diasbp_momentsmall_mlp_mlp_lora": {
+    "wall time": 0.5758290062658489,
+    "gpu time": 0.6605119705200195,
+    "gpu peak": 169.798144,
+    "gpu energy": 0.0,
+    "cpu dRSS": 0.0
+  }
+}

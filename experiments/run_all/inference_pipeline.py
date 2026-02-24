@@ -90,7 +90,8 @@ class InferencePipeline:
             summary=logger.summary()
             if not self.train:
                 base_dir = os.path.dirname(__file__)
-                with open(f"{base_dir}/../../src/fmtk/saved/{path['path']}/pipeline.json", 'r') as file:
+                category = P.model_instance.model_category
+                with open(f"{base_dir}/../../models/{category}/finetuned/{path['path']}/pipeline.json", 'r') as file:
                     data = json.load(file)
                 summary.update({'train':data['train']})
 

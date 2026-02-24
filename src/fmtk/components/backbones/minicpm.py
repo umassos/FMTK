@@ -10,8 +10,9 @@ class MinicpmModel(BaseModel):
     def __init__(self,device,model_name=None,model_config=None):
         super().__init__()
         self.device=device
+        self.model_category = 'vlms'
         base_dir = os.path.dirname(__file__)
-        models_directory = os.path.join(base_dir, '../../../weights')
+        models_directory = os.path.join(base_dir, '../../../../models/vlms/pretrained')
         if model_name=="minicpm":
             model_id='openbmb/MiniCPM-V-2_6'
         tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True, cache_dir=models_directory)

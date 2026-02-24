@@ -56,7 +56,8 @@ class Pipeline:
         with (self.logger.measure(f"add_decoder_{path}", device=self.logger.device) if self.logger else nullcontext()):
             if not train:
                 self.decoders[decoder_name]= decoder_obj
-                self.decoders[decoder_name].model.load_state_dict(torch.load(f"{self.base_dir}/saved/{path}/decoder.pth"))
+                category = self.model_instance.model_category
+                self.decoders[decoder_name].model.load_state_dict(torch.load(f"{self.base_dir}/../../models/{category}/finetuned/{path}/decoder.pth"))
                 
             else:
                 self.decoders[decoder_name] = decoder_obj
@@ -144,16 +145,17 @@ class Pipeline:
                         loss.backward()
                         optimizer.step()
         
-        os.makedirs(f"{self.base_dir}/saved/{path}",exist_ok=True)
+        category = self.model_instance.model_category
+        os.makedirs(f"{self.base_dir}/../../models/{category}/finetuned/{path}",exist_ok=True)
         if trains_decoder:
-            torch.save(self.active_decoder.model.state_dict(), f"{self.base_dir}/saved/{path}/decoder.pth")
+            torch.save(self.active_decoder.model.state_dict(), f"{self.base_dir}/../../models/{category}/finetuned/{path}/decoder.pth")
         if trains_encoder:
-            torch.save(self.active_encoder.model.state_dict(), f"{self.base_dir}/saved/{path}/encoder.pth")
+            torch.save(self.active_encoder.model.state_dict(), f"{self.base_dir}/../../models/{category}/finetuned/{path}/encoder.pth")
         if trains_adapter:
-            self.model_instance.model.save_pretrained(f"{self.base_dir}/saved/{path}/adapter.pth")
+            self.model_instance.model.save_pretrained(f"{self.base_dir}/../../models/{category}/finetuned/{path}/adapter.pth")
         if path is not None:
             summary_metrics = self.logger.summary()
-            summary_path = f"{self.base_dir}/saved/{path}/pipeline.json"
+            summary_path = f"{self.base_dir}/../../models/{category}/finetuned/{path}/pipeline.json"
             with open(summary_path, 'w') as f:
                 json.dump(summary_metrics,f, indent=2)
 

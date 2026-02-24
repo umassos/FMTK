@@ -646,6 +646,7 @@ class ResNetVisionModel(BaseModel):
     def __init__(self, device, model_name="base", model_config={}):
         super().__init__()
         self.device = device
+        self.model_category = 'vision'
         self.model_id = get_resnet_vision_model_id(model_name)
         self.output_hidden_states = model_config.get("output_hidden_states", False)
 

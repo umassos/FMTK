@@ -1,6 +1,6 @@
 
 device="cuda:0"
-Train=True #set it to False for inference only
+Train=False #set it to False for inference only
 backbones={
     'papageip': {
         'model_type': 'papagei',

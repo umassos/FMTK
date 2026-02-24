@@ -10,8 +10,9 @@ class LlavaModel(BaseModel):
     def __init__(self,device,model_name=None,model_config=None):
         super().__init__()
         self.device=device
+        self.model_category = 'vlms'
         base_dir = os.path.dirname(__file__)
-        models_directory = os.path.join(base_dir, '../../../weights')
+        models_directory = os.path.join(base_dir, '../../../../models/vlms/pretrained')
         if model_name=="llava-1.5-7b-hf":
             model_id='llava-hf/llava-1.5-7b-hf'
         elif model_name=="llava-1.5-13b-hf":

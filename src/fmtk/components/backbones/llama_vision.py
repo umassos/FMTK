@@ -10,8 +10,9 @@ class LlamaVisionModel(BaseModel):
     def __init__(self,device,model_name=None,model_config=None):
         super().__init__()
         self.device=device
+        self.model_category = 'vlms'
         base_dir = os.path.dirname(__file__)
-        models_directory = os.path.join(base_dir, '../../../weights')
+        models_directory = os.path.join(base_dir, '../../../../models/vlms/pretrained')
         if model_name=="llama-vision":
             model_id='meta-llama/Llama-3.2-11B-Vision-Instruct'
         self.processor = AutoProcessor.from_pretrained(model_id, cache_dir=models_directory, trust_remote_code=True, use_fast=True)

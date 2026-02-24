@@ -128,7 +128,7 @@ model = ResNet1DMoE(in_channels=1,
             n_classes=model_config['n_classes'],
             n_experts=model_config['n_experts'])
 
-model_path = "../../../weights/papagei_s.pt"
+model_path = "../../../models/tsfm/pretrained/papagei_s.pt"
 model = load_model_without_module_prefix(model, model_path)
 model.to(device)
 
@@ -201,7 +201,7 @@ model = ResNet1DMoE(in_channels=1,
             n_classes=model_config['n_classes'],
             n_experts=model_config['n_experts'])
 
-model_path = "../../../weights/papagei_s.pt"
+model_path = "../../../models/tsfm/pretrained/papagei_s.pt"
 model = load_model_without_module_prefix(model, model_path)
 model.to(device)
 
@@ -236,7 +236,7 @@ model = ResNet1D(in_channels=1,
             use_mt_regression=False,
             use_projection=False)
 
-model_path = "../../../weights/papagei_s_svri.pt"
+model_path = "../../../models/tsfm/pretrained/papagei_s_svri.pt"
 model = load_model_without_module_prefix(model, model_path)
 model.to(device)
 
