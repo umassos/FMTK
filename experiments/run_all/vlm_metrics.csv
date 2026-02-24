@@ -1,3 +1,6 @@
 model_name,dataset_name,device,model_load_duration_sec,gpu_load_memory_mb,avg_cpu_memory_usage_mb,avg_cpu_usage_percent,avg_gpu_usage_percent,avg_gpu_memory_usage_mb,total_prompt_tokens,total_generated_tokens,ttft_ms,avg_latency_ms,throughput_tps,accuracy,total_time,num_samples,gpu_name
 Phi-3.5-vision-instruct,ocr,cuda:0,3.3982698179315776,8293.510144,173.801472,0,97.17,7.1,3300,100,0,596.6267681121826,1.6760897322192756,0.75,59.7570698170457,100,NVIDIA GeForce RTX 3090 Ti
 Phi-3.5-vision-instruct,ocr,cuda:0,3.302990664029494,8293.510144,174.587904,0,97.22,7.1,3300,100,0,599.2286348342896,1.66881210587765,0.75,60.019196033943444,100,NVIDIA GeForce RTX 3090 Ti
+Phi-3.5-vision-instruct,ocr,cuda:0,3.4602994539309293,8293.510144,174.194688,0,97.28,7.1,3300,100,0,597.7867937088013,1.6728372231105662,0.75,59.87189741805196,100,NVIDIA GeForce RTX 3090 Ti
+Phi-3.5-vision-instruct,ocr,cuda:0,3.615929974941537,8293.510144,174.587904,0,97.13,7.1,3300,100,0,599.8374152183533,1.667118413472056,0.75,60.08423340297304,100,NVIDIA GeForce RTX 3090 Ti
+Phi-3.5-vision-instruct,ocr,cuda:0,3.3900376257952303,8293.510144,177.340416,0,97.24,7.1,3300,100,0,602.1498322486877,1.6607162311505888,0.75,60.31101304595359,100,NVIDIA GeForce RTX 3090 Ti
