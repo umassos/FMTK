@@ -9,41 +9,29 @@ from peft import LoraConfig, get_peft_model
 
 
 class MantisModel(BaseModel):
-    def __init__(self, device, model_name="8M"):
+    def __init__(self, device, model_name="8M", model_config=None):
         super().__init__()
         self.device = device
         self.peft_enable = False
 
         # initialization step
-        self.network = Mantis8M(device="cpu")
+        self.network = Mantis8M(device=self.device)
         self.network = Mantis8M.from_pretrained(f"paris-noah/Mantis-{model_name}")
+        self.network.to(self.device)
 
         # next step is wrapping it with trainer
-        self.model = MantisTrainer(device="cpu", network=self.network)
+        self.model = MantisTrainer(device=self.device, network=self.network)
         self.peft_enable = False
 
     # preprocess step almost the same as MOMENTs since both expect (batch, channels, length),
     # and they both need float inputs
-    def preprocess(self, batch):
+    def preprocess(self, batch_x, mask=None):
 
         # FMTK sends dict: {"x":..., "y":..., "mask":...}
-        if isinstance(batch, dict):
-            x = batch["x"]
-            y = batch["y"]
-            mask = batch.get("mask", None)
-            if mask is not None:
-                mask = mask.to(self.device)
+        if mask is not None:
+            mask = mask.to(self.device)
 
-        else:
-            # fallback for tuple mode
-            if len(batch) == 3:
-                x, mask, y = batch
-                mask = mask.to(self.device)
-            else:
-                x, y = batch
-                mask = None
-
-        x = x.float().to(self.device)
+        x = batch_x.float().to(self.device)
         self.B, self.S, self.L = x.shape
 
         # resizing via interpolation, as suggested
@@ -52,24 +40,28 @@ class MantisModel(BaseModel):
                 x, size=512, mode="linear", align_corners=False
             )
 
-        # Mantis expects 1 input channel average multiple channels if present
+        # Mantis expects 1 input channel
         if x.shape[1] != 1:
-            x = x.mean(dim=1, keepdim=True)
+            # Previously, this used to average across channels which leads to loss of information
+            # Better way is to run the pipeline separately for each channel
+            raise ValueError(
+                f"MantisModel currently only supports single-channel input, but got {x.shape[1]} channels."
+            )
 
-        return x, mask, y
+        return x, mask
 
     def forward(self, batch_x, mask=None):
         # changed this to match Chronos args (just pass batch)
-        batch = batch_x
-        
-        x, mask, y = self.preprocess(batch)
+        x, mask = self.preprocess(batch_x)
 
         # x_np = x.cpu().numpy()
         # emb_np = self.model.transform(x_np)
         # embedding = torch.tensor(emb_np, dtype=torch.float32, device=self.device)
 
-        self.network.to(self.device)
-        self.network.train()  # enable training mode if needed
+        ## TODO: Need to see where this goes when we do support finetuning
+        ##  of the badckbone
+        # self.network.train()  # enable training mode if needed
+
         outputs = self.network(x)
 
         # handle possible tuple/dict returns
@@ -80,7 +72,7 @@ class MantisModel(BaseModel):
         else:
             embedding = outputs
 
-        return embedding, y
+        return embedding
 
     @torch.no_grad()
     def predict(self, dataloader: DataLoader):
@@ -91,7 +83,7 @@ class MantisModel(BaseModel):
             all_labels.append(y)
         embeddings_np = np.vstack(all_embeddings)
         labels_np = np.concatenate(all_labels)
-        return embeddings_np, labels_np 
+        return embeddings_np, labels_np
 
     def enable_peft(self, peft_cfg):
         self.model = get_peft_model(self.model, peft_cfg)

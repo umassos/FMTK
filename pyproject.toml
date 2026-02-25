@@ -15,6 +15,7 @@ dependencies = [
 "torchaudio",
 "numpy",
 "pandas",
+"mantis-tsfm",
 "matplotlib",
 "seaborn",
 "joblib",
