@@ -14,7 +14,7 @@ import json
 import torch
 
 class InferencePipeline:
-    def __init__(self,task_name,task_info, pipeline):
+    def __init__(self,task_name,task_info, pipeline, log_file):
 
         self.backbone_cfg = backbones[pipeline['backbone']]
         self.dataset_cfg = datasets[task_info['datasets'][0]]
@@ -25,6 +25,7 @@ class InferencePipeline:
         self.model_name = self.backbone_cfg['model_name']
         self.model_type = self.backbone_cfg['model_type']
         self.device = device
+        self.log_file = log_file
         control_randomness(13)
 
         dataset_class = get_dataset_class(self.dataset_cfg['dataset_type'])
@@ -136,8 +137,8 @@ class InferencePipeline:
                         "inference energy":summary['predict']['gpu energy'],
                         } 
                         
-            write_header = not os.path.exists(log_file)
-            with open(log_file, "a", newline="") as f:
+            write_header = not os.path.exists(self.log_file)
+            with open(self.log_file, "a", newline="") as f:
                 writer = csv.DictWriter(f, fieldnames=metrics.keys())
                 if write_header:
                     writer.writeheader()
