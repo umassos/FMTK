@@ -12,17 +12,14 @@ import argparse
 end_time = timeit.default_timer()
 print(f"Time taken to import fmtk pipeline: {end_time - start_time} seconds")
 
-from fmtk.components.backbones.dinov2 import DinoV2Model, EMBED_DIMS as DINO_EMBED_DIMS
-from fmtk.components.backbones.swin import SwinModel, EMBED_DIMS as SWIN_EMBED_DIMS
-from fmtk.components.decoders.classification.linear import LinearDecoder
-from fmtk.components.encoders.diff import LinearChannelCombiner
+from fmtk.datasets.uwavegesture import UWaveGestureLibraryALLDataset
 from fmtk.metrics import get_accuracy
+from fmtk.components.decoders.classification.linear import LinearDecoder
 from torch.utils.data import DataLoader, Subset, Dataset
 from peft import LoraConfig
-from fmtk.datasets.EuroSAT import EuroSATDataset
 from fmtk.components.decoders.classification.repa_linear import (
     Repa,
-    RepaLinearDecoder,
+    RepaWrappedDecoder,
 )
 import os
 from tqdm import tqdm
@@ -78,45 +75,70 @@ class FeatureDataset(Dataset):
         return {"x": repr_x, "y": repr_y, "idx": idx}
 
 
-def extract_features(dataloader_train, model_cfg, device, model_features_path):
-    backbone_from = utils.get_backbone(
-        model_cfg["model_from_name"], model_cfg["model_from_id"], device, model_cfg
-    )
-    P_from = Pipeline(backbone_from)
+def _extract_single_model(backbone_name, model_id, model_cfg, device, dataloader):
+    """Extract features from one backbone, then free its GPU memory."""
+    backbone = utils.get_backbone(backbone_name, model_id, device, model_cfg)
+    P = Pipeline(backbone)
 
-    backbone_to = utils.get_backbone(
-        model_cfg["model_to_name"], model_cfg["model_to_id"], device, model_cfg
-    )
-    P_to = Pipeline(backbone_to)
+    with torch.no_grad():
+        for batch in tqdm(dataloader, desc=f"Extracting [{model_id}]"):
+            x, idx = batch["x"], batch["idx"]
+            mask = batch.get("mask", None)
+            P.forward(x, mask, idx=idx, use_cache=True)
 
+    feats = P.embedding_cache._cache
+    del P, backbone
+    torch.cuda.empty_cache()
+    return feats
+
+
+def extract_features(
+    dataloader_from, dataloader_to, model_cfg, device, model_features_path
+):
     start_time = timeit.default_timer()
-    for batch in tqdm(dataloader_train, desc="Extracting features..."):
-        x, y, idx = batch["x"], batch["y"], batch["idx"]
-        P_from.forward(x, idx=idx, use_cache=True)
-        P_to.forward(x, idx=idx, use_cache=True)
-    end_time = timeit.default_timer()
 
+    feats_from = _extract_single_model(
+        model_cfg["model_from_name"],
+        model_cfg["model_from_id"],
+        model_cfg,
+        device,
+        dataloader_from,
+    )
+    feats_to = _extract_single_model(
+        model_cfg["model_to_name"],
+        model_cfg["model_to_id"],
+        model_cfg,
+        device,
+        dataloader_to,
+    )
+
+    end_time = timeit.default_timer()
     print(f"Time taken to extract features: {end_time - start_time} seconds")
 
-    feats_from = P_from.embedding_cache._cache
-    feats_to = P_to.embedding_cache._cache
-
-    path = model_features_path
-    logger.info(f"Saving features to {path}")
+    logger.info(f"Saving features to {model_features_path}")
     data = {
-        model_cfg["model_from_id"]: feats_from,
-        model_cfg["model_to_id"]: feats_to,
+        model_cfg["name1"]: feats_from,
+        model_cfg["name2"]: feats_to,
     }
-    torch.save(data, path)
+    os.makedirs(os.path.dirname(model_features_path), exist_ok=True)
+    torch.save(data, model_features_path)
     return data
 
 
-def train_one_epoch(dataloader_train, model, optimizer):
-
+def train_one_epoch(dataloader_train, model, optimizer, device):
     loss_meter = AverageMeter()
     for batch in tqdm(dataloader_train):
-        x, y = batch["x"], batch["y"]
+        x, y = batch["x"].to(device), batch["y"].to(device)
+        # Time series: features are [B, C]; if [B, N, C] then mean over N
+        if x.ndim == 3:
+            x = x.mean(dim=1)
+        if y.ndim == 3:
+            y = y.mean(dim=1)
         feats = model(x)
+        if feats.ndim > 2:
+            feats = feats.flatten(1)
+        if y.ndim > 2:
+            y = y.flatten(1)
         loss = model.criterion(feats, y)
         loss_meter.update(loss.item(), x.size(0))
         loss.backward()
@@ -137,7 +159,6 @@ def run_repa_validation(
     result = get_accuracy(y_test, y_pred)
     return result
 
-
 def run_repa_training(
     dataloader_train,
     model_cfg,
@@ -148,16 +169,24 @@ def run_repa_training(
     inference_config,
     log_path="",
 ):
-
     base_dir = os.path.dirname(os.path.dirname(__file__))
-    decoder_path = f"{base_dir}/src/fmtk/saved/{model_cfg['model_to_id']}/decoder.pth"
-    repa_dir = f"{base_dir}/src/fmtk/saved/repa/{model_cfg['model_from_id']}_to_{model_cfg['model_to_id']}"
+    decoder_path = f"{base_dir}/src/fmtk/saved/uwaveclass_momentsmall_linear/decoder.pth"
+    if not os.path.exists(decoder_path):
+        raise FileNotFoundError(
+            f"Moment decoder not found at {decoder_path}. "
+            "Train a Moment decoder on UWave first (e.g. via moment_uwave.py)."
+        )
+    repa_dir = f"{base_dir}/src/fmtk/saved/repa/uwave_{model_cfg['name1']}_to_{model_cfg['name2']}"
     os.makedirs(repa_dir, exist_ok=True)
     last_save_path = f"{repa_dir}/last.pth"
     best_save_path = f"{repa_dir}/best.pth"
 
-    decoder = RepaLinearDecoder(device, repa_cfg)
+    decoder = LinearDecoder(
+        device, cfg={"input_dim": repa_cfg["repa_output_dim"], "output_dim": 8}
+    )
+    decoder = RepaWrappedDecoder(device, repa_cfg, decoder)
     decoder.load_decoder(decoder_path)
+
     backbone = utils.get_backbone(
         model_cfg["model_from_name"], model_cfg["model_from_id"], device, model_cfg
     )
@@ -166,12 +195,18 @@ def run_repa_training(
     P_validation.add_decoder(decoder, load=True)
 
     model = Repa(device, repa_cfg)
+    model.to(device)
+
     optimizer = torch.optim.Adam(model.parameters(), lr=train_config["lr"])
 
     logger.info("Training RepA model...")
+    logger.info(f"RepA device: {next(model.parameters()).device}")
     best_loss = float("inf")
     for epoch in range(train_config["epochs"]):
-        loss = train_one_epoch(dataloader_train, model, optimizer)
+        start_time = timeit.default_timer()
+        loss = train_one_epoch(dataloader_train, model, optimizer, device)
+        end_time = timeit.default_timer()
+        print(f"Time taken for epoch {epoch + 1}: {end_time - start_time} seconds")
         logger.info(f"Epoch {epoch + 1}/{train_config['epochs']} Loss: {loss:.4f}")
         model.save(last_save_path)
         if loss < best_loss:
@@ -214,32 +249,44 @@ parser.add_argument(
     help="YAML config file specifying default arguments",
 )
 
-parser = argparse.ArgumentParser(description="RepA Training")
+parser = argparse.ArgumentParser(description="RepA Training (UWave Chronos->Moment)")
 model_group = parser.add_argument_group("Model parameters")
 
 model_group.add_argument(
     "--model-from-name",
     type=str,
-    default="dinov2",
+    default="chronos",
     help="Model to convert from",
 )
 model_group.add_argument(
     "--model-to-name",
     type=str,
-    default="dinov2",
+    default="moment",
     help="Model to convert to",
 )
 model_group.add_argument(
     "--model-from-id",
     type=str,
-    default="facebook/dinov2-base",
-    help="Model to convert from",
+    default="small",
+    help="Model to convert from (chronos: small/base/large)",
 )
 model_group.add_argument(
     "--model-to-id",
     type=str,
-    default="facebook/dinov2-small",
-    help="Model to convert to",
+    default="small",
+    help="Model to convert to (moment: small/base/large)",
+)
+model_group.add_argument(
+    "--name1",
+    type=str,
+    default=None,
+    help="Short name for the from-model (defaults to model-from-id)",
+)
+model_group.add_argument(
+    "--name2",
+    type=str,
+    default=None,
+    help="Short name for the to-model (defaults to model-to-id)",
 )
 model_group.add_argument(
     "--return-all-tokens", action="store_true", help="Return all tokens"
@@ -255,16 +302,25 @@ dataset_group = parser.add_argument_group("Dataset parameters")
 dataset_group.add_argument(
     "--dataset-path",
     type=str,
-    default="/work/pi_shenoy_umass_edu/kgudipaty/datasets/EuroSAT",
-    help="Path to the dataset",
+    default="../datasets/UWaveGestureLibraryAll",
+    help="Path to the dataset (folder containing UWaveGestureLibraryAll_*.ts files)",
+)
+dataset_group.add_argument(
+    "--dataset-name",
+    type=str,
+    default="uwave",
+    help="Name of the dataset",
 )
 
 train_group = parser.add_argument_group("Training parameters")
+train_group.add_argument(
+    "--num-experiments", type=int, default=10, help="Number of experiments"
+)
 train_group.add_argument("--train-batch-size", type=int, default=64, help="Batch size")
 train_group.add_argument(
     "--train-shuffle", type=bool, default=False, help="Shuffle the dataset"
 )
-train_group.add_argument("--epochs", type=int, default=20, help="Number of epochs")
+train_group.add_argument("--epochs", type=int, default=50, help="Number of epochs")
 train_group.add_argument("--lr", type=float, default=1e-3, help="Learning rate")
 train_group.add_argument("--scheduler", type=str, default="cosine", help="Scheduler")
 train_group.add_argument(
@@ -288,27 +344,27 @@ repa_group.add_argument(
     "--normalize", type=bool, default=True, help="Normalize the features"
 )
 
+parser.add_argument(
+    "--num-samples-list",
+    type=lambda s: [int(x) for x in s.split(",")],
+    default=[1, 5, 10, 50, 100, 500, 1000, 5000, 10000, 50000],
+    help="List of number of samples to train on",
+)
+
 
 def _parse_args():
-    # TODO: What if we have a YAML config file to parse?
-    # Do we have a config file to parse?
     args_config, remaining = config_parser.parse_known_args()
     if args_config.config:
         with open(args_config.config, "r") as f:
             cfg = yaml.safe_load(f)
             parser.set_defaults(**cfg)
 
-    # The main arg parser parses the rest of the args, the usual
-    # defaults will have been overridden if config file specified.
     args = parser.parse_args(remaining)
-
-    # Cache the args as a text string to save them in the output dir later
     args_text = yaml.safe_dump(args.__dict__, default_flow_style=False)
     return args, args_text
 
 
 if __name__ == "__main__":
-
     args, args_text = _parse_args()
     print(args_text)
 
@@ -328,17 +384,23 @@ if __name__ == "__main__":
         "batch_size": args.inference_batch_size,
         "shuffle": args.inference_shuffle,
     }
-    dataset_cfg = {"dataset_path": args.dataset_path}
     model_cfg = {
         "return_all_tokens": args.return_all_tokens,
         "model_from_id": args.model_from_id,
         "model_to_id": args.model_to_id,
         "model_from_name": args.model_from_name,
         "model_to_name": args.model_to_name,
+        "name1": args.name1,
+        "name2": args.name2,
     }
 
-    args.input_dim = utils.get_embed_dims(args.model_from_name, args.model_from_id)
-    args.repa_output_dim = utils.get_embed_dims(args.model_to_name, args.model_to_id)
+    if args.name1 is None:
+        args.name1 = args.model_from_id
+    if args.name2 is None:
+        args.name2 = args.model_to_id
+
+    args.input_dim = utils.get_embed_dim(args.model_from_name, args.model_from_id)
+    args.repa_output_dim = utils.get_embed_dim(args.model_to_name, args.model_to_id)
     repa_cfg = {
         "input_dim": args.input_dim,
         "repa_output_dim": args.repa_output_dim,
@@ -346,32 +408,32 @@ if __name__ == "__main__":
         "normalize": args.normalize,
     }
 
-    model_features_path = f"{args.model_from_id}_to_{args.model_to_id}_features.pt"
+    model_features_path = f"../features/{args.dataset_name}/{args.name1}_to_{args.name2}_features.pt"
     print(f"Model features path: {model_features_path}")
 
-    train_data = EuroSATDataset(dataset_cfg, task_cfg, split="train")
-    test_data = EuroSATDataset(dataset_cfg, task_cfg, split="test")
+    dataset_cfg = {"dataset_path": args.dataset_path}
 
-    print("Loading test dataloader...")
+    train_data_from = UWaveGestureLibraryALLDataset(dataset_cfg, task_cfg, split="train")
+    train_data_to = UWaveGestureLibraryALLDataset(dataset_cfg, task_cfg, split="train")
+    test_data = UWaveGestureLibraryALLDataset(dataset_cfg, task_cfg, split="test")
+
+    print("Loading dataloaders...")
+    dataloader_train_from = DataLoader(
+        train_data_from,
+        batch_size=train_config["batch_size"],
+        shuffle=False,
+        generator=generator,
+    )
+    dataloader_train_to = DataLoader(
+        train_data_to,
+        batch_size=train_config["batch_size"],
+        shuffle=False,
+        generator=generator,
+    )
     dataloader_test = DataLoader(
         test_data,
         batch_size=inference_config["batch_size"],
         shuffle=inference_config["shuffle"],
-        generator=generator,
-    )
-    print("Loading train dataloader...")
-    # subsets = []
-    # for label in range(train_data.num_classes):
-    #     subsets.append(
-    #         Subset(
-    #             train_data,
-    #             indices=train_data.indices[train_data.labels == label].tolist(),
-    #         )
-    #     )
-    dataloader_train = DataLoader(
-        train_data,
-        batch_size=train_config["batch_size"],
-        shuffle=train_config["shuffle"],
         generator=generator,
     )
 
@@ -381,13 +443,18 @@ if __name__ == "__main__":
     else:
         logger.info("Creating feature dataset...")
         data = extract_features(
-            dataloader_train, model_cfg, device, model_features_path
+            dataloader_train_from,
+            dataloader_train_to,
+            model_cfg,
+            device,
+            model_features_path,
         )
 
-    for num_samples in [1, 5, 10, 50, 100, 500, 1000, 5000, 10000, 50000]:
-        log_path = f"results/repa/{args.model_from_id}_to_{args.model_to_id}_accuracy_num_samples_{num_samples}.csv"
-        for _ in range(10):
-            x, y = data[model_cfg["model_from_id"]], data[model_cfg["model_to_id"]]
+    num_samples_list = args.num_samples_list
+    for num_samples in num_samples_list:
+        log_path = f"results/repa/uwave_{args.name1}_to_{args.name2}_accuracy_num_samples_{num_samples}.csv"
+        for _ in range(args.num_experiments):
+            x, y = data[model_cfg["name1"]], data[model_cfg["name2"]]
             keys = list(x.keys())
             n = min(num_samples, len(keys))
             chosen_positions = np.random.choice(len(keys), n, replace=False)
@@ -410,5 +477,5 @@ if __name__ == "__main__":
                 device,
                 dataloader_test,
                 inference_config,
-                log_path,
+                log_path=log_path,
             )

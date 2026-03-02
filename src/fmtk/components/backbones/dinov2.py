@@ -7,8 +7,6 @@ from transformers import AutoModel, AutoImageProcessor
 from peft import get_peft_model, PeftModel
 from functools import singledispatchmethod
 
-# import torch.nn as nn
-
 def get_dinov2_model_id(model_name):
     if model_name in ['small', 'dinov2-small', 'facebook/dinov2-small']:
         return 'facebook/dinov2-small'
@@ -18,7 +16,8 @@ def get_dinov2_model_id(model_name):
         return 'facebook/dinov2-large'
     elif model_name in ['giant', 'dinov2-giant', 'facebook/dinov2-giant']:
         return 'facebook/dinov2-giant'
-
+    elif model_name in ['Karan007/facebook-dinov2-base-finetuned-orchid']:
+        return 'Karan007/facebook-dinov2-base-finetuned-orchid'
 
 def get_dinov2_embed_dim(model_id):
     if model_id in ['small', 'dinov2-small', 'facebook/dinov2-small']:
@@ -29,16 +28,21 @@ def get_dinov2_embed_dim(model_id):
         return 1024
     elif model_id in ['giant', 'dinov2-giant', 'facebook/dinov2-giant']:
         return 1536
+    elif model_id in ['Karan007/facebook-dinov2-base-finetuned-orchid']:
+        return 768
 
 class DinoV2Model(BaseModel):
     """
     DINOv2 model for vision tasks.
     """
 
-    def __init__(self, device, model_name="base", model_config=None):
+    def __init__(self, device, model_name="base", model_config={}):
         super().__init__()
         self.device = device
         self.return_all_tokens = model_config.get("return_all_tokens", False)
+        # For RF-DETR compatibility: output multi-scale features from these layer indices
+        # e.g. [2, 4, 5, 9] for base (12 layers). Returns list of (B, D, H, W) per layer.
+        self.out_feature_indexes = model_config.get("out_feature_indexes", None)
         # Default to base model if not specified or not recognized
         self.model_id = get_dinov2_model_id(model_name)
 
@@ -64,13 +68,24 @@ class DinoV2Model(BaseModel):
         x, mask = self.preprocess(batch_x, mask)
 
         # The model returns a BaseModelOutputWithPooling object
+        output_hidden_states = self.out_feature_indexes is not None
         if isinstance(self.model, PeftModel) and len(adapters) > 0:
-            outputs = self.model(x, adapters=adapters)
+            outputs = self.model(x, adapters=adapters, output_hidden_states=output_hidden_states)
         else:
-            outputs = self.model(x)
+            outputs = self.model(x, output_hidden_states=output_hidden_states)
+
+        if self.out_feature_indexes is not None:
+            # Multi-scale output for RF-DETR: list of (B, D, H, W) per layer
+            hidden_states = outputs.hidden_states  # tuple of (B, N+1, D)
+            B, N_plus_1, D = hidden_states[0].shape
+            h = w = int((N_plus_1 - 1) ** 0.5)  # exclude CLS
+            feats = []
+            for idx in self.out_feature_indexes:
+                layer_out = hidden_states[idx][:, 1:, :]  # drop CLS: (B, N, D)
+                feats.append(layer_out.permute(0, 2, 1).reshape(B, D, h, w))
+            return feats
 
         if self.return_all_tokens:
-
             # Extract all tokens for a detr style decoder
             embeddings = outputs.last_hidden_state[:, 1:, :]
         else:

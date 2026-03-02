@@ -72,9 +72,6 @@ class ETTh1Dataset(TimeSeriesDataset):
         df.drop(columns=["date"], inplace=True)
         df = df.infer_objects().interpolate(method="cubic")
 
-        df = df[[self.target_col]]
-        self.n_channels = 1
-        
         data_splits = self._get_borders()
 
         train_data = df[data_splits[0]]
@@ -102,11 +99,12 @@ class ETTh1Dataset(TimeSeriesDataset):
                 seq_start = seq_end - self.seq_len
 
             timeseries = self.data[seq_start:seq_end, :].T
-            forecast = self.data[seq_end:pred_end, :].T
+            forecast = self.data[seq_end:pred_end, :].T.flatten()  # [C * forecast_horizon], channel-major
 
             return {
                 'x':timeseries,
                 'y':forecast,
+                'idx': index,
             }
 
         elif self.task_name == "imputation":

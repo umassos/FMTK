@@ -9,12 +9,14 @@ from fmtk.pipeline import Pipeline
 end_time = timeit.default_timer()
 print(f"Time taken to import fmtk pipeline: {end_time - start_time} seconds")
 
-from fmtk.components.backbones.resnet import ResNetVisionModel, get_resnet_embed_dim
+from fmtk.components.backbones.dinov3 import DinoV3Model, get_dinov3_embed_dim
 from fmtk.components.decoders.classification.linear import LinearDecoder
 from fmtk.metrics import get_accuracy
 from torch.utils.data import DataLoader, Subset
-from fmtk.datasets.EuroSAT import EuroSATDataset
+from fmtk.datasets.ecg5000 import ECG5000Dataset
 import traceback
+from fmtk.components.backbones.moment import MomentModel
+from fmtk.components.decoders.classification.mlp import MLPDecoder
 
 device = "cuda:0"
 seed = 42
@@ -32,22 +34,32 @@ def train_model(
     device,
 ):
 
-    backbone = ResNetVisionModel(device, model_id, model_cfg)
+    backbone = MomentModel(device, model_id, model_cfg)
     P = Pipeline(backbone)
-    embed_dim = get_resnet_embed_dim(model_id)
     linear_decoder = P.add_decoder(
-        LinearDecoder(device, cfg={"input_dim": embed_dim, "output_dim": 10}),
+        MLPDecoder(device,cfg={'input_dim':512,'output_dim':5,'hidden_dim':128}),
         load=True,
     )
     end_time = timeit.default_timer()
     print(f"Time taken to load model: {end_time - start_time} seconds")
 
     print("Training...")
-    P.train(
+    P.train_eval(
         dataloader_train,
         parts_to_train=["decoder"],
         cfg=train_config,
-        path="imgclass_dinobase_eurosat_wrong",
+        path="ecgclass_momentsmall_mlp_v2",
+        test_loader=dataloader_test,
+        metric_fn=get_accuracy,
+        mlflow_cfg={
+            "experiment_name": "ecgclass_momentsmall_mlp_v2",
+            "run_name": "ecgclass_momentsmall_mlp_v2",
+            "extra_params": {
+                "model_id": model_id,
+                "model_cfg": model_cfg,
+                "train_config": train_config,
+            },
+        },
     )
 
     y_test, y_pred = P.predict(dataloader_test, cfg=inference_config)
@@ -113,21 +125,22 @@ if __name__ == "__main__":
     train_config = {
         "batch_size": 32,
         "shuffle": False,
-        "epochs": 1,
+        "epochs": 20,
         "lr": 1e-3,
         "scheduler": {"type": "cosine", "T_max": 10, "eta_min": 0},
     }
     inference_config = {"batch_size": 32, "shuffle": False}
     dataset_cfg = {
-        "dataset_path": "/work/pi_shenoy_umass_edu/kgudipaty/datasets/EuroSAT",
-        "model_id": "facebook/dinov2-base",
+        "dataset_path": "../datasets/ECG5000",
+        # "model_id": "facebook/dinov2-base",
+        "model_id": "AutonLab/MOMENT-1-small",
     }
     model_cfg = {"return_all_tokens": False}
 
-    model_id = "resnet-18"
+    model_id = "small"
     samples_per_class = [1000]
-    train_data = EuroSATDataset(dataset_cfg, task_cfg, split="train")
-    test_data = EuroSATDataset(dataset_cfg, task_cfg, split="test")
+    train_data = ECG5000Dataset(dataset_cfg, task_cfg, split="train")
+    test_data = ECG5000Dataset(dataset_cfg, task_cfg, split="test")
 
     print("Loading test dataloader...")
     dataloader_test = DataLoader(
@@ -138,13 +151,13 @@ if __name__ == "__main__":
     )
     print("Loading train dataloader...")
     subsets = []
-    for label in range(train_data.num_classes):
-        subsets.append(
-            Subset(
-                train_data,
-                indices=train_data.indices[train_data.labels == label].tolist(),
-            )
-        )
+    # for label in range(train_data.num_classes):
+    #     subsets.append(
+    #         Subset(
+    #             train_data,
+    #             indices=train_data.indices[train_data.labels == label].tolist(),
+    #         )
+    #     )
     dataloader_train = DataLoader(
         train_data,
         batch_size=train_config["batch_size"],

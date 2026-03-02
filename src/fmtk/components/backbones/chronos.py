@@ -47,9 +47,11 @@ class ChronosModel(BaseModel):
         return output
     
     def postprocess(self,embedding):
-        _,E,_=embedding.shape #[batch size*segment size,token size, length]
-        output =embedding.view(self.B,self.S,E,-1)
+        output = embedding[:, :512, :].mean(dim=1)
         return output
+        # _,E,_=embedding.shape #[batch size*segment size,token size, length]
+        # output =embedding.view(self.B,self.S,E,-1)
+        # return output
     
     def predict(self,dataloader):
         """

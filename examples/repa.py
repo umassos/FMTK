@@ -22,13 +22,12 @@ class RepaLoss(object):
         
 
 class Repa(nn.Module):
-    def __init__(self, device, cfg):
+    def __init__(self, device, stitch, criterion, preprocess_fn):
         super().__init__()
         self.device = device
-        self.repa = nn.Linear(in_features=cfg['input_dim'], out_features=cfg['repa_output_dim'], bias=False)
-        # self.repa = nn.Conv2d(in_channels=cfg['input_dim'], out_channels=cfg['repa_output_dim'], kernel_size=(1, 1), bias=False)
-        self.criterion = RepaLoss(nn.MSELoss(), normalize=cfg.get('normalize', True))
-        self.preprocess_fn = lambda x: x
+        self.repa = stitch
+        self.criterion = criterion
+        self.preprocess_fn = preprocess_fn
 
     def forward(self, x):
         x = self.preprocess_fn(x).float()
@@ -39,15 +38,6 @@ class Repa(nn.Module):
     
     def load(self, path):
         self.repa.load_state_dict(torch.load(path))
-
-    def preprocess(self, x):
-        if x.ndim == 3:
-            x = x.reshape(-1, int(x.shape[1]**0.5), int(x.shape[1]**0.5), x.shape[2]).permute(0, 3, 1, 2)
-        return x
-        # return self.preprocess_fn(x)
-
-    def set_preprocess_fn(self, preprocess_fn):
-        self.preprocess_fn = preprocess_fn
 
 
 class RepaWrappedDecoder(nn.Module):

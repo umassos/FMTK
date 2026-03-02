@@ -1,210 +1,252 @@
-"""
-DINOv2 + Faster R-CNN on COCO detection.
-
-Uses the DINOv2 backbone (return_all_tokens=True) with the Simple Feature Pyramid
-and torchvision-based Faster R-CNN detection heads.
-"""
-
 import timeit
+import numpy as np
 import torch
 import gc
-
-from fmtk.components.backbones.dinov2 import DinoV2Model, EMBED_DIMS
-from fmtk.components.decoders.detection.faster_rcnn import FasterRCNNDecoder
-from fmtk.datasets.COCO import COCODetectionDataset, coco_collate_fn
 from torch.utils.data import DataLoader
+from tqdm.auto import tqdm
+
+start_time = timeit.default_timer()
+from fmtk.pipeline import Pipeline
+
+end_time = timeit.default_timer()
+print(f"Time taken to import fmtk pipeline: {end_time - start_time} seconds")
+
+from fmtk.components.backbones.dinov2 import DinoV2Model, get_dinov2_embed_dim
+from fmtk.components.decoders.detection.rfdetr_decoder import RFDetrDecoder
+from fmtk.datasets.COCO import COCODetectionDataset, coco_collate_fn
 
 device = "cuda:0"
 seed = 42
-torch.manual_seed(seed)
 generator = torch.Generator()
 generator.manual_seed(seed)
 
+# Resolution and per-model configs that match RF-DETR checkpoints
+RFDETR_BACKBONE_CONFIG = {
+    "nano": {"model_id": "small", "resolution": 384, "out_feature_indexes": [3, 6, 9, 12]},
+    "base": {"model_id": "small", "resolution": 560, "out_feature_indexes": [2, 5, 8, 11]},
+}
 
-def train(
-    backbone,
-    decoder,
+DECODER_CHECKPOINT = {"nano": "rf-detr-nano.pth", "base": "rf-detr-base.pth"}
+
+# RF-DETR decoder configs: must match checkpoint architecture
+RFDETR_CONFIG = {
+    "nano": {
+        "out_feature_indexes": [3, 6, 9, 12],
+        "projector_scale": ["P4"],
+        "dec_layers": 2,
+        "dec_n_points": 2,
+    },
+    "base": {
+        "out_feature_indexes": [2, 5, 8, 11],
+        "projector_scale": ["P4"],
+        "dec_layers": 3,
+        "dec_n_points": 2,
+    },
+}
+
+
+def evaluate_detection(pipeline, test_loader, device):
+    """Run detection on test set and compute COCO mAP."""
+    try:
+        from rfdetr.models import PostProcess
+        from rfdetr.datasets.coco_eval import CocoEvaluator
+    except ImportError as e:
+        print(f"Could not evaluate: rfdetr required ({e})")
+        return None
+
+    coco_gt = test_loader.dataset.get_coco_api()
+    pipeline.set_eval_mode()
+    cat_ids = sorted(coco_gt.getCatIds())
+    coco_gt.label2cat = {i: cid for i, cid in enumerate(cat_ids)}
+
+    postprocess = PostProcess(num_select=100)
+    coco_evaluator = CocoEvaluator(coco_gt, ["bbox"], max_dets=100)
+
+    total_preds = 0
+    total_fg = 0
+    sample_scores = []
+    for batch in tqdm(test_loader, desc="Evaluating"):
+        x = batch["x"].to(device)
+        mask = batch.get("mask")
+        if mask is not None:
+            mask = mask.to(device)
+        targets = [{k: v.to(device) if isinstance(v, torch.Tensor) else v for k, v in t.items()} for t in batch["y"]]
+
+        with torch.no_grad():
+            outputs = pipeline.forward(x, mask=mask, idx=None, use_cache=False)
+
+        orig_target_sizes = torch.stack([t["orig_size"] for t in targets], dim=0)
+        results_all = postprocess(outputs, orig_target_sizes)
+        res = {t["image_id"].item(): out for t, out in zip(targets, results_all)}
+        for output in results_all:
+            labels = output["labels"].cpu()
+            scores = output["scores"].cpu()
+            total_preds += len(labels)
+            fg_mask = labels < 80
+            total_fg += fg_mask.sum().item()
+            if len(sample_scores) < 100:
+                sample_scores.extend(scores[fg_mask].tolist())
+        coco_evaluator.update(res)
+
+    print(f"[Debug] Total preds: {total_preds}, foreground (label<80): {total_fg}")
+    if sample_scores:
+        print(f"[Debug] Sample FG scores (first 10): {sample_scores[:10]}")
+
+    coco_evaluator.synchronize_between_processes()
+    coco_evaluator.accumulate()
+    coco_evaluator.summarize()
+
+    stats = coco_evaluator.coco_eval["bbox"].stats
+    mAP = float(stats[0]) if len(stats) > 0 else 0.0
+    mAP_50 = float(stats[1]) if len(stats) > 1 else 0.0
+    mAP_75 = float(stats[2]) if len(stats) > 2 else 0.0
+    print(f"COCO mAP: {mAP:.4f}  mAP@50: {mAP_50:.4f}  mAP@75: {mAP_75:.4f}")
+    return {"mAP": mAP, "mAP_50": mAP_50, "mAP_75": mAP_75}
+
+
+def coco_detection_metric_fn(coco_dataset, device):
+    """Build metric_fn for COCO detection. Use with pipeline train_eval."""
+
+    def metric_fn(y_true, y_pred):
+        if not y_true or not y_pred:
+            return 0.0
+        try:
+            from rfdetr.models import PostProcess
+            from rfdetr.datasets.coco_eval import CocoEvaluator
+        except ImportError:
+            return 0.0
+        coco_gt = coco_dataset.get_coco_api()
+        cat_ids = sorted(coco_gt.getCatIds())
+        coco_gt.label2cat = {i: cid for i, cid in enumerate(cat_ids)}
+        postprocess = PostProcess(num_select=100)
+        coco_evaluator = CocoEvaluator(coco_gt, ["bbox"], max_dets=100)
+        for targets_batch, outputs_batch in zip(y_true, y_pred):
+            targets = [{k: v.to(device) if isinstance(v, torch.Tensor) else v for k, v in t.items()} for t in targets_batch]
+            outputs_device = {k: v.to(device) if isinstance(v, torch.Tensor) else v for k, v in outputs_batch.items()}
+            orig_target_sizes = torch.stack([t["orig_size"] for t in targets], dim=0)
+            results_all = postprocess(outputs_device, orig_target_sizes)
+            res = {t["image_id"].item(): out for t, out in zip(targets, results_all)}
+            coco_evaluator.update(res)
+        coco_evaluator.synchronize_between_processes()
+        coco_evaluator.accumulate()
+        coco_evaluator.summarize()
+        stats = coco_evaluator.coco_eval["bbox"].stats
+        return float(stats[1]) if len(stats) > 1 else 0.0
+
+    return metric_fn
+
+
+def train_model(
     dataloader_train,
-    dataloader_val,
+    dataloader_test,
+    model_id,
+    decoder_id,
+    model_cfg,
     train_config,
+    inference_config,
     device,
 ):
-    """Train the detection decoder for multiple epochs."""
-    optimizer = torch.optim.AdamW(
-        decoder.trainable_parameters(),
-        lr=train_config["lr"],
-        weight_decay=train_config.get("weight_decay", 0.1),
+    rf_cfg = RFDETR_CONFIG.get(decoder_id, RFDETR_CONFIG["base"])
+    out_feature_indexes = rf_cfg["out_feature_indexes"]
+    backbone_cfg = RFDETR_BACKBONE_CONFIG.get(decoder_id, RFDETR_BACKBONE_CONFIG["nano"])
+    model_cfg_aligned = {
+        **model_cfg,
+        "out_feature_indexes": out_feature_indexes,
+    }
+    backbone = DinoV2Model(device, backbone_cfg["model_id"], model_cfg_aligned)
+    P = Pipeline(backbone)
+    embed_dim = get_dinov2_embed_dim(backbone_cfg["model_id"])
+    decoder_cfg = {
+        "embed_dim": embed_dim,
+        "num_classes": 80,
+        "out_feature_indexes": out_feature_indexes,
+        "projector_scale": rf_cfg["projector_scale"],
+        "dec_layers": rf_cfg["dec_layers"],
+        "dec_n_points": rf_cfg.get("dec_n_points", 2),
+    }
+    rfdetr_decoder = RFDetrDecoder(device, cfg=decoder_cfg)
+    P.add_decoder(rfdetr_decoder, load=True)
+    end_time = timeit.default_timer()
+    print(f"Time taken to load model: {end_time - start_time} seconds")
+
+    checkpoint = DECODER_CHECKPOINT.get(decoder_id, "rf-detr-base.pth")
+    # try:
+    #     report = rfdetr_decoder.load_pretrained_rfdetr_weights(checkpoint)
+    #     print(f"Loaded decoder pretrained weights: {report['loaded']} keys")
+    # except Exception as e:
+    #     print(f"Could not load decoder pretrained weights: {e}")
+
+    metric_fn = coco_detection_metric_fn(dataloader_test.dataset, device)
+
+    print("Training...")
+    P.train_eval(
+        dataloader_train,
+        dataloader_test,
+        parts_to_train=["decoder"],
+        train_cfg=train_config,
+        inference_cfg=inference_config,
+        path="dino_coco_rfdetrnano",
+        metric_fn=metric_fn,
+        mlflow_cfg={
+            "experiment_name": "dino-coco-rfdetrnano",
+            "run_name": "dino-coco-rfdetrnano",
+            "extra_params": {
+                "decoder_id": decoder_id,
+                "model_cfg": str(model_cfg),
+                "train_config": str(train_config),
+            },
+        },
     )
 
-    freeze_backbone = train_config.get("freeze_backbone", True)
-    num_epochs = train_config["epochs"]
+    print("Evaluating after training...")
+    evaluate_detection(P, dataloader_test, device)
 
-    for epoch in range(1, num_epochs + 1):
-        print(f"\n--- Epoch {epoch}/{num_epochs} ---")
-
-        start = timeit.default_timer()
-        avg_loss = decoder.train_one_epoch(
-            backbone, dataloader_train, optimizer, device,
-            freeze_backbone=freeze_backbone,
-        )
-        elapsed = timeit.default_timer() - start
-        print(f"Epoch {epoch}  loss: {avg_loss:.4f}  time: {elapsed:.1f}s")
-
-        # Run evaluation every eval_interval epochs
-        eval_interval = train_config.get("eval_interval", 5)
-        if epoch % eval_interval == 0 or epoch == num_epochs:
-            print("Running evaluation...")
-            detections = decoder.evaluate(backbone, dataloader_val, device)
-            print(f"  Total detections: {sum(len(d['boxes']) for d in detections)}")
-            # For full COCO mAP evaluation, use pycocotools COCOeval
-            # with dataset.get_coco_api() -- see below.
-
-    return decoder
-
-
-def evaluate_coco_map(decoder, backbone, dataloader_val, dataset_val, device):
-    """
-    Compute COCO mAP using pycocotools.
-
-    Requires: pip install pycocotools
-    """
-    from pycocotools.cocoeval import COCOeval
-    import json
-    import numpy as np
-
-    detections = decoder.evaluate(backbone, dataloader_val, device)
-
-    # Convert detections to COCO results format
-    coco_results = []
-    for idx, det in enumerate(detections):
-        image_id = dataset_val.get_image_id(idx)
-        boxes = det["boxes"].cpu().numpy()
-        scores = det["scores"].cpu().numpy()
-        labels = det["labels"].cpu().numpy()
-
-        for i in range(len(boxes)):
-            x1, y1, x2, y2 = boxes[i]
-            # Convert back to COCO format [x, y, w, h]
-            coco_results.append({
-                "image_id": int(image_id),
-                "category_id": int(
-                    # Map contiguous label back to COCO category ID
-                    list(dataset_val._cat_id_to_label.keys())[
-                        list(dataset_val._cat_id_to_label.values()).index(int(labels[i]))
-                    ]
-                ),
-                "bbox": [float(x1), float(y1), float(x2 - x1), float(y2 - y1)],
-                "score": float(scores[i]),
-            })
-
-    if len(coco_results) == 0:
-        print("No detections to evaluate.")
-        return
-
-    coco_gt = dataset_val.get_coco_api()
-    coco_dt = coco_gt.loadRes(coco_results)
-
-    coco_eval = COCOeval(coco_gt, coco_dt, "bbox")
-    coco_eval.evaluate()
-    coco_eval.accumulate()
-    coco_eval.summarize()
-
-    return coco_eval.stats
+    gc.collect()
+    del P, rfdetr_decoder, backbone
+    torch.cuda.empty_cache()
+    torch.cuda.synchronize()
 
 
 if __name__ == "__main__":
+    decoder_id = "nano"
+    train_config = {"batch_size": 32, "shuffle": True, "epochs": 10, "lr": 1e-4}
+    inference_config = {"batch_size": 128, "shuffle": False}
+    model_cfg = {}
 
-    # -------------------------------------------------------------------------
-    # Configuration
-    # -------------------------------------------------------------------------
-    model_id = "base"  # DINOv2 variant: "small", "base", "large", "giant"
-    model_cfg = {"return_all_tokens": True}  # Required for detection
-
+    backbone_cfg = RFDETR_BACKBONE_CONFIG.get(decoder_id, RFDETR_BACKBONE_CONFIG["nano"])
     dataset_cfg = {
         "dataset_path": "/datasets/ai/coco",
-        "target_size": 1024,  # Use 224 to match ViT pretrain size; increase for better detection
+        "target_size": backbone_cfg["resolution"],
     }
-    task_cfg = {"task_type": "detection"}
+    task_cfg = {}
 
-    train_config = {
-        "batch_size": 4,
-        "epochs": 10,
-        "lr": 1e-4,
-        "weight_decay": 0.1,
-        "freeze_backbone": True,
-        "eval_interval": 5,
-    }
-    inference_config = {"batch_size": 4}
-
-    decoder_cfg = {
-        "embed_dim": EMBED_DIMS[f"facebook/dinov2-{model_id}"],
-        "num_classes": 80,  # COCO has 80 object classes
-        "out_channels": 256,
-        "image_size": dataset_cfg["target_size"],
-    }
-
-    # -------------------------------------------------------------------------
-    # Load data
-    # -------------------------------------------------------------------------
-    print("Loading COCO train dataset...")
     train_data = COCODetectionDataset(dataset_cfg, task_cfg, split="train")
+    test_data = COCODetectionDataset(dataset_cfg, task_cfg, split="val")
 
-    print("Loading COCO val dataset...")
-    val_data = COCODetectionDataset(dataset_cfg, task_cfg, split="val")
-
+    print("Loading dataloaders...")
+    dataloader_test = DataLoader(
+        test_data,
+        batch_size=inference_config["batch_size"],
+        shuffle=inference_config["shuffle"],
+        collate_fn=coco_collate_fn,
+        generator=generator,
+    )
     dataloader_train = DataLoader(
         train_data,
         batch_size=train_config["batch_size"],
-        shuffle=True,
+        shuffle=train_config["shuffle"],
         collate_fn=coco_collate_fn,
-        num_workers=4,
         generator=generator,
     )
 
-    dataloader_val = DataLoader(
-        val_data,
-        batch_size=inference_config["batch_size"],
-        shuffle=False,
-        collate_fn=coco_collate_fn,
-        num_workers=4,
+    train_model(
+        dataloader_train,
+        dataloader_test,
+        decoder_id,
+        decoder_id,
+        model_cfg,
+        train_config,
+        inference_config,
+        device,
     )
-
-    # -------------------------------------------------------------------------
-    # Build model
-    # -------------------------------------------------------------------------
-    print("Loading DINOv2 backbone...")
-    backbone = DinoV2Model(device, model_id, model_cfg)
-
-    print("Building Faster R-CNN decoder...")
-    decoder = FasterRCNNDecoder(device, decoder_cfg)
-    decoder.to_device()
-
-    # -------------------------------------------------------------------------
-    # Train
-    # -------------------------------------------------------------------------
-    print(f"\nTraining Faster R-CNN with DINOv2-{model_id} backbone on COCO")
-    print(f"  Image size:      {dataset_cfg['target_size']}")
-    print(f"  Batch size:      {train_config['batch_size']}")
-    print(f"  Epochs:          {train_config['epochs']}")
-    print(f"  Learning rate:   {train_config['lr']}")
-    print(f"  Freeze backbone: {train_config['freeze_backbone']}")
-
-    decoder = train(
-        backbone, decoder,
-        dataloader_train, dataloader_val,
-        train_config, device,
-    )
-
-    # -------------------------------------------------------------------------
-    # Final evaluation (COCO mAP)
-    # -------------------------------------------------------------------------
-    print("\n--- Final COCO mAP evaluation ---")
-    stats = evaluate_coco_map(decoder, backbone, dataloader_val, val_data, device)
-    if stats is not None:
-        print(f"AP @[IoU=0.50:0.95]: {stats[0]:.4f}")
-        print(f"AP @[IoU=0.50]:      {stats[1]:.4f}")
-        print(f"AP @[IoU=0.75]:      {stats[5]:.4f}")
-
-    # Cleanup
-    gc.collect()
-    torch.cuda.empty_cache()
+    print("Done.")

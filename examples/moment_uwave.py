@@ -9,12 +9,15 @@ from fmtk.pipeline import Pipeline
 end_time = timeit.default_timer()
 print(f"Time taken to import fmtk pipeline: {end_time - start_time} seconds")
 
-from fmtk.components.backbones.resnet import ResNetVisionModel, get_resnet_embed_dim
 from fmtk.components.decoders.classification.linear import LinearDecoder
 from fmtk.metrics import get_accuracy
 from torch.utils.data import DataLoader, Subset
-from fmtk.datasets.EuroSAT import EuroSATDataset
+from fmtk.datasets.uwavegesture import UWaveGestureLibraryALLDataset
 import traceback
+from fmtk.components.backbones.moment import MomentModel
+from fmtk.components.backbones.mantis import MantisModel
+from fmtk.components.backbones.chronos import ChronosModel
+from fmtk.components.decoders.classification.mlp import MLPDecoder
 
 device = "cuda:0"
 seed = 42
@@ -32,23 +35,36 @@ def train_model(
     device,
 ):
 
-    backbone = ResNetVisionModel(device, model_id, model_cfg)
+    backbone = MantisModel(device, model_id, model_cfg)
     P = Pipeline(backbone)
-    embed_dim = get_resnet_embed_dim(model_id)
+    # MLPDecoder(device,cfg={'input_dim':512,'output_dim':5,'hidden_dim':128})
     linear_decoder = P.add_decoder(
-        LinearDecoder(device, cfg={"input_dim": embed_dim, "output_dim": 10}),
+        LinearDecoder(device,cfg={'input_dim':256,'output_dim':8}),
         load=True,
+        path='gestureclass_mantis8M_linear_v2',
+        train=False,
     )
     end_time = timeit.default_timer()
     print(f"Time taken to load model: {end_time - start_time} seconds")
 
     print("Training...")
-    P.train(
-        dataloader_train,
-        parts_to_train=["decoder"],
-        cfg=train_config,
-        path="imgclass_dinobase_eurosat_wrong",
-    )
+    # P.train_eval(
+    #     dataloader_train,
+    #     parts_to_train=["decoder"],
+    #     train_cfg=train_config,
+    #     path="gestureclass_mantis8M_linear_v2",
+    #     test_loader=dataloader_test,
+    #     metric_fn=get_accuracy,
+    #     mlflow_cfg={
+    #         "experiment_name": "gestureclass_mantis8M_linear_v2",
+    #         "run_name": "gestureclass_mantis8M_linear_v2",
+    #         "extra_params": {
+    #             "model_id": model_id,
+    #             "model_cfg": model_cfg,
+    #             "train_config": train_config,
+    #         },
+    #     },
+    # )
 
     y_test, y_pred = P.predict(dataloader_test, cfg=inference_config)
     result = get_accuracy(y_test, y_pred)
@@ -113,21 +129,23 @@ if __name__ == "__main__":
     train_config = {
         "batch_size": 32,
         "shuffle": False,
-        "epochs": 1,
+        "epochs": 50,
         "lr": 1e-3,
         "scheduler": {"type": "cosine", "T_max": 10, "eta_min": 0},
+        "use_cache": True,
     }
     inference_config = {"batch_size": 32, "shuffle": False}
     dataset_cfg = {
-        "dataset_path": "/work/pi_shenoy_umass_edu/kgudipaty/datasets/EuroSAT",
-        "model_id": "facebook/dinov2-base",
+        "dataset_path": "../datasets/UWaveGestureLibrary",
+        # "model_id": "facebook/dinov2-base",
+        "model_id": "AutonLab/MOMENT-1-small",
     }
     model_cfg = {"return_all_tokens": False}
 
-    model_id = "resnet-18"
+    model_id = "8M"
     samples_per_class = [1000]
-    train_data = EuroSATDataset(dataset_cfg, task_cfg, split="train")
-    test_data = EuroSATDataset(dataset_cfg, task_cfg, split="test")
+    train_data = UWaveGestureLibraryALLDataset(dataset_cfg, task_cfg, split="train")
+    test_data = UWaveGestureLibraryALLDataset(dataset_cfg, task_cfg, split="test")
 
     print("Loading test dataloader...")
     dataloader_test = DataLoader(
@@ -138,13 +156,13 @@ if __name__ == "__main__":
     )
     print("Loading train dataloader...")
     subsets = []
-    for label in range(train_data.num_classes):
-        subsets.append(
-            Subset(
-                train_data,
-                indices=train_data.indices[train_data.labels == label].tolist(),
-            )
-        )
+    # for label in range(train_data.num_classes):
+    #     subsets.append(
+    #         Subset(
+    #             train_data,
+    #             indices=train_data.indices[train_data.labels == label].tolist(),
+    #         )
+    #     )
     dataloader_train = DataLoader(
         train_data,
         batch_size=train_config["batch_size"],

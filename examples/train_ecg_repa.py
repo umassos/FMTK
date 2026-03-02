@@ -12,13 +12,14 @@ import argparse
 end_time = timeit.default_timer()
 print(f"Time taken to import fmtk pipeline: {end_time - start_time} seconds")
 
+from fmtk.datasets.ecg5000 import ECG5000Dataset
 from fmtk.metrics import get_accuracy
+from fmtk.components.decoders.classification.mlp import MLPDecoder
 from torch.utils.data import DataLoader, Subset, Dataset
 from peft import LoraConfig
-from fmtk.datasets.EuroSAT import EuroSATDataset
 from fmtk.components.decoders.classification.repa_linear import (
     Repa,
-    RepaLinearDecoder,
+    RepaWrappedDecoder,
 )
 import os
 from tqdm import tqdm
@@ -73,37 +74,69 @@ class FeatureDataset(Dataset):
         repr_x, repr_y = self.dataset[self.keys[idx]]
         return {"x": repr_x, "y": repr_y, "idx": idx}
 
+class SyntheticECGDataset(Dataset):
+    def __init__(self, num_samples=500, seq_len=512):
+        self.num_samples = num_samples
+        self.seq_len = seq_len
+        self.data = np.random.randn(num_samples, seq_len).astype(np.float32)
 
-def extract_features(dataloader_train, model_cfg, device, model_features_path):
-    backbone_from = utils.get_backbone(
-        model_cfg["model_from_name"], model_cfg["model_from_id"], device, model_cfg
-    )
-    P_from = Pipeline(backbone_from)
+    def __len__(self):
+        return self.num_samples
 
-    backbone_to = utils.get_backbone(
-        model_cfg["model_to_name"], model_cfg["model_to_id"], device, model_cfg
-    )
-    P_to = Pipeline(backbone_to)
+    def __getitem__(self, index):
+        return {
+            "x": np.expand_dims(self.data[index], axis=0),  # [1, 512]
+            "mask": np.ones(self.seq_len),
+            "y": 0,  # dummy, not used by RepA
+            "idx": index + 500,
+        }
 
+
+def _extract_single_model(backbone_name, model_id, model_cfg, device, dataloader):
+    """Extract features from one backbone, then free its GPU memory."""
+    backbone = utils.get_backbone(backbone_name, model_id, device, model_cfg)
+    P = Pipeline(backbone)
+
+    with torch.no_grad():
+        for batch in tqdm(dataloader, desc=f"Extracting [{model_id}]"):
+            x, idx = batch["x"], batch["idx"]
+            
+            P.forward(x, idx=idx, use_cache=True)
+
+    feats = P.embedding_cache._cache
+    
+    
+    del P, backbone
+    torch.cuda.empty_cache()
+    return feats
+
+
+def extract_features(
+    dataloader_from, dataloader_to, model_cfg, device, model_features_path
+):
     start_time = timeit.default_timer()
-    for batch in tqdm(dataloader_train, desc="Extracting features..."):
-        x, y, idx = batch["x"], batch["y"], batch["idx"]
-        P_from.forward(x, idx=idx, use_cache=True)
-        P_to.forward(x, idx=idx, use_cache=True)
-    end_time = timeit.default_timer()
 
+    feats_from = _extract_single_model(
+        model_cfg["model_from_name"],
+        model_cfg["model_from_id"],
+        model_cfg, device, dataloader_from,
+    )
+    feats_to = _extract_single_model(
+        model_cfg["model_to_name"],
+        model_cfg["model_to_id"],
+        model_cfg, device, dataloader_to,
+    )
+
+    end_time = timeit.default_timer()
     print(f"Time taken to extract features: {end_time - start_time} seconds")
 
-    feats_from = P_from.embedding_cache._cache
-    feats_to = P_to.embedding_cache._cache
-
-    path = model_features_path
-    logger.info(f"Saving features to {path}")
+    logger.info(f"Saving features to {model_features_path}")
     data = {
-        model_cfg["model_from_id"]: feats_from,
-        model_cfg["model_to_id"]: feats_to,
+        model_cfg["name1"]: feats_from,
+        model_cfg["name2"]: feats_to,
     }
-    torch.save(data, path)
+    os.makedirs(os.path.dirname(model_features_path), exist_ok=True)
+    torch.save(data, model_features_path)
     return data
 
 
@@ -112,6 +145,10 @@ def train_one_epoch(dataloader_train, model, optimizer):
     loss_meter = AverageMeter()
     for batch in tqdm(dataloader_train):
         x, y = batch["x"], batch["y"]
+        if x.ndim > 2:
+            x = x.flatten(1, -2).mean(dim=1)
+        if y.ndim > 2:
+            y = y.flatten(1, -2).mean(dim=1)
         feats = model(x)
         loss = model.criterion(feats, y)
         loss_meter.update(loss.item(), x.size(0))
@@ -129,8 +166,10 @@ def run_repa_validation(
     inference_config,
 ):
     P.active_decoder.load_repa(repa_path)
+    
     y_test, y_pred = P.predict(dataloader_test, cfg=inference_config)
     result = get_accuracy(y_test, y_pred)
+    print("Accuracy: ", result)
     return result
 
 
@@ -146,13 +185,16 @@ def run_repa_training(
 ):
 
     base_dir = os.path.dirname(os.path.dirname(__file__))
-    decoder_path = f"{base_dir}/src/fmtk/saved/{model_cfg['model_to_id']}/decoder.pth"
-    repa_dir = f"{base_dir}/src/fmtk/saved/repa/{model_cfg['model_from_id']}_to_{model_cfg['model_to_id']}"
+    decoder_path = f"{base_dir}/src/fmtk/saved/ecgclass_momentsmall_mlp_v2/decoder.pth"
+    repa_dir = f"{base_dir}/src/fmtk/saved/repa/ecg_{model_cfg['name1']}_to_{model_cfg['name2']}"
     os.makedirs(repa_dir, exist_ok=True)
     last_save_path = f"{repa_dir}/last.pth"
     best_save_path = f"{repa_dir}/best.pth"
 
-    decoder = RepaLinearDecoder(device, repa_cfg)
+    decoder = MLPDecoder(device, cfg={'input_dim': repa_cfg['input_dim'], 'output_dim': 5, 'hidden_dim': 128})
+
+    decoder = RepaWrappedDecoder(device, repa_cfg, decoder)
+    
     decoder.load_decoder(decoder_path)
     backbone = utils.get_backbone(
         model_cfg["model_from_name"], model_cfg["model_from_id"], device, model_cfg
@@ -162,6 +204,7 @@ def run_repa_training(
     P_validation.add_decoder(decoder, load=True)
 
     model = Repa(device, repa_cfg)
+
     optimizer = torch.optim.Adam(model.parameters(), lr=train_config["lr"])
 
     logger.info("Training RepA model...")
@@ -241,6 +284,12 @@ model_group.add_argument(
     help="Model to convert to",
 )
 model_group.add_argument(
+    "--name1", type=str, default=None, help="Short name for the from-model (defaults to model-from-id)"
+)
+model_group.add_argument(
+    "--name2", type=str, default=None, help="Short name for the to-model (defaults to model-to-id)"
+)
+model_group.add_argument(
     "--return-all-tokens", action="store_true", help="Return all tokens"
 )
 model_group.add_argument(
@@ -254,17 +303,36 @@ dataset_group = parser.add_argument_group("Dataset parameters")
 dataset_group.add_argument(
     "--dataset-path",
     type=str,
-    default="/work/pi_shenoy_umass_edu/kgudipaty/datasets/EuroSAT",
+    default="../datasets/ECG5000",
     help="Path to the dataset",
+)
+dataset_group.add_argument(
+    "--dataset-name",
+    type=str,
+    default="ecg5000",
+    help="Name of the dataset",
+)
+dataset_group.add_argument(
+    "--target-size-from",
+    type=int,
+    default=448,
+    help="Image size for the from-model (DINOv2 patch14: 448 → 32x32 grid)",
+)
+dataset_group.add_argument(
+    "--target-size-to",
+    type=int,
+    default=512,
+    help="Image size for the to-model (DINOv3 patch16: 512 → 32x32 grid)",
 )
 
 train_group = parser.add_argument_group("Training parameters")
+train_group.add_argument("--num-experiments", type=int, default=10, help="Number of experiments")
 train_group.add_argument("--train-batch-size", type=int, default=64, help="Batch size")
 train_group.add_argument(
     "--train-shuffle", type=bool, default=False, help="Shuffle the dataset"
 )
-train_group.add_argument("--epochs", type=int, default=20, help="Number of epochs")
-train_group.add_argument("--lr", type=float, default=1e-3, help="Learning rate")
+train_group.add_argument("--epochs", type=int, default=50, help="Number of epochs")
+train_group.add_argument("--lr", type=float, default=1e-1, help="Learning rate")
 train_group.add_argument("--scheduler", type=str, default="cosine", help="Scheduler")
 train_group.add_argument(
     "--scheduler-T-max", type=int, default=10, help="T_max for the scheduler"
@@ -333,14 +401,20 @@ if __name__ == "__main__":
         "batch_size": args.inference_batch_size,
         "shuffle": args.inference_shuffle,
     }
-    dataset_cfg = {"dataset_path": args.dataset_path}
     model_cfg = {
         "return_all_tokens": args.return_all_tokens,
         "model_from_id": args.model_from_id,
         "model_to_id": args.model_to_id,
         "model_from_name": args.model_from_name,
         "model_to_name": args.model_to_name,
+        "name1": args.name1,
+        "name2": args.name2,
     }
+
+    if args.name1 is None:
+        args.name1 = args.model_from_id
+    if args.name2 is None:
+        args.name2 = args.model_to_id
 
     args.input_dim = utils.get_embed_dim(args.model_from_name, args.model_from_id)
     args.repa_output_dim = utils.get_embed_dim(args.model_to_name, args.model_to_id)
@@ -351,32 +425,39 @@ if __name__ == "__main__":
         "normalize": args.normalize,
     }
 
-    model_features_path = f"../features/{args.model_from_id}_to_{args.model_to_id}_features.pt"
+    model_features_path = f"../features/{args.dataset_name}/{args.name1}_to_{args.name2}_features.pt"
     print(f"Model features path: {model_features_path}")
 
-    train_data = EuroSATDataset(dataset_cfg, task_cfg, split="train")
-    test_data = EuroSATDataset(dataset_cfg, task_cfg, split="test")
+    dataset_cfg = {"dataset_path": args.dataset_path}
 
-    print("Loading test dataloader...")
+    train_data_from = ECG5000Dataset(dataset_cfg, task_cfg, split="train")
+    train_data_to = ECG5000Dataset(dataset_cfg, task_cfg, split="train")
+    synthetic_data = SyntheticECGDataset(num_samples=2500, seq_len=512)
+    test_data = ECG5000Dataset(dataset_cfg, task_cfg, split="test")
+
+    train_data_from = ConcatDataset([train_data_from, synthetic_data])
+    train_data_to = ConcatDataset([train_data_to, synthetic_data])
+
+
+    print("Loading dataloaders...")
+    dataloader_train_from = DataLoader(
+        train_data_from,
+        batch_size=train_config["batch_size"],
+        shuffle=False,
+        generator=generator,
+    )
+    print('Length of train_data_from: ', len(train_data_from))
+    dataloader_train_to = DataLoader(
+        train_data_to,
+        batch_size=train_config["batch_size"],
+        shuffle=False,
+        generator=generator,
+    )
+    print('Length of train_data_to: ', len(train_data_to))
     dataloader_test = DataLoader(
         test_data,
         batch_size=inference_config["batch_size"],
         shuffle=inference_config["shuffle"],
-        generator=generator,
-    )
-    print("Loading train dataloader...")
-    # subsets = []
-    # for label in range(train_data.num_classes):
-    #     subsets.append(
-    #         Subset(
-    #             train_data,
-    #             indices=train_data.indices[train_data.labels == label].tolist(),
-    #         )
-    #     )
-    dataloader_train = DataLoader(
-        train_data,
-        batch_size=train_config["batch_size"],
-        shuffle=train_config["shuffle"],
         generator=generator,
     )
 
@@ -386,14 +467,15 @@ if __name__ == "__main__":
     else:
         logger.info("Creating feature dataset...")
         data = extract_features(
-            dataloader_train, model_cfg, device, model_features_path
+            dataloader_train_from, dataloader_train_to,
+            model_cfg, device, model_features_path,
         )
 
     num_samples_list = args.num_samples_list
     for num_samples in num_samples_list:
-        log_path = f"results/repa/{args.model_from_id}_to_{args.model_to_id}_accuracy_num_samples_{num_samples}.csv"
-        for _ in range(10):
-            x, y = data[model_cfg["model_from_id"]], data[model_cfg["model_to_id"]]
+        log_path = f"results/repa/{args.name1}_to_{args.name2}_accuracy_num_samples_{num_samples}.csv"
+        for _ in range(args.num_experiments):
+            x, y = data[model_cfg["name1"]], data[model_cfg["name2"]]
             keys = list(x.keys())
             n = min(num_samples, len(keys))
             chosen_positions = np.random.choice(len(keys), n, replace=False)
@@ -416,5 +498,5 @@ if __name__ == "__main__":
                 device,
                 dataloader_test,
                 inference_config,
-                log_path,
+                log_path=log_path,
             )

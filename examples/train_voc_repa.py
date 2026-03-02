@@ -12,13 +12,16 @@ import argparse
 end_time = timeit.default_timer()
 print(f"Time taken to import fmtk pipeline: {end_time - start_time} seconds")
 
-from fmtk.metrics import get_accuracy
+from fmtk.datasets.VOC12 import VOC12Dataset
+from fmtk.metrics import get_mIoU, StreamingMIoU
+from fmtk.components.decoders.segmentation.LinearSemanticSegmenter import (
+    LinearSemanticSegmenter,
+)
 from torch.utils.data import DataLoader, Subset, Dataset
 from peft import LoraConfig
-from fmtk.datasets.EuroSAT import EuroSATDataset
 from fmtk.components.decoders.classification.repa_linear import (
     Repa,
-    RepaLinearDecoder,
+    RepaWrappedDecoder,
 )
 import os
 from tqdm import tqdm
@@ -71,47 +74,67 @@ class FeatureDataset(Dataset):
 
     def __getitem__(self, idx):
         repr_x, repr_y = self.dataset[self.keys[idx]]
+        repr_x = repr_x.reshape(int(repr_x.shape[0]**0.5), int(repr_x.shape[0]**0.5), repr_x.shape[1]).permute(2, 0, 1)
+        repr_y = repr_y.reshape(int(repr_y.shape[0]**0.5), int(repr_y.shape[0]**0.5), repr_y.shape[1]).permute(2, 0, 1)
         return {"x": repr_x, "y": repr_y, "idx": idx}
 
 
-def extract_features(dataloader_train, model_cfg, device, model_features_path):
-    backbone_from = utils.get_backbone(
-        model_cfg["model_from_name"], model_cfg["model_from_id"], device, model_cfg
-    )
-    P_from = Pipeline(backbone_from)
+def _extract_single_model(backbone_name, model_id, model_cfg, device, dataloader):
+    """Extract features from one backbone, then free its GPU memory."""
+    backbone = utils.get_backbone(backbone_name, model_id, device, model_cfg)
+    P = Pipeline(backbone)
 
-    backbone_to = utils.get_backbone(
-        model_cfg["model_to_name"], model_cfg["model_to_id"], device, model_cfg
-    )
-    P_to = Pipeline(backbone_to)
+    with torch.no_grad():
+        for batch in tqdm(dataloader, desc=f"Extracting [{model_id}]"):
+            x, idx = batch["x"], batch["idx"]
 
+            embeddings = P.forward(x, idx=idx, use_cache=True)
+            print(embeddings.shape)
+
+    feats = P.embedding_cache._cache
+    del P, backbone
+    torch.cuda.empty_cache()
+    return feats
+
+
+def extract_features(
+    dataloader_from, dataloader_to, model_cfg, device, model_features_path
+):
     start_time = timeit.default_timer()
-    for batch in tqdm(dataloader_train, desc="Extracting features..."):
-        x, y, idx = batch["x"], batch["y"], batch["idx"]
-        P_from.forward(x, idx=idx, use_cache=True)
-        P_to.forward(x, idx=idx, use_cache=True)
-    end_time = timeit.default_timer()
 
+    feats_from = _extract_single_model(
+        model_cfg["model_from_name"],
+        model_cfg["model_from_id"],
+        model_cfg,
+        device,
+        dataloader_from,
+    )
+    feats_to = _extract_single_model(
+        model_cfg["model_to_name"],
+        model_cfg["model_to_id"],
+        model_cfg,
+        device,
+        dataloader_to,
+    )
+
+    end_time = timeit.default_timer()
     print(f"Time taken to extract features: {end_time - start_time} seconds")
 
-    feats_from = P_from.embedding_cache._cache
-    feats_to = P_to.embedding_cache._cache
-
-    path = model_features_path
-    logger.info(f"Saving features to {path}")
+    logger.info(f"Saving features to {model_features_path}")
     data = {
         model_cfg["model_from_id"]: feats_from,
         model_cfg["model_to_id"]: feats_to,
     }
-    torch.save(data, path)
+    os.makedirs(os.path.dirname(model_features_path), exist_ok=True)
+    torch.save(data, model_features_path)
     return data
 
 
-def train_one_epoch(dataloader_train, model, optimizer):
+def train_one_epoch(dataloader_train, model, optimizer, device):
 
     loss_meter = AverageMeter()
     for batch in tqdm(dataloader_train):
-        x, y = batch["x"], batch["y"]
+        x, y = batch["x"].to(device), batch["y"].to(device)
         feats = model(x)
         loss = model.criterion(feats, y)
         loss_meter.update(loss.item(), x.size(0))
@@ -129,9 +152,16 @@ def run_repa_validation(
     inference_config,
 ):
     P.active_decoder.load_repa(repa_path)
-    y_test, y_pred = P.predict(dataloader_test, cfg=inference_config)
-    result = get_accuracy(y_test, y_pred)
-    return result
+    meter = StreamingMIoU(num_classes=21, ignore_index=255)
+    with torch.no_grad():
+        for batch in tqdm(dataloader_test, desc="Validating"):
+            x, y = batch["x"], batch["y"]
+            idx = batch.get("idx", None)
+            logits = P.forward(x, idx=idx, use_cache=False)
+            preds = torch.argmax(logits, dim=1)
+            meter.update(y, preds)
+    result = meter.compute()
+    return result["mIoU"], result["per_class_iou"]
 
 
 def run_repa_training(
@@ -142,17 +172,40 @@ def run_repa_training(
     device,
     dataloader_test,
     inference_config,
+    target_size_from=448,
     log_path="",
 ):
 
     base_dir = os.path.dirname(os.path.dirname(__file__))
-    decoder_path = f"{base_dir}/src/fmtk/saved/{model_cfg['model_to_id']}/decoder.pth"
-    repa_dir = f"{base_dir}/src/fmtk/saved/repa/{model_cfg['model_from_id']}_to_{model_cfg['model_to_id']}"
+    decoder_path = f"{base_dir}/src/fmtk/saved/semseg_dinov3_voc/decoder.pth"
+    repa_dir = f"{base_dir}/src/fmtk/saved/repa/voc_{model_cfg['model_from_id']}_to_{model_cfg['model_to_id']}"
     os.makedirs(repa_dir, exist_ok=True)
     last_save_path = f"{repa_dir}/last.pth"
     best_save_path = f"{repa_dir}/best.pth"
 
-    decoder = RepaLinearDecoder(device, repa_cfg)
+    upsample = lambda x, target=32: (
+    torch.nn.functional.interpolate(
+        x.reshape(x.shape[0], int(x.shape[1]**0.5), int(x.shape[1]**0.5), x.shape[2]).permute(0, 3, 1, 2),
+        size=(target, target),
+        mode="bilinear",
+        align_corners=False,
+    ).permute(0, 2, 3, 1).reshape(x.shape[0], target * target, x.shape[2])
+    )
+
+    decoder_cfg = {
+        "input_dim": 768,
+        "output_dim": 21,
+        "height": 32,
+        "width": 32,
+        "pixel_height": target_size_from,
+        "pixel_width": target_size_from,
+        "ignore_index": 255,
+    }
+    decoder = LinearSemanticSegmenter(device, cfg=decoder_cfg)
+
+    decoder = RepaWrappedDecoder(device, repa_cfg, decoder)
+    # Important for convnext models
+    # decoder.repa.set_preprocess_fn(upsample)
     decoder.load_decoder(decoder_path)
     backbone = utils.get_backbone(
         model_cfg["model_from_name"], model_cfg["model_from_id"], device, model_cfg
@@ -162,13 +215,18 @@ def run_repa_training(
     P_validation.add_decoder(decoder, load=True)
 
     model = Repa(device, repa_cfg)
+    model.to(device)
+    # Important for convnext models
+    # model.set_preprocess_fn(upsample)
+
     optimizer = torch.optim.Adam(model.parameters(), lr=train_config["lr"])
 
     logger.info("Training RepA model...")
+    logger.info(f"RepA device: {next(model.parameters()).device}")
     best_loss = float("inf")
     for epoch in range(train_config["epochs"]):
         start_time = timeit.default_timer()
-        loss = train_one_epoch(dataloader_train, model, optimizer)
+        loss = train_one_epoch(dataloader_train, model, optimizer, device)
         end_time = timeit.default_timer()
         print(f"Time taken for epoch {epoch + 1}: {end_time - start_time} seconds")
         logger.info(f"Epoch {epoch + 1}/{train_config['epochs']} Loss: {loss:.4f}")
@@ -197,7 +255,8 @@ def run_repa_training(
         dataloader_test,
         inference_config,
     )
-    logger.info(f"Best accuracy: {best_accuracy}")
+    logger.info(f"Best mIoU: {best_accuracy[0]}")
+    logger.info(f"Best per-class mIoU: {best_accuracy[1]}")
     logger.info(f"Best loss: {best_loss}")
 
 
@@ -254,11 +313,32 @@ dataset_group = parser.add_argument_group("Dataset parameters")
 dataset_group.add_argument(
     "--dataset-path",
     type=str,
-    default="/work/pi_shenoy_umass_edu/kgudipaty/datasets/EuroSAT",
+    default="/work/pi_shenoy_umass_edu/kgudipaty/datasets/PASCAL-VOC",
     help="Path to the dataset",
+)
+dataset_group.add_argument(
+    "--dataset-name",
+    type=str,
+    default="voc12",
+    help="Name of the dataset",
+)
+dataset_group.add_argument(
+    "--target-size-from",
+    type=int,
+    default=448,
+    help="Image size for the from-model (DINOv2 patch14: 448 → 32x32 grid)",
+)
+dataset_group.add_argument(
+    "--target-size-to",
+    type=int,
+    default=512,
+    help="Image size for the to-model (DINOv3 patch16: 512 → 32x32 grid)",
 )
 
 train_group = parser.add_argument_group("Training parameters")
+train_group.add_argument(
+    "--num-experiments", type=int, default=10, help="Number of experiments"
+)
 train_group.add_argument("--train-batch-size", type=int, default=64, help="Batch size")
 train_group.add_argument(
     "--train-shuffle", type=bool, default=False, help="Shuffle the dataset"
@@ -294,6 +374,7 @@ parser.add_argument(
     help="List of number of samples to train on",
 )
 
+
 def _parse_args():
     # TODO: What if we have a YAML config file to parse?
     # Do we have a config file to parse?
@@ -317,7 +398,7 @@ if __name__ == "__main__":
     args, args_text = _parse_args()
     print(args_text)
 
-    task_cfg = {"task_type": "classification"}
+    task_cfg = {"task_type": "segmentation"}
     train_config = {
         "batch_size": args.train_batch_size,
         "shuffle": args.train_shuffle,
@@ -333,7 +414,6 @@ if __name__ == "__main__":
         "batch_size": args.inference_batch_size,
         "shuffle": args.inference_shuffle,
     }
-    dataset_cfg = {"dataset_path": args.dataset_path}
     model_cfg = {
         "return_all_tokens": args.return_all_tokens,
         "model_from_id": args.model_from_id,
@@ -351,32 +431,39 @@ if __name__ == "__main__":
         "normalize": args.normalize,
     }
 
-    model_features_path = f"../features/{args.model_from_id}_to_{args.model_to_id}_features.pt"
+    model_features_path = f"../features/{args.dataset_name}/{args.model_from_id}_to_{args.model_to_id}_features.pt"
     print(f"Model features path: {model_features_path}")
 
-    train_data = EuroSATDataset(dataset_cfg, task_cfg, split="train")
-    test_data = EuroSATDataset(dataset_cfg, task_cfg, split="test")
+    dataset_cfg_from = {
+        "dataset_path": args.dataset_path,
+        "target_size": args.target_size_from,
+    }
+    dataset_cfg_to = {
+        "dataset_path": args.dataset_path,
+        "target_size": args.target_size_to,
+    }
 
-    print("Loading test dataloader...")
+    train_data_from = VOC12Dataset(dataset_cfg_from, task_cfg, split="trainval")
+    train_data_to = VOC12Dataset(dataset_cfg_to, task_cfg, split="trainval")
+    test_data = VOC12Dataset(dataset_cfg_from, task_cfg, split="test")
+
+    print("Loading dataloaders...")
+    dataloader_train_from = DataLoader(
+        train_data_from,
+        batch_size=train_config["batch_size"],
+        shuffle=False,
+        generator=generator,
+    )
+    dataloader_train_to = DataLoader(
+        train_data_to,
+        batch_size=train_config["batch_size"],
+        shuffle=False,
+        generator=generator,
+    )
     dataloader_test = DataLoader(
         test_data,
         batch_size=inference_config["batch_size"],
         shuffle=inference_config["shuffle"],
-        generator=generator,
-    )
-    print("Loading train dataloader...")
-    # subsets = []
-    # for label in range(train_data.num_classes):
-    #     subsets.append(
-    #         Subset(
-    #             train_data,
-    #             indices=train_data.indices[train_data.labels == label].tolist(),
-    #         )
-    #     )
-    dataloader_train = DataLoader(
-        train_data,
-        batch_size=train_config["batch_size"],
-        shuffle=train_config["shuffle"],
         generator=generator,
     )
 
@@ -386,13 +473,17 @@ if __name__ == "__main__":
     else:
         logger.info("Creating feature dataset...")
         data = extract_features(
-            dataloader_train, model_cfg, device, model_features_path
+            dataloader_train_from,
+            dataloader_train_to,
+            model_cfg,
+            device,
+            model_features_path,
         )
 
     num_samples_list = args.num_samples_list
     for num_samples in num_samples_list:
         log_path = f"results/repa/{args.model_from_id}_to_{args.model_to_id}_accuracy_num_samples_{num_samples}.csv"
-        for _ in range(10):
+        for _ in range(args.num_experiments):
             x, y = data[model_cfg["model_from_id"]], data[model_cfg["model_to_id"]]
             keys = list(x.keys())
             n = min(num_samples, len(keys))
@@ -416,5 +507,6 @@ if __name__ == "__main__":
                 device,
                 dataloader_test,
                 inference_config,
-                log_path,
+                target_size_from=args.target_size_from,
+                log_path=log_path,
             )

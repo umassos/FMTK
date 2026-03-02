@@ -17,8 +17,9 @@ class MLPHead(nn.Module):
     def forward(self, x):
         return self.net(x)
 
-class MLPDecoder(BaseModel):
+class MLPDecoder(BaseModel, nn.Module):
     def __init__(self, device, cfg):
+        super().__init__()
         self.device = device
         self.model = MLPHead(input_dim=cfg['input_dim'],output_dim=cfg['output_dim'],hidden_dim=cfg['hidden_dim'])
         self.criterion = nn.CrossEntropyLoss()
@@ -47,3 +48,6 @@ class MLPDecoder(BaseModel):
     def forward(self, batch_x):
         features=self.preprocess(batch_x)
         return self.model(features)
+    
+    def load_state_dict(self, state_dict):
+        self.model.load_state_dict(state_dict)

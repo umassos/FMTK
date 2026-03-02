@@ -56,6 +56,7 @@ class MomentModel(BaseModel):
             embedding=self.model(x_enc=x, reduction="none").embeddings
         else:
             embedding=self.model(x_enc=x, input_mask=mask, reduction="none").embeddings
+        # return embedding.squeeze(1).mean(dim=1)
         return embedding
     
     def postprocess(self, embedding):

@@ -7,28 +7,26 @@ from transformers import AutoModel, AutoImageProcessor
 from peft import get_peft_model, PeftModel
 from functools import singledispatchmethod
 
-MODEL_MAPPING = {
-    "tiny": "microsoft/swin-tiny-patch4-window7-224",
-    "small": "microsoft/swin-small-patch4-window7-224",
-    "base": "microsoft/swin-base-patch4-window7-224",
-    "large": "microsoft/swin-large-patch4-window7-224",
-    "swin-tiny": "microsoft/swin-tiny-patch4-window7-224",
-    "swin-small": "microsoft/swin-small-patch4-window7-224",
-    "swin-base": "microsoft/swin-base-patch4-window7-224",
-    "swin-large": "microsoft/swin-large-patch4-window7-224",
-}
+def get_swin_model_id(model_name):
+    if model_name in ['tiny', 'swin-tiny', 'microsoft/swin-tiny-patch4-window7-224']:
+        return 'microsoft/swin-tiny-patch4-window7-224'
+    elif model_name in ['small', 'swin-small', 'microsoft/swin-small-patch4-window7-224']:
+        return 'microsoft/swin-small-patch4-window7-224'
+    elif model_name in ['base', 'swin-base', 'microsoft/swin-base-patch4-window7-224']:
+        return 'microsoft/swin-base-patch4-window7-224'
+    elif model_name in ['large', 'swin-large', 'microsoft/swin-large-patch4-window7-224']:
+        return 'microsoft/swin-large-patch4-window7-224'
 
-EMBED_DIMS = {
-    "microsoft/swin-tiny-patch4-window7-224": 768,
-    "microsoft/swin-small-patch4-window7-224": 768,
-    "microsoft/swin-base-patch4-window7-224": 1024,
-    "microsoft/swin-large-patch4-window7-224": 1536,
-    "tiny": 768,
-    "small": 768,
-    "base": 1024,
-    "large": 1536,
-}
+def get_swin_embed_dim(model_id):
 
+    if model_id in ['tiny', 'swin-tiny', 'microsoft/swin-tiny-patch4-window7-224']:
+        return 768
+    elif model_id in ['small', 'swin-small', 'microsoft/swin-small-patch4-window7-224']:
+        return 768
+    elif model_id in ['base', 'swin-base', 'microsoft/swin-base-patch4-window7-224']:
+        return 1024
+    elif model_id in ['large', 'swin-large', 'microsoft/swin-large-patch4-window7-224']:
+        return 1536
 
 class SwinModel(BaseModel):
     """
@@ -36,25 +34,20 @@ class SwinModel(BaseModel):
     Uses Hugging Face transformers (SwinModel with pooling).
     """
 
-    def __init__(self, device, model_name="base", model_config=None):
+    def __init__(self, device, model_name="base", model_config={}):
         super().__init__()
         self.device = device
         self.return_all_tokens = model_config.get("return_all_tokens", False)
 
-        if model_name in MODEL_MAPPING:
-            model_id = MODEL_MAPPING[model_name]
-        else:
-            model_id = model_name    
+        self.model_id = get_swin_model_id(model_name)
+        self.embed_dim = get_swin_embed_dim(self.model_id)
 
-        embed_dim = EMBED_DIMS[model_id]
+        print(f"[Swin] Loading {self.model_id} on device {device}")
 
-        print(f"[Swin] Loading {model_id} on device {device}")
-
-        self.model = AutoModel.from_pretrained(model_id)
-        self.processor = AutoImageProcessor.from_pretrained(model_id)
+        self.model = AutoModel.from_pretrained(self.model_id)
+        self.processor = AutoImageProcessor.from_pretrained(self.model_id)
 
         self.model.to(device)
-        self.embed_dim = embed_dim
         self.peft_enable = False
 
     def preprocess(self, batch_x, mask=None):

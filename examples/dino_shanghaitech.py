@@ -1,4 +1,6 @@
+from posix import sched_get_priority_max
 import timeit
+import pandas as pd
 import torch
 import gc
 from torch.utils.data import ConcatDataset
@@ -9,12 +11,12 @@ from fmtk.pipeline import Pipeline
 end_time = timeit.default_timer()
 print(f"Time taken to import fmtk pipeline: {end_time - start_time} seconds")
 
-from fmtk.components.backbones.resnet import ResNetVisionModel, get_resnet_embed_dim
-from fmtk.components.decoders.classification.linear import LinearDecoder
-from fmtk.metrics import get_accuracy
+from fmtk.components.backbones.dinov2 import DinoV2Model, get_dinov2_embed_dim
+from fmtk.metrics import get_mae
 from torch.utils.data import DataLoader, Subset
-from fmtk.datasets.EuroSAT import EuroSATDataset
+from fmtk.datasets.ShanghaiTech import ShanghaiTechDataset
 import traceback
+from fmtk.components.decoders.regression.spatial_count import SpatialCountDecoder
 
 device = "cuda:0"
 seed = 42
@@ -32,29 +34,53 @@ def train_model(
     device,
 ):
 
-    backbone = ResNetVisionModel(device, model_id, model_cfg)
+    backbone = DinoV2Model(device, model_id, model_cfg)
     P = Pipeline(backbone)
-    embed_dim = get_resnet_embed_dim(model_id)
-    linear_decoder = P.add_decoder(
-        LinearDecoder(device, cfg={"input_dim": embed_dim, "output_dim": 10}),
-        load=True,
+    embed_dim = get_dinov2_embed_dim(model_id)
+    
+    sc_decoder = SpatialCountDecoder(
+        device,
+        cfg={
+            "input_dim": embed_dim,
+            "output_dim": 1,
+            "hidden_dim": 128,
+        },
     )
+
+    decoder = P.add_decoder(sc_decoder, load=True)
     end_time = timeit.default_timer()
     print(f"Time taken to load model: {end_time - start_time} seconds")
 
     print("Training...")
-    P.train(
+    # P.train(
+    #     dataloader_train,
+    #     parts_to_train=["decoder"],
+    #     cfg=train_config,
+    #     path="imgreg_dinobase_shanghaitech",
+    # )
+    P.train_eval(
         dataloader_train,
+        dataloader_test,
         parts_to_train=["decoder"],
         cfg=train_config,
-        path="imgclass_dinobase_eurosat_wrong",
+        path="imgclass_dinobase_shanghaitech",
+        metric_fn=get_mae,
+        mlflow_cfg={
+            "experiment_name": "shanghaitech-crowd-counting",
+            "run_name": "dinov2-base-sc-partB",
+            "extra_params": {
+                "dataset": "ShanghaiTech-PartB",
+                "backbone": "dinov2-base",
+                "decoder": "sc-128",
+            },
+        },
     )
 
     y_test, y_pred = P.predict(dataloader_test, cfg=inference_config)
-    result = get_accuracy(y_test, y_pred)
+    result = get_mae(y_test, y_pred)
     print("Accuracy: ", result)
     gc.collect()
-    del P, linear_decoder, backbone
+    del P, sc_decoder, backbone
     torch.cuda.empty_cache()
     torch.cuda.synchronize()
     return result
@@ -109,25 +135,25 @@ def run_multiple(
 
 
 if __name__ == "__main__":
-    task_cfg = {"task_type": "classification"}
+    task_cfg = {"task_type": "regression"}
     train_config = {
         "batch_size": 32,
-        "shuffle": False,
-        "epochs": 1,
-        "lr": 1e-3,
+        "shuffle": True,
+        "epochs": 100,
+        "lr": 1e-5,
         "scheduler": {"type": "cosine", "T_max": 10, "eta_min": 0},
     }
     inference_config = {"batch_size": 32, "shuffle": False}
     dataset_cfg = {
-        "dataset_path": "/work/pi_shenoy_umass_edu/kgudipaty/datasets/EuroSAT",
+        "dataset_path": "/work/pi_shenoy_umass_edu/kgudipaty/datasets/ShanghaiTech",
         "model_id": "facebook/dinov2-base",
     }
-    model_cfg = {"return_all_tokens": False}
+    model_cfg = {"return_all_tokens": True}
 
-    model_id = "resnet-18"
+    model_id = "base"
     samples_per_class = [1000]
-    train_data = EuroSATDataset(dataset_cfg, task_cfg, split="train")
-    test_data = EuroSATDataset(dataset_cfg, task_cfg, split="test")
+    train_data = ShanghaiTechDataset(dataset_cfg, task_cfg, split="train")
+    test_data = ShanghaiTechDataset(dataset_cfg, task_cfg, split="test")
 
     print("Loading test dataloader...")
     dataloader_test = DataLoader(
@@ -138,13 +164,13 @@ if __name__ == "__main__":
     )
     print("Loading train dataloader...")
     subsets = []
-    for label in range(train_data.num_classes):
-        subsets.append(
-            Subset(
-                train_data,
-                indices=train_data.indices[train_data.labels == label].tolist(),
-            )
-        )
+    # for label in range(train_data.num_classes):
+    #     subsets.append(
+    #         Subset(
+    #             train_data,
+    #             indices=train_data.indices[train_data.labels == label].tolist(),
+    #         )
+    #     )
     dataloader_train = DataLoader(
         train_data,
         batch_size=train_config["batch_size"],

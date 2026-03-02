@@ -1,13 +1,12 @@
+import os
 import numpy as np
 import torch
 from torchvision import datasets, transforms
 from fmtk.datasets.base import VisionDataset
 
 
-class Food101Dataset(VisionDataset):
+class OrchidFlowersDataset(VisionDataset):
     """
-    Food101 dataset (101 classes). Wraps torchvision.datasets.Food101.
-
     Parameters
     ----------
     dataset_cfg : dict
@@ -29,14 +28,11 @@ class Food101Dataset(VisionDataset):
         self.num_channels = 3
         self.transform = None
 
-        dataset_path = dataset_cfg.get("dataset_path", "./data")
-        download = dataset_cfg.get("download", True)
+        dataset_path = dataset_cfg.get("dataset_path", "./data/OrchidFlowers")
+        split_dir = os.path.join(dataset_path, split)
 
-        self.dataset = datasets.Food101(
-            root=dataset_path,
-            split=split,
-            download=download,
-        )
+        # ImageFolder reads one subfolder per class
+        self.dataset = datasets.ImageFolder(root=split_dir)
 
         self.class_names = self.dataset.classes
         self.num_classes = len(self.class_names)
@@ -53,7 +49,7 @@ class Food101Dataset(VisionDataset):
 
     @property
     def labels(self):
-        return np.array(self.dataset._labels)
+        return np.array([s[1] for s in self.dataset.samples])
 
     @property
     def indices(self):

@@ -1,5 +1,4 @@
 import timeit
-import pandas as pd
 import torch
 import gc
 from torch.utils.data import ConcatDataset
@@ -10,12 +9,10 @@ from fmtk.pipeline import Pipeline
 end_time = timeit.default_timer()
 print(f"Time taken to import fmtk pipeline: {end_time - start_time} seconds")
 
-from fmtk.components.backbones.mae import MAEModel, EMBED_DIMS as MAE_EMBED_DIMS
+from fmtk.components.backbones.mae import MAEModel, get_mae_embed_dim
 from fmtk.components.decoders.classification.linear import LinearDecoder
-from fmtk.components.encoders.diff import LinearChannelCombiner
 from fmtk.metrics import get_accuracy
 from torch.utils.data import DataLoader, Subset
-from peft import LoraConfig
 from fmtk.datasets.EuroSAT import EuroSATDataset
 import traceback
 
@@ -37,10 +34,9 @@ def train_model(
 
     backbone = MAEModel(device, model_id, model_cfg)
     P = Pipeline(backbone)
+    embed_dim = get_mae_embed_dim(model_id)
     linear_decoder = P.add_decoder(
-        LinearDecoder(
-            device, cfg={"input_dim": MAE_EMBED_DIMS[model_id], "output_dim": 10}
-        ),
+        LinearDecoder(device, cfg={"input_dim": embed_dim, "output_dim": 10}),
         load=True,
     )
     end_time = timeit.default_timer()
@@ -158,7 +154,15 @@ if __name__ == "__main__":
         generator=generator,
     )
 
-    accuracy = train_model(dataloader_train, dataloader_test, model_id, model_cfg, train_config, inference_config, device)
+    accuracy = train_model(
+        dataloader_train,
+        dataloader_test,
+        model_id,
+        model_cfg,
+        train_config,
+        inference_config,
+        device,
+    )
     print("Accuracy: ", accuracy)
     # run_multiple(
     #     [10],

@@ -9,7 +9,7 @@ from fmtk.pipeline import Pipeline
 end_time = timeit.default_timer()
 print(f"Time taken to import fmtk pipeline: {end_time - start_time} seconds")
 
-from fmtk.components.backbones.resnet import ResNetVisionModel, get_resnet_embed_dim
+from fmtk.components.backbones.dinov3 import DinoV3Model, get_dinov3_embed_dim
 from fmtk.components.decoders.classification.linear import LinearDecoder
 from fmtk.metrics import get_accuracy
 from torch.utils.data import DataLoader, Subset
@@ -32,9 +32,9 @@ def train_model(
     device,
 ):
 
-    backbone = ResNetVisionModel(device, model_id, model_cfg)
+    backbone = DinoV3Model(device, model_id, model_cfg)
     P = Pipeline(backbone)
-    embed_dim = get_resnet_embed_dim(model_id)
+    embed_dim = get_dinov3_embed_dim(model_id)
     linear_decoder = P.add_decoder(
         LinearDecoder(device, cfg={"input_dim": embed_dim, "output_dim": 10}),
         load=True,
@@ -43,11 +43,22 @@ def train_model(
     print(f"Time taken to load model: {end_time - start_time} seconds")
 
     print("Training...")
-    P.train(
+    P.train_eval(
         dataloader_train,
         parts_to_train=["decoder"],
         cfg=train_config,
-        path="imgclass_dinobase_eurosat_wrong",
+        path="imgclass_dinov3_eurosat",
+        test_loader=dataloader_test,
+        metric_fn=get_accuracy,
+        mlflow_cfg={
+            "experiment_name": "dinov3-eurosat",
+            "run_name": "dinov3-eurosat",
+            "extra_params": {
+                "model_id": model_id,
+                "model_cfg": model_cfg,
+                "train_config": train_config,
+            },
+        },
     )
 
     y_test, y_pred = P.predict(dataloader_test, cfg=inference_config)
@@ -113,7 +124,7 @@ if __name__ == "__main__":
     train_config = {
         "batch_size": 32,
         "shuffle": False,
-        "epochs": 1,
+        "epochs": 20,
         "lr": 1e-3,
         "scheduler": {"type": "cosine", "T_max": 10, "eta_min": 0},
     }
@@ -124,7 +135,7 @@ if __name__ == "__main__":
     }
     model_cfg = {"return_all_tokens": False}
 
-    model_id = "resnet-18"
+    model_id = "vitb16"
     samples_per_class = [1000]
     train_data = EuroSATDataset(dataset_cfg, task_cfg, split="train")
     test_data = EuroSATDataset(dataset_cfg, task_cfg, split="test")

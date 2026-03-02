@@ -9,11 +9,11 @@ from fmtk.pipeline import Pipeline
 end_time = timeit.default_timer()
 print(f"Time taken to import fmtk pipeline: {end_time - start_time} seconds")
 
-from fmtk.components.backbones.resnet import ResNetVisionModel, get_resnet_embed_dim
+from fmtk.components.backbones.dinov2 import DinoV2Model, get_dinov2_embed_dim
 from fmtk.components.decoders.classification.linear import LinearDecoder
 from fmtk.metrics import get_accuracy
 from torch.utils.data import DataLoader, Subset
-from fmtk.datasets.EuroSAT import EuroSATDataset
+from fmtk.datasets.OrchidFlowers import OrchidFlowersDataset
 import traceback
 
 device = "cuda:0"
@@ -32,24 +32,34 @@ def train_model(
     device,
 ):
 
-    backbone = ResNetVisionModel(device, model_id, model_cfg)
+    backbone = DinoV2Model(device, model_id, model_cfg)
     P = Pipeline(backbone)
-    embed_dim = get_resnet_embed_dim(model_id)
+    embed_dim = get_dinov2_embed_dim(model_id)
     linear_decoder = P.add_decoder(
-        LinearDecoder(device, cfg={"input_dim": embed_dim, "output_dim": 10}),
+        LinearDecoder(device, cfg={"input_dim": embed_dim, "output_dim": 52}),
         load=True,
     )
     end_time = timeit.default_timer()
     print(f"Time taken to load model: {end_time - start_time} seconds")
 
     print("Training...")
-    P.train(
+    P.train_eval(
         dataloader_train,
+        dataloader_test,
         parts_to_train=["decoder"],
         cfg=train_config,
-        path="imgclass_dinobase_eurosat_wrong",
+        path="imgclass_dinobase_orchid",
+        metric_fn=get_accuracy,
+        mlflow_cfg={
+            "experiment_name": "orchid-flowers",
+            "run_name": "dinov2-base-orchid",
+            "extra_params": {
+                "dataset": "OrchidFlowers",
+                "backbone": "dinov2-base",
+                "decoder": "linear",
+            },
+        },
     )
-
     y_test, y_pred = P.predict(dataloader_test, cfg=inference_config)
     result = get_accuracy(y_test, y_pred)
     print("Accuracy: ", result)
@@ -112,22 +122,23 @@ if __name__ == "__main__":
     task_cfg = {"task_type": "classification"}
     train_config = {
         "batch_size": 32,
-        "shuffle": False,
-        "epochs": 1,
-        "lr": 1e-3,
+        "shuffle": True,
+        "epochs": 20,
+        "lr": 5e-5,
         "scheduler": {"type": "cosine", "T_max": 10, "eta_min": 0},
     }
     inference_config = {"batch_size": 32, "shuffle": False}
     dataset_cfg = {
-        "dataset_path": "/work/pi_shenoy_umass_edu/kgudipaty/datasets/EuroSAT",
-        "model_id": "facebook/dinov2-base",
+        "dataset_path": "/work/pi_shenoy_umass_edu/kgudipaty/datasets/OrchidFlowers",
+        "model_id": "dinov2-base",
     }
     model_cfg = {"return_all_tokens": False}
 
-    model_id = "resnet-18"
+    model_id = "dinov2-base"
+    model_id  = "Karan007/facebook-dinov2-base-finetuned-orchid"
     samples_per_class = [1000]
-    train_data = EuroSATDataset(dataset_cfg, task_cfg, split="train")
-    test_data = EuroSATDataset(dataset_cfg, task_cfg, split="test")
+    train_data = OrchidFlowersDataset(dataset_cfg, task_cfg, split="train")
+    test_data = OrchidFlowersDataset(dataset_cfg, task_cfg, split="test")
 
     print("Loading test dataloader...")
     dataloader_test = DataLoader(

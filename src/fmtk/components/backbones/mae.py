@@ -7,26 +7,23 @@ from transformers import AutoModel, AutoImageProcessor
 from peft import get_peft_model, PeftModel
 from functools import singledispatchmethod
 
-MODEL_MAPPING = {
-    "base": "facebook/vit-mae-base",
-    "large": "facebook/vit-mae-large",
-    "huge": "facebook/vit-mae-huge",
-    "mae-base": "facebook/vit-mae-base",
-    "mae-large": "facebook/vit-mae-large",
-    "mae-huge": "facebook/vit-mae-huge",
-}
 
-EMBED_DIMS = {
-    "facebook/vit-mae-base": 768,
-    "facebook/vit-mae-large": 1024,
-    "facebook/vit-mae-huge": 1280,
-    "mae-base": 768,
-    "mae-large": 1024,
-    "mae-huge": 1280,
-    "base": 768,
-    "large": 1024,
-    "huge": 1280,
-}
+def get_mae_model_id(model_name):
+    if model_name in ["base", "mae-base", "facebook/vit-mae-base"]:
+        return "facebook/vit-mae-base"
+    elif model_name in ["large", "mae-large", "facebook/vit-mae-large"]:
+        return "facebook/vit-mae-large"
+    elif model_name in ["huge", "mae-huge", "facebook/vit-mae-huge"]:
+        return "facebook/vit-mae-huge"
+
+
+def get_mae_embed_dim(model_id):
+    if model_id in ["base", "mae-base", "facebook/vit-mae-base"]:
+        return 768
+    elif model_id in ["large", "mae-large", "facebook/vit-mae-large"]:
+        return 1024
+    elif model_id in ["huge", "mae-huge", "facebook/vit-mae-huge"]:
+        return 1280
 
 
 class MAEModel(BaseModel):
@@ -35,29 +32,20 @@ class MAEModel(BaseModel):
     Uses Hugging Face transformers ViTMAEModel; returns encoder [CLS] or all patch tokens.
     """
 
-    def __init__(self, device, model_name="base", model_config=None):
+    def __init__(self, device, model_name="base", model_config={}):
         super().__init__()
         model_config = model_config or {}
         self.device = device
         self.return_all_tokens = model_config.get("return_all_tokens", False)
 
-        if model_name in MODEL_MAPPING:
-            model_id = MODEL_MAPPING[model_name]
-        else:
-            model_id = model_name
+        self.model_id = get_mae_model_id(model_name)
+        self.embed_dim = get_mae_embed_dim(self.model_id)
+        print(f"[MAE] Loading {self.model_id} on device {device}")
 
-        if model_id not in EMBED_DIMS:
-            model_id = MODEL_MAPPING["base"]
-            print("Model ID not in EMBED_DIMS, using facebook/vit-mae-base")
-
-        embed_dim = EMBED_DIMS.get(model_id, 768)
-        print(f"[MAE] Loading {model_id} on device {device}")
-
-        self.model = AutoModel.from_pretrained(model_id)
-        self.processor = AutoImageProcessor.from_pretrained(model_id)
+        self.model = AutoModel.from_pretrained(self.model_id)
+        self.processor = AutoImageProcessor.from_pretrained(self.model_id)
 
         self.model.to(device)
-        self.embed_dim = embed_dim
         self.peft_enable = False
 
     def preprocess(self, batch_x, mask=None):
@@ -82,6 +70,7 @@ class MAEModel(BaseModel):
 
         return embeddings
 
+    # TODO: This should be moved to the abstract class
     @singledispatchmethod
     @torch.no_grad()
     def predict(self, data):

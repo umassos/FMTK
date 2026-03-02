@@ -1,5 +1,4 @@
 import timeit
-import pandas as pd
 import torch
 import gc
 from torch.utils.data import ConcatDataset
@@ -10,12 +9,10 @@ from fmtk.pipeline import Pipeline
 end_time = timeit.default_timer()
 print(f"Time taken to import fmtk pipeline: {end_time - start_time} seconds")
 
-from fmtk.components.backbones.dinov2 import DinoV2Model, EMBED_DIMS
+from fmtk.components.backbones.dinov2 import DinoV2Model, get_dinov2_embed_dim
 from fmtk.components.decoders.classification.linear import LinearDecoder
-from fmtk.components.encoders.diff import LinearChannelCombiner
 from fmtk.metrics import get_accuracy
 from torch.utils.data import DataLoader, Subset
-from peft import LoraConfig
 from fmtk.datasets.EuroSAT import EuroSATDataset
 import traceback
 
@@ -37,10 +34,9 @@ def train_model(
 
     backbone = DinoV2Model(device, model_id, model_cfg)
     P = Pipeline(backbone)
+    embed_dim = get_dinov2_embed_dim(model_id)
     linear_decoder = P.add_decoder(
-        LinearDecoder(
-            device, cfg={"input_dim": EMBED_DIMS[model_id], "output_dim": 10}
-        ),
+        LinearDecoder(device, cfg={"input_dim": embed_dim, "output_dim": 10}),
         load=True,
     )
     end_time = timeit.default_timer()
@@ -51,7 +47,7 @@ def train_model(
         dataloader_train,
         parts_to_train=["decoder"],
         cfg=train_config,
-        path="imgclass_dinobase_eurosat_wrong",
+        path="imgclass_dinobase_eurosat",
     )
 
     y_test, y_pred = P.predict(dataloader_test, cfg=inference_config)
@@ -156,7 +152,15 @@ if __name__ == "__main__":
         generator=generator,
     )
 
-    accuracy = train_model(dataloader_train, dataloader_test, model_id, model_cfg, train_config, inference_config, device)
+    accuracy = train_model(
+        dataloader_train,
+        dataloader_test,
+        model_id,
+        model_cfg,
+        train_config,
+        inference_config,
+        device,
+    )
     print("Accuracy: ", accuracy)
     # run_multiple(
     #     [10],

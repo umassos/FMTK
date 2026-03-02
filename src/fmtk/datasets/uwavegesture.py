@@ -82,7 +82,8 @@ class UWaveGestureLibraryALLDataset(TimeSeriesDataset):
 
         return {'x':np.expand_dims(timeseries, axis=0),
                 'mask':input_mask,
-                'y':labels}
+                'y':labels,
+                'idx':index}
 
     def preprocess(self):
         pass

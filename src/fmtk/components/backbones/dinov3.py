@@ -11,38 +11,73 @@ from peft import get_peft_model, PeftModel
 
 MODEL_MAPPING = {
     "vit7b16": "facebook/dinov3-vit7b16-pretrain-lvd1689m",
+    "vits16": "facebook/dinov3-vits16-pretrain-lvd1689m",
+    "convnext-small": "facebook/dinov3-convnext-small-pretrain-lvd1689m",
+    "vitb16": "facebook/dinov3-vitb16-pretrain-lvd1689m",
+    "convnext-base": "facebook/dinov3-convnext-base-pretrain-lvd1689m",
+    "vits16plus": "facebook/dinov3-vits16plus-pretrain-lvd1689m",
+    "convnext-tiny": "facebook/dinov3-convnext-tiny-pretrain-lvd1689m",
+    "vitl16": "facebook/dinov3-vitl16-pretrain-lvd1689m",
+    "vith16plus": "facebook/dinov3-vith16plus-pretrain-lvd1689m",
+    "convnext-large": "facebook/dinov3-convnext-large-pretrain-lvd1689m",
+}
+EMBED_DIMS = {
+    "vit7b16": 4096,
+    "facebook/dinov3-vit7b16-pretrain-lvd1689m": 4096,
+    "vits16": 384,
+    "facebook/dinov3-vits16-pretrain-lvd1689m": 384,
+    "convnext-small": 768,
+    "facebook/dinov3-convnext-small-pretrain-lvd1689m": 768,
+    "vitb16": 768,
+    "facebook/dinov3-vitb16-pretrain-lvd1689m": 768,
+    "convnext-base": 1024,
+    "facebook/dinov3-convnext-base-pretrain-lvd1689m": 1024,
+    "vits16plus": 768,
+    "facebook/dinov3-vits16plus-pretrain-lvd1689m": 768,
+    "convnext-tiny": 768,
+    "facebook/dinov3-convnext-tiny-pretrain-lvd1689m": 768,
+    "vitl16": 1024,
+    "facebook/dinov3-vitl16-pretrain-lvd1689m": 1024,
+    "vith16plus": 1536,
+    "facebook/dinov3-vith16plus-pretrain-lvd1689m": 1536,
+    "convnext-large": 1536,
+    "facebook/dinov3-convnext-large-pretrain-lvd1689m": 1536,
 }
 
-# EMBED_DIMS = {"giant": 1536, "large": 1024, "base": 768, "small": 384}
-
+def get_dinov3_model_id(model_name):
+    if model_name in MODEL_MAPPING.values():
+        return model_name
+    elif model_name in MODEL_MAPPING.keys():
+        return MODEL_MAPPING[model_name]
+    else:
+        raise ValueError(f"Model name {model_name} not recognized")
+    
+def get_dinov3_embed_dim(model_name):
+    model_id = get_dinov3_model_id(model_name)
+    return EMBED_DIMS[model_id]
 
 class DinoV3Model(BaseModel):
     """
     DINOv3 model for vision tasks.
     """
 
-    def __init__(self, device, model_name="base", return_all_tokens=False):
+    def __init__(self, device, model_name="vitb16", return_all_tokens=False):
         super().__init__()
         self.device = device
         self.return_all_tokens = return_all_tokens
         
         # Default to base model if not specified or not recognized
-        if model_name not in MODEL_MAPPING:
-            model_name = "base"
-            print("Model name not recognized, using default facebook/dinov2-base")
+        self.model_id = get_dinov3_model_id(model_name)
+        self.embed_dim = get_dinov3_embed_dim(self.model_id)
 
-        model_id = MODEL_MAPPING[model_name]
-        # embed_dim = EMBED_DIMS[model_name]
+        self.is_convnext = "convnext" in self.model_id.lower()
 
-        print(f"[DINO v3] Loading {model_id} on device {device}")
+        print(f"[DINO v3] Loading {self.model_id} on device {device}")
 
-        self.model = AutoModel.from_pretrained(model_id)
-        self.processor = AutoImageProcessor.from_pretrained(model_id)
+        self.model = AutoModel.from_pretrained(self.model_id)
+        self.processor = AutoImageProcessor.from_pretrained(self.model_id)
 
-        # self.model.eval()
         self.model.to(device)
-        # self.embed_dim = embed_dim
-
         self.peft_enable = False
 
     def preprocess(self, batch_x, mask=None):
@@ -52,16 +87,6 @@ class DinoV3Model(BaseModel):
         self.B, self.C, self.H, self.W = batch_x.shape
         batch_x = batch_x.to(self.device)
         return batch_x, mask
-
-    # TODO: Dataset/DataLoader should handle this
-    # def preprocess_images(self, images):
-    #     """
-    #     Preprocess raw images using the Hugging Face image processor.
-    #     Useful when you have raw PIL images or numpy arrays instead of tensors.
-    #     """
-    #     return self.processor(images, return_tensors="pt")["pixel_values"].to(
-    #         self.device
-    #     )
 
     def forward(self, batch_x, mask=None, adapters=[]):
         x, mask = self.preprocess(batch_x, mask)
@@ -73,9 +98,9 @@ class DinoV3Model(BaseModel):
             outputs = self.model(x)
 
         if self.return_all_tokens:
-
-            # Extract all tokens for a detr style decoder
-            embeddings = outputs.last_hidden_state[:, 1:, :]
+            # Strip CLS token (index 0) and any register tokens
+            num_register = getattr(self.model.config, "num_register_tokens", 0)
+            embeddings = outputs.last_hidden_state[:, 1 + num_register:, :]
         else:
             # Extract the pooled output (CLS token representation)
             embeddings = outputs.pooler_output

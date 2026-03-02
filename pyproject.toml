@@ -33,3 +33,6 @@ dependencies = [
 "torch-ecg<=0.0.28",
 ]
 
+[project.optional-dependencies]
+detection = ["rfdetr"]
+

@@ -90,6 +90,7 @@ class ECG5000Dataset(TimeSeriesDataset):
             "x": np.expand_dims(timeseries, axis=0),
             "mask": input_mask,
             "y": labels,
+            "idx": index,
         }
 
     def preprocess(self):
