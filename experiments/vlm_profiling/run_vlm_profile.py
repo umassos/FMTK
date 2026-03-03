@@ -40,7 +40,7 @@ def _patched_sdpa(*args, **kwargs):
     return _orig_sdpa(*args, **kwargs)
 F.scaled_dot_product_attention = _patched_sdpa
 
-from fmtk.datasets.vlm_dataset import VLMDataset, vlm_collate_fn
+from fmtk.datasetloaders.vlm_dataset import VLMDataset, vlm_collate_fn
 from fmtk.tasks.vlm_utils import (
     get_vlm_dataset_config,
     get_parser,

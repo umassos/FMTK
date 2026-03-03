@@ -11,6 +11,7 @@ class LlamaVisionModel(BaseModel):
     def __init__(self,device,model_name=None,model_config=None):
         super().__init__()
         self.device=device
+        self.model_category = 'vlms'
         base_dir = os.path.dirname(__file__)
         models_directory = os.path.join(base_dir, '../../../../..', 'FMaaS-motivation/vqa/updated/models')
         if model_name=="llama-vision":

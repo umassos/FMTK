@@ -37,6 +37,7 @@ class VGGModel(BaseModel):
         super().__init__()
 
         self.device = device
+        self.model_category = 'vision'
 
         self.model_id = get_vgg_model_id(model_name)
         self.embed_dim = get_vgg_embed_dim(

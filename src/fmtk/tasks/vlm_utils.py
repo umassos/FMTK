@@ -450,7 +450,7 @@ def get_vlm_dataset_config(task_name: str):
     Example usage in a standalone profiling script::
 
         from fmtk.tasks.vlm_utils import get_vlm_dataset_config
-        from fmtk.datasets.vlm_dataset import VLMDataset
+        from fmtk.datasetloaders.vlm_dataset import VLMDataset
 
         dataset_cfg, task_cfg = get_vlm_dataset_config("scene")
         dataset = VLMDataset(dataset_cfg, task_cfg, split="test")

@@ -36,6 +36,7 @@ class MAEModel(BaseModel):
         super().__init__()
         model_config = model_config or {}
         self.device = device
+        self.model_category = 'vision'
         self.return_all_tokens = model_config.get("return_all_tokens", False)
 
         self.model_id = get_mae_model_id(model_name)

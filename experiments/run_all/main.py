@@ -1,8 +1,10 @@
 import subprocess
 import json
 from config import tasks
+import sys
 
 if __name__ == "__main__":
+    log_file = sys.argv[1] if len(sys.argv) > 1 else "combined_metrics.csv"
     for task_name, task_info in tasks.items():
         print(f"\n=== Running task: {task_name} ===")
 
@@ -18,6 +20,7 @@ if __name__ == "__main__":
                 json.dumps({
                     "task_name": task_name,
                     "task_info": task_info,
-                    "pipeline": p
+                    "pipeline": p,
+                    "file_name": log_file
                 })
             ])

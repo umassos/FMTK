@@ -9,8 +9,9 @@ if __name__ == "__main__":
     task_name  = payload["task_name"]
     task_info  = payload["task_info"]
     pipeline   = payload["pipeline"]
+    log_file =   payload["file_name"]
 
-    pipe = InferencePipeline(task_name, task_info, pipeline)
+    pipe = InferencePipeline(task_name, task_info, pipeline, log_file)
     pipe.run()
 
     # FULL cleanup

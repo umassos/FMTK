@@ -1,0 +1,30 @@
+{
+  "backbone": {
+    "wall time": 2140.353088034317,
+    "gpu time": 2140.433349609375,
+    "gpu peak": 20.068352,
+    "gpu energy": 94.778,
+    "cpu dRSS": 171.70432
+  },
+  "add_decoder_gestureclass_papageissvri_mlp": {
+    "wall time": 0.427871011197567,
+    "gpu time": 0.46489599347114563,
+    "gpu peak": 20.335616,
+    "gpu energy": 0.0,
+    "cpu dRSS": 0.0
+  },
+  "decoder": {
+    "wall time": 2.808644901961088,
+    "gpu time": 2.8436479568481445,
+    "gpu peak": 20.335616,
+    "gpu energy": 0.0,
+    "cpu dRSS": 0.0
+  },
+  "train": {
+    "wall time": 35314.88089996856,
+    "gpu time": 35319.984375,
+    "gpu peak": 202.239488,
+    "gpu energy": 2605.908,
+    "cpu dRSS": 314.441728
+  }
+}

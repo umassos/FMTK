@@ -53,7 +53,7 @@ dependencies:
       - torch-ecg<=0.0.28
       - biosppy
       - peakutils
-      - pyPPG
+      - pyPPG==1.0.73
       - pytorch-metric-learning
       - torch-optimizer
       # Build

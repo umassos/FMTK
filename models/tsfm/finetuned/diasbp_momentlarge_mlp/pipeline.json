@@ -1,0 +1,30 @@
+{
+  "backbone": {
+    "wall time": 3787.0225170627236,
+    "gpu time": 3787.173828125,
+    "gpu peak": 1461.95456,
+    "gpu energy": 279.163,
+    "cpu dRSS": 519.716864
+  },
+  "add_decoder": {
+    "wall time": 0.21472293883562088,
+    "gpu time": 0.23552000522613525,
+    "gpu peak": 1462.480384,
+    "gpu energy": 0.0,
+    "cpu dRSS": 0.0
+  },
+  "decoder": {
+    "wall time": 7.207582239061594,
+    "gpu time": 7.2284159660339355,
+    "gpu peak": 1462.480384,
+    "gpu energy": 0.0,
+    "cpu dRSS": 0.0
+  },
+  "train": {
+    "wall time": 121735.37600273266,
+    "gpu time": 121734.78125,
+    "gpu peak": 2613.989888,
+    "gpu energy": 43894.734,
+    "cpu dRSS": 352.321536
+  }
+}

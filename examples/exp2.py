@@ -1,5 +1,5 @@
 from fmtk.pipeline import Pipeline
-from fmtk.datasets.etth1 import ETTh1Dataset
+from fmtk.datasetloaders.etth1 import ETTh1Dataset
 from fmtk.components.backbones.papagei import PapageiModel
 from fmtk.components.decoders.forecasting.mlp import MLPDecoder
 from fmtk.metrics import get_mae

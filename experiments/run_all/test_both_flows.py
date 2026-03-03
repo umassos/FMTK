@@ -63,6 +63,7 @@ def run_task(label, task_name, task_info, pipeline):
             "task_name": task_name,
             "task_info": task_info,
             "pipeline": pipeline,
+            "file_name": "combined_metrics.csv",
         })],
         cwd=os.path.dirname(os.path.abspath(__file__)),
     )

@@ -3,6 +3,7 @@ from abc import ABC, abstractmethod
 class BaseModel(ABC):
     def __init__(self):
         super().__init__()
+        self.model_category = 'tsfm'
 
     def preprocess(self,batch):
         pass

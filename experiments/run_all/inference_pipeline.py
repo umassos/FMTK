@@ -14,7 +14,7 @@ import json
 import torch
 
 class InferencePipeline:
-    def __init__(self,task_name,task_info, pipeline):
+    def __init__(self,task_name,task_info, pipeline, log_file):
 
         self.backbone_cfg = backbones[pipeline['backbone']]
         self.dataset_cfg = datasets[task_info['datasets'][0]]
@@ -26,6 +26,7 @@ class InferencePipeline:
         self.model_type = self.backbone_cfg['model_type']
         self.device = device
         self.is_vlm = task_info.get('task_type') == 'vlm'
+        self.log_file = log_file
         control_randomness(13)
 
         dataset_class = get_dataset_class(self.dataset_cfg['dataset_type'])
@@ -35,7 +36,7 @@ class InferencePipeline:
             vlm_task_key = self.task_cfg['vlm_task_key']
             self.task_cfg['prompt'] = TASK_REGISTRY[vlm_task_key]['prompt']
 
-            from fmtk.datasets.vlm_dataset import vlm_collate_fn
+            from fmtk.datasetloaders.vlm_dataset import vlm_collate_fn
             self.dataset_instance_test = dataset_class(self.dataset_cfg, self.task_cfg, split='test')
             self.dataloader_test = DataLoader(self.dataset_instance_test, batch_size=1,
                                               shuffle=False, collate_fn=vlm_collate_fn)
@@ -179,7 +180,8 @@ class InferencePipeline:
             summary=logger.summary()
             if not self.train:
                 base_dir = os.path.dirname(__file__)
-                with open(f"{base_dir}/../../src/fmtk/saved/{path['path']}/pipeline.json", 'r') as file:
+                category = P.model_instance.model_category
+                with open(f"{base_dir}/../../models/{category}/finetuned/{path['path']}/pipeline.json", 'r') as file:
                     data = json.load(file)
                 summary.update({'train':data['train']})
 
@@ -224,8 +226,8 @@ class InferencePipeline:
                         "inference energy":summary['predict']['gpu energy'],
                         }
 
-            write_header = not os.path.exists(log_file)
-            with open(log_file, "a", newline="") as f:
+            write_header = not os.path.exists(self.log_file)
+            with open(self.log_file, "a", newline="") as f:
                 writer = csv.DictWriter(f, fieldnames=metrics.keys())
                 if write_header:
                     writer.writeheader()
