@@ -210,7 +210,38 @@ class Pipeline:
                     labels.append(y.numpy())
                 return np.concatenate(labels), np.concatenate(preds)
         else:
-            preds,labels=self.model_instance.predict(test_loader)
+            preds, labels = [], []
+            is_generative = False
+            for batch in tqdm(test_loader):
+                is_vlm = 'question' in batch
+                if is_vlm:
+                    x = (batch['x'], batch['question'])
+                else:
+                    x = batch['x']
+                y = batch['y']
+                mask = batch.get('mask', None)
+
+                with (self.logger.measure("predict", device=self.logger.device) if self.logger else nullcontext()):
+                    with torch.no_grad():
+                        output = self.model_instance.forward(x, mask)
+
+                # Generative output: list of strings
+                if isinstance(output, list):
+                    is_generative = True
+                    preds.extend(output)
+                    if isinstance(y, torch.Tensor):
+                        labels.extend(y.tolist())
+                    else:
+                        labels.extend(list(y))
+                else:
+                    preds.append(output.detach().cpu().numpy())
+                    if isinstance(y, torch.Tensor):
+                        labels.append(y.numpy())
+                    else:
+                        labels.append(np.array(y))
+
+            if is_generative:
+                return np.array(labels, dtype=object), np.array(preds, dtype=object)
             return np.concatenate(labels), np.concatenate(preds)
 
     def _encoder_loader(self, dataloader, cfg):
