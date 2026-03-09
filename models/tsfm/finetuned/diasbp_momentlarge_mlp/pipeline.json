@@ -1,30 +1,30 @@
 {
   "backbone": {
-    "wall time": 3787.0225170627236,
-    "gpu time": 3787.173828125,
+    "wall time": 3804.4257359579206,
+    "gpu time": 3804.559326171875,
     "gpu peak": 1461.95456,
-    "gpu energy": 279.163,
-    "cpu dRSS": 519.716864
+    "gpu energy": 101.605,
+    "cpu dRSS": 518.119424
   },
-  "add_decoder": {
-    "wall time": 0.21472293883562088,
-    "gpu time": 0.23552000522613525,
+  "add_decoder_diasbp_momentlarge_mlp": {
+    "wall time": 0.3105939831584692,
+    "gpu time": 0.32972800731658936,
     "gpu peak": 1462.480384,
     "gpu energy": 0.0,
     "cpu dRSS": 0.0
   },
   "decoder": {
-    "wall time": 7.207582239061594,
-    "gpu time": 7.2284159660339355,
+    "wall time": 9.637693874537945,
+    "gpu time": 9.657376289367676,
     "gpu peak": 1462.480384,
     "gpu energy": 0.0,
     "cpu dRSS": 0.0
   },
   "train": {
-    "wall time": 121735.37600273266,
-    "gpu time": 121734.78125,
-    "gpu peak": 2613.989888,
-    "gpu energy": 43894.734,
-    "cpu dRSS": 352.321536
+    "wall time": 402093.2084650267,
+    "gpu time": 402091.03125,
+    "gpu peak": 1883.792384,
+    "gpu energy": 23481.195,
+    "cpu dRSS": 207.896576
   }
 }

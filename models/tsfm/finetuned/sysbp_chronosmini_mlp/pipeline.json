@@ -1,30 +1,30 @@
 {
   "backbone": {
-    "wall time": 943.9110732637346,
-    "gpu time": 943.9901733398438,
-    "gpu peak": 57.957376,
-    "gpu energy": 64.83,
-    "cpu dRSS": 1.835008
+    "wall time": 485.77431589365005,
+    "gpu time": 485.8480224609375,
+    "gpu peak": 40.918016,
+    "gpu energy": 17.652,
+    "cpu dRSS": 115.79392
   },
-  "add_decoder": {
-    "wall time": 0.19088108092546463,
-    "gpu time": 0.2176000028848648,
-    "gpu peak": 58.15552,
+  "add_decoder_sysbp_chronosmini_mlp": {
+    "wall time": 0.1905909739434719,
+    "gpu time": 0.20694400370121002,
+    "gpu peak": 41.11616,
     "gpu energy": 0.0,
     "cpu dRSS": 0.0
   },
   "decoder": {
-    "wall time": 6.300936918705702,
-    "gpu time": 6.319744110107422,
-    "gpu peak": 58.15552,
+    "wall time": 6.708505097776651,
+    "gpu time": 6.730559825897217,
+    "gpu peak": 41.11616,
     "gpu energy": 0.0,
-    "cpu dRSS": 0.0
+    "cpu dRSS": 0.524288
   },
   "train": {
-    "wall time": 11846.703339833766,
-    "gpu time": 11846.705078125,
-    "gpu peak": 2751.832064,
-    "gpu energy": 2828.92,
-    "cpu dRSS": 29.257728
+    "wall time": 86076.78312598728,
+    "gpu time": 86076.4453125,
+    "gpu peak": 2752.623104,
+    "gpu energy": 4977.225,
+    "cpu dRSS": 407.691264
   }
 }

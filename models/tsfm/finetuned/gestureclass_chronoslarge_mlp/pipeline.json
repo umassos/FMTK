@@ -1,30 +1,30 @@
 {
   "backbone": {
-    "wall time": 11438.54215007741,
-    "gpu time": 11438.7236328125,
+    "wall time": 1283.3010610193014,
+    "gpu time": 1283.3768310546875,
     "gpu peak": 1417.926656,
-    "gpu energy": 443.949,
-    "cpu dRSS": 173.387776
+    "gpu energy": 41.092,
+    "cpu dRSS": 130.17088
   },
   "add_decoder_gestureclass_chronoslarge_mlp": {
-    "wall time": 0.4224969306960702,
-    "gpu time": 0.4615359902381897,
+    "wall time": 0.2605870831757784,
+    "gpu time": 0.27904000878334045,
     "gpu peak": 1418.456064,
     "gpu energy": 0.0,
     "cpu dRSS": 0.0
   },
   "decoder": {
-    "wall time": 3.657607943750918,
-    "gpu time": 3.6901440620422363,
+    "wall time": 6.2044779770076275,
+    "gpu time": 6.227615833282471,
     "gpu peak": 1418.456064,
     "gpu energy": 0.0,
-    "cpu dRSS": 0.262144
+    "cpu dRSS": 0.0
   },
   "train": {
-    "wall time": 2062514.1214099713,
-    "gpu time": 2062525.375,
+    "wall time": 3558767.1221848577,
+    "gpu time": 3558749.5,
     "gpu peak": 3256.41984,
-    "gpu energy": 423757.919,
-    "cpu dRSS": 278.249472
+    "gpu energy": 207235.399,
+    "cpu dRSS": 353.255424
   }
 }
