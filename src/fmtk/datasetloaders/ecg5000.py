@@ -18,7 +18,7 @@ class ECG5000Dataset(TimeSeriesDataset):
             Split of the dataset, 'train', 'val' or 'test'.
         """
         super().__init__(dataset_cfg, task_cfg, split)
-        self.seq_len = 512
+        self.seq_len = self.dataset_cfg.get('seq_len', 512)  # Default to 512 if not specified in config
         self.train_file_path_and_name = f"{dataset_path}/ECG5000_TRAIN.ts"
         self.test_file_path_and_name = f"{dataset_path}/ECG5000_TEST.ts"
 

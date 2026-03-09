@@ -38,7 +38,7 @@ class ETTh1Dataset(TimeSeriesDataset):
             Random seed for reproducibility.
         """
         super().__init__(dataset_cfg, task_cfg, split)
-        self.seq_len = 512
+        self.seq_len = self.dataset_cfg.get('seq_len', 512)  # Default to 512 if not specified in config
         self.forecast_horizon = forecast_horizon
         self.full_file_path_and_name = f"{dataset_path}/ETTh1.csv"
         self.data_stride_len = data_stride_len

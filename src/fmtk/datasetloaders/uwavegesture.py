@@ -11,7 +11,8 @@ dataset_path = os.path.join(root_dir, "dataset/UWaveGestureLibraryAll")
 class UWaveGestureLibraryALLDataset(TimeSeriesDataset):
     def __init__(self, dataset_cfg, task_cfg, split):
         super().__init__(dataset_cfg, task_cfg, split)
-        self.seq_len = 945
+        # self.seq_len = 945
+        self.seq_len = self.dataset_cfg.get('seq_len', 945)  # Default to 945 if not specified in config
         self.train_file_path_and_name = f"{dataset_path}/UWaveGestureLibraryAll_TRAIN.ts"
         self.test_file_path_and_name = f"{dataset_path}/UWaveGestureLibraryAll_TEST.ts"
 

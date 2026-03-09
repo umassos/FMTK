@@ -18,8 +18,8 @@ dataset_path = os.path.join(root_dir, "dataset/PPG-data")
 class PPGDataset(TimeSeriesDataset):
     def __init__(self, dataset_cfg, task_cfg, split):
         super().__init__(dataset_cfg, task_cfg, split)
-        self.seq_len = 1250  # 10 seconds at 125 Hz original
-        #self.seq_len = 512  # 4.096 seconds at 125 Hz
+        # self.seq_len = 1250  # 10 seconds at 125 Hz original
+        self.seq_len = self.dataset_cfg.get('seq_len', 1250)  # 4.096 seconds at 125 Hz
         self.task_name = self.task_cfg['task_type']  
         self.x_df,self.y_df = self.load_data()
         self.length = len(self.x_df)
@@ -92,9 +92,12 @@ class PPGDataset(TimeSeriesDataset):
                 signal = self.resample_batch_signal(signal, fs_original=fs, fs_target=fs_target, axis=0)
 
                 padding_needed = self.seq_len - len(signal)
-                pad_left = padding_needed // 2
-                pad_right = padding_needed - pad_left
-                signal = np.pad(signal, pad_width=(pad_left, pad_right))
+                if padding_needed < 0:
+                    signal = signal[-self.seq_len:]
+                else:
+                    pad_left = padding_needed // 2
+                    pad_right = padding_needed - pad_left
+                    signal = np.pad(signal, pad_width=(pad_left, pad_right))
                 segments.append(signal)
             segments= np.vstack(segments)
             x_df.append(segments)  # Shape: (3, 1250)

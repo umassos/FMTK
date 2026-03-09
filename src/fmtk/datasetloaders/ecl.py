@@ -42,7 +42,7 @@ class ECLDataset(TimeSeriesDataset):
             multiply 15-min kW by 0.25 before summing.
         """
         super().__init__(dataset_cfg, task_cfg, split)
-        self.seq_len = 512
+        self.seq_len = self.dataset_cfg.get('seq_len', 512)  # Default to 512 if not specified in config
         self.forecast_horizon = forecast_horizon
         self.full_file_path_and_name = f"{dataset_path}/electricity.csv"
         self.data_stride_len = data_stride_len
