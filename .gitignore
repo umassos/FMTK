@@ -11,3 +11,8 @@ data/
 logs/
 *.pth
 *.pt
+models/tsfm/finetuned/
+.claude/
+memory/
+project-2.zip
+src/fmtk/datasets/

@@ -1,0 +1,9 @@
+run,task,n_samples,metric,value,weight_status,data_status
+run1_baseline,heartrate,500,mae,37.58689880371094,pretrained,synthetic
+run2_same_dec_same_len,sysbp,500,mae,72.33329772949219,pretrained,synthetic
+run2_same_dec_same_len,heartrate,500,mae,37.676204681396484,pretrained,synthetic
+run3_same_dec_diff_len,heartrate,500,mae,37.647125244140625,pretrained,synthetic
+run4_diff_dec_same_len,gestureclass,3582,accuracy,0.24399776661083195,pretrained,real
+run4_diff_dec_same_len,heartrate,500,mae,37.67599868774414,pretrained,synthetic
+run5_diff_dec_diff_len,gestureclass,3582,accuracy,0.23897264098269122,pretrained,real
+run5_diff_dec_diff_len,heartrate,500,mae,37.629234313964844,pretrained,synthetic

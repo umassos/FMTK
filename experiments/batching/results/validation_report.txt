@@ -1,0 +1,77 @@
+============================================================
+BATCHING EXPERIMENT VALIDATION REPORT
+============================================================
+
+PASSED (49):
+  PASS: run1_baseline: backbone latency ratio max/min=1.07 < 3.0 (roughly constant)
+  PASS: run2_same_dec_same_len: backbone latency ratio max/min=1.11 < 3.0 (roughly constant)
+  PASS: run3_same_dec_diff_len: backbone latency ratio max/min=1.09 < 3.0 (roughly constant)
+  PASS: run4_diff_dec_same_len: backbone latency ratio max/min=1.09 < 3.0 (roughly constant)
+  PASS: run5_diff_dec_diff_len: backbone latency ratio max/min=1.10 < 3.0 (roughly constant)
+  PASS: run1_baseline: per-request latency at bs=1 / bs=32 = 3.52 > 1.5 (good batching benefit)
+  PASS: run2_same_dec_same_len: per-request latency at bs=1 / bs=32 = 3.48 > 1.5 (good batching benefit)
+  PASS: run3_same_dec_diff_len: per-request latency at bs=1 / bs=32 = 3.48 > 1.5 (good batching benefit)
+  PASS: run4_diff_dec_same_len: per-request latency at bs=1 / bs=32 = 3.44 > 1.5 (good batching benefit)
+  PASS: run5_diff_dec_diff_len: per-request latency at bs=1 / bs=32 = 3.59 > 1.5 (good batching benefit)
+  PASS: run1_baseline bs=1: CV=0.021 < 0.15 (stable)
+  PASS: run1_baseline bs=2: CV=0.014 < 0.15 (stable)
+  PASS: run1_baseline bs=4: CV=0.012 < 0.15 (stable)
+  PASS: run1_baseline bs=8: CV=0.010 < 0.15 (stable)
+  PASS: run1_baseline bs=16: CV=0.007 < 0.15 (stable)
+  PASS: run1_baseline bs=32: CV=0.005 < 0.15 (stable)
+  PASS: run2_same_dec_same_len bs=1: CV=0.025 < 0.15 (stable)
+  PASS: run2_same_dec_same_len bs=2: CV=0.015 < 0.15 (stable)
+  PASS: run2_same_dec_same_len bs=4: CV=0.013 < 0.15 (stable)
+  PASS: run2_same_dec_same_len bs=8: CV=0.009 < 0.15 (stable)
+  PASS: run2_same_dec_same_len bs=16: CV=0.007 < 0.15 (stable)
+  PASS: run2_same_dec_same_len bs=32: CV=0.008 < 0.15 (stable)
+  PASS: run3_same_dec_diff_len bs=1: CV=0.024 < 0.15 (stable)
+  PASS: run3_same_dec_diff_len bs=2: CV=0.020 < 0.15 (stable)
+  PASS: run3_same_dec_diff_len bs=4: CV=0.017 < 0.15 (stable)
+  PASS: run3_same_dec_diff_len bs=8: CV=0.012 < 0.15 (stable)
+  PASS: run3_same_dec_diff_len bs=16: CV=0.009 < 0.15 (stable)
+  PASS: run3_same_dec_diff_len bs=32: CV=0.005 < 0.15 (stable)
+  PASS: run4_diff_dec_same_len bs=1: CV=0.022 < 0.15 (stable)
+  PASS: run4_diff_dec_same_len bs=2: CV=0.017 < 0.15 (stable)
+  PASS: run4_diff_dec_same_len bs=4: CV=0.013 < 0.15 (stable)
+  PASS: run4_diff_dec_same_len bs=8: CV=0.013 < 0.15 (stable)
+  PASS: run4_diff_dec_same_len bs=16: CV=0.008 < 0.15 (stable)
+  PASS: run4_diff_dec_same_len bs=32: CV=0.005 < 0.15 (stable)
+  PASS: run5_diff_dec_diff_len bs=1: CV=0.023 < 0.15 (stable)
+  PASS: run5_diff_dec_diff_len bs=2: CV=0.007 < 0.15 (stable)
+  PASS: run5_diff_dec_diff_len bs=4: CV=0.017 < 0.15 (stable)
+  PASS: run5_diff_dec_diff_len bs=8: CV=0.010 < 0.15 (stable)
+  PASS: run5_diff_dec_diff_len bs=16: CV=0.007 < 0.15 (stable)
+  PASS: run5_diff_dec_diff_len bs=32: CV=0.005 < 0.15 (stable)
+  PASS: heartrate MAE=37.5869 is finite and positive
+  PASS: sysbp MAE=72.3333 is finite and positive
+  PASS: heartrate MAE=37.6762 is finite and positive
+  PASS: heartrate MAE=37.6471 is finite and positive
+  PASS: gestureclass accuracy=0.2440 > 0.15 (beats random 0.125)
+  PASS: heartrate MAE=37.6760 is finite and positive
+  PASS: gestureclass accuracy=0.2390 > 0.15 (beats random 0.125)
+  PASS: heartrate MAE=37.6292 is finite and positive
+  PASS: Backbone latency consistent across runs (max/min=1.05)
+
+FAILED (0):
+
+SUMMARY: median total latency (ms) by run x batch_size
+batch_size                    1         2         4         8          16         32
+run                                                                                 
+run1_baseline           3.363275  4.004358  5.668978  9.046556  16.215387  30.540569
+run2_same_dec_same_len  3.360598  4.026457  5.681849  9.092131  16.331371  30.908631
+run3_same_dec_diff_len  3.369089  4.048052  5.724997  9.225998  16.404428  30.942484
+run4_diff_dec_same_len  3.349871  4.074969  5.738809  9.217283  16.522062  31.124831
+run5_diff_dec_diff_len  3.512489  4.105633  5.806164  9.256189  16.589664  31.295284
+
+ACCURACY:
+                   run         task   metric     value weight_status
+         run1_baseline    heartrate      mae 37.586899    pretrained
+run2_same_dec_same_len        sysbp      mae 72.333298    pretrained
+run2_same_dec_same_len    heartrate      mae 37.676205    pretrained
+run3_same_dec_diff_len    heartrate      mae 37.647125    pretrained
+run4_diff_dec_same_len gestureclass accuracy  0.243998    pretrained
+run4_diff_dec_same_len    heartrate      mae 37.675999    pretrained
+run5_diff_dec_diff_len gestureclass accuracy  0.238973    pretrained
+run5_diff_dec_diff_len    heartrate      mae 37.629234    pretrained
+============================================================

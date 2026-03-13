@@ -1,0 +1,124 @@
+/home/pragya/miniconda3/envs/fmtk/lib/python3.10/site-packages/torch/cuda/__init__.py:58: FutureWarning: The pynvml package is deprecated. Please install nvidia-ml-py instead. If you did not install pynvml directly, please report this to the maintainers of the package that installed pynvml for you.
+  import pynvml  # type: ignore[import]
+/home/pragya/miniconda3/envs/fmtk/lib/python3.10/site-packages/momentfm/models/moment.py:174: UserWarning: Only reconstruction head is pre-trained. Classification and forecasting heads must be fine-tuned.
+  warnings.warn("Only reconstruction head is pre-trained. Classification and forecasting heads must be fine-tuned.")
+/home/pragya/Desktop/FMaaS/FMTK/src/fmtk/pipeline.py:60: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  self.decoders[decoder_name].model.load_state_dict(torch.load(f"{self.base_dir}/../../models/{category}/finetuned/{path}/decoder.pth"))
+
+==============================================================
+  TSFM Batching Experiment
+  Backbone    : momentbase
+  Batch sizes : [1, 2, 4, 8, 16, 32]
+  Reps        : 50 + 10 warmup
+  Device      : cuda (NVIDIA GeForce RTX 3090 Ti)
+==============================================================
+
+[setup] Checking decoder weights...
+  All decoder weights are pre-trained.
+
+[data] Building data pools...
+  heartrate : (500, 1, 512)  (synthetic — no PPG weights)
+  sysbp     : (500, 1, 512)  (synthetic — no PPG weights)
+  heartrate_short : (500, 1, 512)  (synthetic, real content in [:, :, :256])
+  gestureclass : (3582, 1, 512)  (UWaveGesture test set, real data)
+  gestureclass_short : (3582, 1, 512)  (UWaveGesture, tail zeroed)
+  ecgclass : (4500, 1, 512)  (ECG5000 test set, real data)
+
+[setup] Loading backbone + decoders...
+[ModelLoader] Loading backbone: momentbase
+[Moment] Loading AutonLab/MOMENT-1-base on device cuda
+[ModelLoader] Loading decoder: heartrate (regression) from heartrate_momentbase_mlp
+[ModelLoader] Loading decoder: sysbp (regression) from sysbp_momentbase_mlp
+[ModelLoader] Loading decoder: gestureclass (classification) from gestureclass_momentbase_mlp
+[ModelLoader] Loading decoder: ecgclass (classification) from ecgclass_momentbase_mlp
+[ModelLoader] Loaded MomentModel with 4 decoders.
+[setup] Model loaded in 1.7s.
+
+
+[milestone] Smoke test: single heartrate request through runtime...
+  backbone_latency  : 73.10 ms
+  decoder_latency   : 1.00 ms
+  swap_latency      : 0.00 ms
+  total e2e latency : 74.23 ms
+  gpu_peak_mb       : 444.20 MB
+  output shape      : (1,)
+[milestone] Smoke test passed.
+
+
+──────────────────────────────────────────────────────────────
+  run1_baseline
+  Single task, single decoder — heartrate regression, seq_len=512
+──────────────────────────────────────────────────────────────
+  bs= 1 | total=   3.37ms  backbone=   3.14ms  per_req=  3.37ms  gpu= 444.2MB
+  bs= 2 | total=   4.03ms  backbone=   3.24ms  per_req=  2.01ms  gpu= 444.4MB
+  bs= 4 | total=   5.70ms  backbone=   3.25ms  per_req=  1.42ms  gpu= 444.8MB
+  bs= 8 | total=   9.09ms  backbone=   3.21ms  per_req=  1.14ms  gpu= 445.5MB
+  bs=16 | total=  16.22ms  backbone=   3.34ms  per_req=  1.01ms  gpu= 447.0MB
+  bs=32 | total=  30.56ms  backbone=   3.38ms  per_req=  0.96ms  gpu= 450.0MB
+  [run1_baseline] heartrate        mae=37.5869  weights=pretrained  data=synthetic
+
+──────────────────────────────────────────────────────────────
+  run2_same_dec_same_len
+  Two regression tasks, same decoder arch, same seq_len (heartrate + sysbp interleaved, both MLP 768→1)
+──────────────────────────────────────────────────────────────
+  bs= 1 | total=   3.38ms  backbone=   3.14ms  per_req=  3.38ms  gpu= 444.2MB
+  bs= 2 | total=   4.05ms  backbone=   3.21ms  per_req=  2.02ms  gpu= 444.4MB
+  bs= 4 | total=   5.71ms  backbone=   3.22ms  per_req=  1.43ms  gpu= 444.8MB
+  bs= 8 | total=   9.13ms  backbone=   3.21ms  per_req=  1.14ms  gpu= 445.5MB
+  bs=16 | total=  16.32ms  backbone=   3.31ms  per_req=  1.02ms  gpu= 447.0MB
+  bs=32 | total=  30.90ms  backbone=   3.49ms  per_req=  0.97ms  gpu= 450.0MB
+  [run2_same_dec_same_len] sysbp            mae=72.3333  weights=pretrained  data=synthetic
+  [run2_same_dec_same_len] heartrate        mae=37.6762  weights=pretrained  data=synthetic
+
+──────────────────────────────────────────────────────────────
+  run3_same_dec_diff_len
+  Same decoder (heartrate MLP), mixed seq_len (full 512 + zero-padded 256, interleaved)
+──────────────────────────────────────────────────────────────
+  bs= 1 | total=   3.39ms  backbone=   3.15ms  per_req=  3.39ms  gpu= 444.2MB
+  bs= 2 | total=   4.08ms  backbone=   3.24ms  per_req=  2.04ms  gpu= 444.4MB
+  bs= 4 | total=   5.76ms  backbone=   3.26ms  per_req=  1.44ms  gpu= 444.8MB
+  bs= 8 | total=   9.26ms  backbone=   3.27ms  per_req=  1.16ms  gpu= 445.5MB
+  bs=16 | total=  16.41ms  backbone=   3.30ms  per_req=  1.03ms  gpu= 447.0MB
+  bs=32 | total=  30.97ms  backbone=   3.45ms  per_req=  0.97ms  gpu= 450.0MB
+  [run3_same_dec_diff_len] heartrate        mae=37.6471  weights=pretrained  data=synthetic
+
+──────────────────────────────────────────────────────────────
+  run4_diff_dec_same_len
+  Different decoders, same seq_len (heartrate regression + gestureclass classification, interleaved)
+──────────────────────────────────────────────────────────────
+  bs= 1 | total=   3.36ms  backbone=   3.13ms  per_req=  3.36ms  gpu= 444.2MB
+  bs= 2 | total=   4.10ms  backbone=   3.22ms  per_req=  2.05ms  gpu= 444.4MB
+  bs= 4 | total=   5.77ms  backbone=   3.24ms  per_req=  1.44ms  gpu= 444.8MB
+  bs= 8 | total=   9.27ms  backbone=   3.25ms  per_req=  1.16ms  gpu= 445.5MB
+  bs=16 | total=  16.51ms  backbone=   3.32ms  per_req=  1.03ms  gpu= 447.0MB
+  bs=32 | total=  31.14ms  backbone=   3.41ms  per_req=  0.97ms  gpu= 450.0MB
+  [run4_diff_dec_same_len] gestureclass     accuracy=0.2440  weights=pretrained  data=real
+  [run4_diff_dec_same_len] heartrate        mae=37.6760  weights=pretrained  data=synthetic
+
+──────────────────────────────────────────────────────────────
+  run5_diff_dec_diff_len
+  Different decoders, mixed seq_len (heartrate@512 + gestureclass@256, interleaved)
+──────────────────────────────────────────────────────────────
+  bs= 1 | total=   3.55ms  backbone=   3.30ms  per_req=  3.55ms  gpu= 444.2MB
+  bs= 2 | total=   4.11ms  backbone=   3.34ms  per_req=  2.06ms  gpu= 444.4MB
+  bs= 4 | total=   5.85ms  backbone=   3.40ms  per_req=  1.46ms  gpu= 444.8MB
+  bs= 8 | total=   9.30ms  backbone=   3.36ms  per_req=  1.16ms  gpu= 445.5MB
+  bs=16 | total=  16.57ms  backbone=   3.46ms  per_req=  1.04ms  gpu= 447.0MB
+  bs=32 | total=  31.32ms  backbone=   3.61ms  per_req=  0.98ms  gpu= 450.0MB
+  [run5_diff_dec_diff_len] gestureclass     accuracy=0.2390  weights=pretrained  data=real
+  [run5_diff_dec_diff_len] heartrate        mae=37.6292  weights=pretrained  data=synthetic
+
+[results] Timing   → /home/pragya/Desktop/FMaaS/FMTK/experiments/batching/results/batching_results.csv  (1500 rows)
+[results] Accuracy → /home/pragya/Desktop/FMaaS/FMTK/experiments/batching/results/accuracy_results.csv  (8 rows)
+
+==============================================================
+  Summary: median total latency (ms) by run × batch_size
+==============================================================
+batch_size                    1         2         4         8          16         32
+run                                                                                 
+run1_baseline           3.363275  4.004358  5.668978  9.046556  16.215387  30.540569
+run2_same_dec_same_len  3.360598  4.026457  5.681849  9.092131  16.331371  30.908631
+run3_same_dec_diff_len  3.369089  4.048052  5.724997  9.225998  16.404428  30.942484
+run4_diff_dec_same_len  3.349871  4.074969  5.738809  9.217283  16.522062  31.124831
+run5_diff_dec_diff_len  3.512489  4.105633  5.806164  9.256189  16.589664  31.295284
+
