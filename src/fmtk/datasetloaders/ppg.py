@@ -20,6 +20,7 @@ class PPGDataset(TimeSeriesDataset):
         super().__init__(dataset_cfg, task_cfg, split)
         # self.seq_len = 1250  # 10 seconds at 125 Hz original
         self.seq_len = self.dataset_cfg.get('seq_len', 1250)  # 4.096 seconds at 125 Hz
+        self.num_channels = self.dataset_cfg.get('num_channels', 3)  # PPG, VPG, APG
         self.task_name = self.task_cfg['task_type']  
         self.x_df,self.y_df = self.load_data()
         self.length = len(self.x_df)
@@ -81,7 +82,7 @@ class PPGDataset(TimeSeriesDataset):
         for _, row in tqdm(df_split.iterrows(), total=len(df_split), desc=f"Processing {self.split}"):
             subject_id = row["subject_ID"]
             segments = []
-            for s in range(1, 4):
+            for s in range(1, self.num_channels + 1):
             # for s in range(1, 2):  # Using only first segment for now
                 file_path = f"{main_dir}{subject_id}_{s}.txt"
 
