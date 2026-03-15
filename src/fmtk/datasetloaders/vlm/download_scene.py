@@ -1,6 +1,6 @@
 # Download SUN397 dataset for scene classification
 # Source: tanganke/sun397 on HuggingFace
-# Mirrors FMaaS-motivation/vqa/updated/dataset/scene_classification/download-data.py
+# Download script for scene classification dataset.
 import os
 os.environ["HF_HUB_DISABLE_XET"] = "1"  # fall back to standard HTTPS, avoid Xet/CAS CDN
 

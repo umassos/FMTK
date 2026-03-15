@@ -1,6 +1,6 @@
 # Download GTSRB (German Traffic Sign Recognition Benchmark) dataset
 # Source: tanganke/gtsrb on HuggingFace
-# Mirrors FMaaS-motivation/vqa/updated/dataset/traffic_classification/download-data.py
+# Download script for traffic classification dataset.
 import os
 os.environ["HF_HUB_DISABLE_XET"] = "1"  # fall back to standard HTTPS, avoid Xet/CAS CDN
 

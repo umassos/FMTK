@@ -1,5 +1,6 @@
 from transformers import AutoModelForVision2Seq, AutoProcessor
 import os
+from pathlib import Path
 
 import torch
 import re
@@ -8,13 +9,14 @@ from fmtk.components.base import BaseModel
 from torchvision import transforms
 from qwen_vl_utils import process_vision_info
 
+_MODEL_CACHE = str(Path(__file__).resolve().parents[4] / "models" / "vlm")
+
 class QwenModel(BaseModel):
     def __init__(self,device,model_name=None,model_config=None):
         super().__init__()
         self.device=device
         self.model_category = 'vlms'
-        base_dir = os.path.dirname(__file__)
-        models_directory = os.path.join(base_dir, '../../../../..', 'FMaaS-motivation/vqa/updated/models')
+        models_directory = _MODEL_CACHE
         if model_name=="qwen-3B":
             model_id='Qwen/Qwen2.5-VL-3B-Instruct'
         elif model_name=="qwen-7B":

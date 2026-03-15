@@ -1,8 +1,8 @@
 """
 VLM profiling experiment for FMTK.
 
-Mirrors the profiling methodology of FMaaS-motivation/unified_inference.py
-but uses FMTK's Pipeline, Logger, VLMDataset, and backbone abstractions.
+Uses FMTK's Pipeline, Logger, VLMDataset, and backbone abstractions
+to profile VLM models across all 9 tasks.
 
 Runs VLM model(s) across ALL 9 VLM tasks, appending one CSV row per
 (model, task) combination — identical schema to unified_metrics.csv.
@@ -17,9 +17,9 @@ import sys, os, gc, csv, time, argparse, importlib
 # ── make FMTK importable when running from the repo root ──
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '../../src'))
 
-# ── point HF cache at FMaaS-motivation's cached models ────
+# ── point HF cache at FMTK's cached models ────
 _FMTK_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
-_HF_MODELS = os.path.join(_FMTK_ROOT, '..', 'FMaaS-motivation', 'vqa', 'updated', 'models')
+_HF_MODELS = os.path.join(_FMTK_ROOT, 'models', 'vlm')
 os.environ["HF_HOME"] = _HF_MODELS
 os.environ["HUGGINGFACE_HUB_CACHE"] = _HF_MODELS
 os.environ["TRANSFORMERS_CACHE"] = _HF_MODELS
@@ -64,7 +64,7 @@ VLM_MODELS = {
     "minicpm":        ("minicpm",      "MinicpmModel",      "openbmb/MiniCPM-V-2_6"),
 }
 
-# ── CSV schema — identical to FMaaS-motivation/unified_metrics.csv ──
+# ── CSV schema ──
 VLM_METRICS_CSV = os.path.join(os.path.dirname(__file__), "vlm_metrics.csv")
 CSV_COLUMNS = [
     "model_name", "dataset_name", "device", "model_load_duration_sec",
@@ -78,7 +78,7 @@ CSV_COLUMNS = [
 DEVICE = "cuda:1" if torch.cuda.device_count() > 1 else "cuda:0"
 BATCH_SIZE = 1
 
-# All 9 VLM tasks (same order as FMaaS-motivation/run_all_models_tasks.py)
+# All 9 VLM tasks
 ALL_TASKS = [
     "crowd", "scene", "ocr", "vqa", "traffic",
     "gesture", "activity", "object_detection", "image_classification",

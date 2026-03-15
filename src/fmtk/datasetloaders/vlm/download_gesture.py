@@ -1,7 +1,7 @@
 # Download HaGRID (Hand Gesture Recognition) dataset
 # Source: cj-mills/hagrid-sample-500k-384p on HuggingFace
 # Uses HTTP range requests to stream only N images from the 13 GB zip without
-# downloading the whole file. Mirrors FMaaS-motivation gesture download script.
+# Downloads gesture recognition dataset avoiding large file downloads.
 import os
 os.environ["HF_HUB_DISABLE_XET"] = "1"  # fall back to standard HTTPS, avoid Xet/CAS CDN
 

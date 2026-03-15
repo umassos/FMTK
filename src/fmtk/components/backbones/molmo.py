@@ -1,5 +1,6 @@
 from transformers import AutoProcessor, AutoModelForCausalLM, GenerationConfig
 import os
+from pathlib import Path
 
 import torch
 import re
@@ -20,13 +21,14 @@ def _patched_torch_all(input, *args, **kwargs):
     return _orig_torch_all(input, *args, **kwargs)
 torch.all = _patched_torch_all
 
+_MODEL_CACHE = str(Path(__file__).resolve().parents[4] / "models" / "vlm")
+
 class MolmoModel(BaseModel):
     def __init__(self,device,model_name=None,model_config=None):
         super().__init__()
         self.device=device
         self.model_category = 'vlms'
-        base_dir = os.path.dirname(__file__)
-        models_directory = os.path.join(base_dir, '../../../../..', 'FMaaS-motivation/vqa/updated/models')
+        models_directory = _MODEL_CACHE
         if model_name=="molmo":
             model_id='allenai/Molmo-7B-D-0924'
 

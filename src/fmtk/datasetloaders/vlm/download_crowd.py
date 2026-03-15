@@ -1,6 +1,6 @@
 # Download DroneCrowd dataset for categorical crowd counting
 # Source: VisDrone2020-CC via Google Drive
-# Mirrors FMaaS-motivation/vqa/updated/dataset/crowd_counting/download-data.py
+# Download script for crowd counting dataset.
 import json
 import os
 import shutil

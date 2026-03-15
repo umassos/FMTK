@@ -1,6 +1,6 @@
 # Download MNIST dataset for OCR (digit recognition)
 # Source: ylecun/mnist on HuggingFace
-# Mirrors FMaaS-motivation/vqa/updated/dataset/ocr/download-data.py
+# Download script for OCR dataset.
 # Note: labels are stored as int (e.g. {"label": 5}); VLMDataset converts to str
 import os
 os.environ["HF_HUB_DISABLE_XET"] = "1"  # fall back to standard HTTPS, avoid Xet/CAS CDN

@@ -1,6 +1,6 @@
 # Download Human Action Recognition dataset (balanced sampling)
 # Source: Bingsu/Human_Action_Recognition on HuggingFace
-# Mirrors FMaaS-motivation/vqa/updated/dataset/activity_recognition/download-data-fixed.py
+# Download script for activity recognition dataset.
 import os
 os.environ["HF_HUB_DISABLE_XET"] = "1"  # fall back to standard HTTPS, avoid Xet/CAS CDN
 

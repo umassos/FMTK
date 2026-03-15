@@ -1,6 +1,6 @@
 # Download MS COCO val2017 dataset for object detection
 # Source: cocodataset.org
-# Mirrors FMaaS-motivation/vqa/updated/dataset/object_detection/download-data.py
+# Download script for object detection dataset.
 import json
 import shutil
 import urllib.request

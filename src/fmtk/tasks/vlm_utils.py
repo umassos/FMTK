@@ -9,7 +9,7 @@ Each task has:
 Dataset paths:
   - Unified pipeline: experiments/run_all/config.py  (datasets{} with 'vlm_*' keys)
   - Standalone scripts: use get_vlm_dataset_config(task_name) from this module.
-  All VLM data is sourced from FMaaS-motivation (sibling repo) to avoid duplication.
+  All VLM data is sourced from FMTK/dataset/vlm/.
 """
 import os
 import re
@@ -388,11 +388,11 @@ def get_evaluator(evaluator_name: str):
 
 
 # ==================== SHARED DATASET CONFIGURATION ====================
-# All VLM data is sourced from FMaaS-motivation to avoid duplicating ~hundreds of GB.
+# All VLM data lives under FMTK/dataset/vlm/.
 # Resolve the shared root once (works regardless of working directory).
 
 _FMTK_ROOT = Path(__file__).resolve().parents[3]          # .../FMTK
-_VLM_DATA_ROOT = _FMTK_ROOT.parent / "FMaaS-motivation" / "vqa" / "updated" / "dataset"
+_VLM_DATA_ROOT = _FMTK_ROOT / "dataset" / "vlm"
 
 VLM_DATASET_CONFIGS = {
     "activity": {

@@ -1,6 +1,6 @@
 # Download ImageNet-1k validation dataset for image classification
 # Source: imagenet-1k on HuggingFace (requires accepting terms)
-# Mirrors FMaaS-motivation/vqa/updated/dataset/image_classification/download-data.py
+# Download script for image classification dataset.
 import os
 os.environ["HF_HUB_DISABLE_XET"] = "1"  # fall back to standard HTTPS, avoid Xet/CAS CDN
 

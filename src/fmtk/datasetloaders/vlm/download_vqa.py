@@ -4,7 +4,7 @@
 #   - Questions: https://s3.amazonaws.com/cvmlp/vqa/mscoco/vqa/v2_Questions_Val_mscoco.zip
 #   - Images: http://images.cocodataset.org/zips/val2014.zip
 # Output: val.json (dict keyed by composite id) + val2014/ directory of images
-# Format mirrors FMaaS-motivation/vqa/updated/dataset/val.json
+# Expected format for val.json.
 import json
 import urllib.request
 import zipfile

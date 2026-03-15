@@ -1,5 +1,6 @@
 from transformers import LlavaForConditionalGeneration, AutoProcessor, LlavaNextForConditionalGeneration
 import os
+from pathlib import Path
 
 import torch
 import re
@@ -7,13 +8,14 @@ from fmtk.components.base import BaseModel
 
 from torchvision import transforms
 
+_MODEL_CACHE = str(Path(__file__).resolve().parents[4] / "models" / "vlm")
+
 class LlavaModel(BaseModel):
     def __init__(self,device,model_name=None,model_config=None):
         super().__init__()
         self.device=device
         self.model_category = 'vlms'
-        base_dir = os.path.dirname(__file__)
-        models_directory = os.path.join(base_dir, '../../../../..', 'FMaaS-motivation/vqa/updated/models')
+        models_directory = _MODEL_CACHE
         if model_name=="llava-1.5-7b":
             model_id='llava-hf/llava-1.5-7b-hf'
         elif model_name=="llava-1.5-13b":

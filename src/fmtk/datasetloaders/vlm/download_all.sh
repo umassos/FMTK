@@ -1,12 +1,11 @@
 #!/bin/bash
 # Run all VLM dataset download scripts sequentially.
-# Usage: bash src/fmtk/datasets/vlm/download_all.sh
+# Usage: bash src/fmtk/datasetloaders/vlm/download_all.sh
 #   from the FMTK project root.
 #
-# NOTE: These datasets already exist in ../FMaaS-motivation/vqa/updated/dataset/.
-#   FMTK is configured to read directly from that shared location (see
-#   experiments/run_all/config.py and src/fmtk/tasks/vlm_utils.py).
-#   You only need to run these download scripts if the shared data is unavailable.
+# NOTE: Datasets are stored in FMTK/dataset/vlm/ (see experiments/run_all/config.py
+#   and src/fmtk/tasks/vlm_utils.py). Run these download scripts only if the
+#   data directory is missing or incomplete.
 #
 # Excluded (require special handling):
 #   download_crowd.py              - needs ~1GB Google Drive download (gdown)
