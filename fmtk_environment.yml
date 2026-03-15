@@ -1,0 +1,60 @@
+name: fmtk
+channels:
+  - defaults
+dependencies:
+  - python=3.10
+  - pip
+  - pip:
+      - --extra-index-url https://download.pytorch.org/whl/cu118
+      # Core ML
+      - torch==2.4.1+cu118
+      - torchvision==0.19.1+cu118
+      - torchaudio==2.4.1+cu118
+      - transformers==4.46.3
+      - accelerate==0.34.2
+      - peft==0.10.0
+      - safetensors
+      - tokenizers==0.20.3
+      - huggingface-hub==0.24.0
+      # Time-series models
+      - chronos-forecasting==1.5.0
+      # momentfm: installed in install.sh with --no-deps (strict hub pin conflicts)
+      # VLM
+      - qwen-vl-utils==0.0.14
+      - flash-attn @ https://github.com/Dao-AILab/flash-attention/releases/download/v2.6.3/flash_attn-2.6.3+cu118torch2.4cxx11abiFALSE-cp310-cp310-linux_x86_64.whl
+      - av>=16.0
+      - einops
+      # Data & science
+      - numpy>=1.23,<2.0
+      - pandas>=2.0
+      - scipy>=1.10
+      - scikit-learn>=1.5
+      - matplotlib>=3.8
+      - seaborn
+      - h5py
+      - pyarrow
+      - openpyxl
+      # Utilities
+      - psutil
+      - pynvml
+      - tqdm
+      - dotmap
+      - pillow>=10.0
+      - opencv-python==4.10.0.84
+      - pyyaml
+      - requests
+      - regex
+      - filelock
+      - fsspec
+      - protobuf
+      # Domain-specific
+      - vitaldb
+      - wfdb
+      - torch-ecg<=0.0.28
+      - biosppy
+      - peakutils
+      - pyPPG==1.0.73
+      - pytorch-metric-learning
+      - torch-optimizer
+      # Build
+      - ninja

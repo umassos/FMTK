@@ -1,27 +1,43 @@
-from transformers import AutoProcessor, AutoModelForCausalLM
+from transformers import AutoProcessor, AutoModelForCausalLM, GenerationConfig
 import os
+from pathlib import Path
+
 import torch
 import re
 from fmtk.components.base import BaseModel
-from tqdm import tqdm
+
 from torchvision import transforms
+
+# ── PyTorch 2.0 compat: torch.all() doesn't support dim=tuple ──
+_orig_torch_all = torch.all
+def _patched_torch_all(input, *args, **kwargs):
+    dim = kwargs.get('dim', args[0] if args else None)
+    if isinstance(dim, tuple):
+        keepdim = kwargs.get('keepdim', False)
+        result = input
+        for d in sorted(dim, reverse=True):
+            result = _orig_torch_all(result, dim=d, keepdim=keepdim)
+        return result
+    return _orig_torch_all(input, *args, **kwargs)
+torch.all = _patched_torch_all
+
+_MODEL_CACHE = str(Path(__file__).resolve().parents[4] / "models" / "vlm")
 
 class MolmoModel(BaseModel):
     def __init__(self,device,model_name=None,model_config=None):
         super().__init__()
         self.device=device
         self.model_category = 'vlms'
-        base_dir = os.path.dirname(__file__)
-        models_directory = os.path.join(base_dir, '../../../../models/vlms/pretrained')
+        models_directory = _MODEL_CACHE
         if model_name=="molmo":
             model_id='allenai/Molmo-7B-D-0924'
 
-        self.processor = AutoProcessor.from_pretrained(model_id, cache_dir=models_directory, trust_remote_code=True, use_fast=True)
+        self.processor = AutoProcessor.from_pretrained(model_id, cache_dir=models_directory, trust_remote_code=True)
         self.model = AutoModelForCausalLM.from_pretrained(model_id, cache_dir=models_directory, trust_remote_code=True, torch_dtype=torch.float32, attn_implementation="eager", device_map={"": self.device})
 
     def preprocess(self,batch_x,mask=None):
         pass
-    
+
     def forward(self, batch_x, mask=None):
         batch_x_image,batch_x_question=batch_x
         responses=[]
@@ -29,41 +45,15 @@ class MolmoModel(BaseModel):
             if isinstance(image, torch.Tensor):
                 to_pil = transforms.ToPILImage()
                 image = to_pil(image)
-            processed = self.processor.process(images=[image], text=question+ " Please answer in one word.")
+            processed = self.processor.process(images=[image], text=question)
             inputs = {k: v.to(self.device).unsqueeze(0) for k, v in processed.items()}
-            outputs = self.model(**inputs)
-            logits = outputs.logits
-            next_token_id = torch.argmax(logits[:, -1, :], dim=-1)
-            generated_token_ids = torch.cat([inputs["input_ids"], next_token_id[:, None]], dim=1)
-            response = self.processor.tokenizer.decode(generated_token_ids[0][inputs["input_ids"].shape[1]:], skip_special_tokens=True).strip()
+            input_len = inputs["input_ids"].shape[1]
+            gen_config = GenerationConfig(max_new_tokens=20, stop_strings="<|endoftext|>")
+            output_ids = self.model.generate_from_batch(inputs, gen_config, tokenizer=self.processor.tokenizer)
+            generated_ids = output_ids[0, input_len:]
+            response = self.processor.tokenizer.decode(generated_ids, skip_special_tokens=True).strip()
             responses.append(response)
         return responses
-    
+
     def postprocess(self,embeddings):
         pass
-
-    
-    def predict(self,dataloader):
-        """
-        Compute embeddings for a single split using a DataLoader.
-        
-        Args:
-            dataloader: PyTorch DataLoader yielding (x, y) or just x.
-            pipeline: model or wrapper with a `.embed()` method.
-            device: torch device.
-        
-        Returns:
-            embeddings: [N, E] NumPy array (where E = embedding dimension)
-            labels: [N] NumPy array of ground truth labels (if available)
-        """
-        embeddings_np=[]
-        labels_np=[]
-        for batch in tqdm(dataloader,total=len(dataloader)):
-            image,question,gt = batch['x'],batch['question'],batch['y'] 
-            with torch.no_grad():
-                answer=self.forward((image,question))
-                embeddings_np.append(answer)
-                labels_np.append(gt)
-        return embeddings_np,labels_np               
-
-    

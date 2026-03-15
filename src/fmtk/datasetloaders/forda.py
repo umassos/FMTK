@@ -1,7 +1,7 @@
 from typing import Optional
 import numpy as np
 from sklearn.preprocessing import StandardScaler
-from fmtk.datasets.base import TimeSeriesDataset
+from fmtk.datasetloaders.base import TimeSeriesDataset
 import os
 
 class FordADataset(TimeSeriesDataset):
