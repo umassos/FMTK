@@ -19,6 +19,10 @@ echo "=== Installing momentfm (--no-deps to bypass strict huggingface-hub pin) =
 conda run -n "$ENV_NAME" pip install momentfm==0.1.4 --no-deps
 
 echo ""
+echo "=== Installing pyPPG (--no-deps to bypass strict scipy==1.9.1 pin) ==="
+conda run -n "$ENV_NAME" pip install pyPPG==1.0.73 --no-deps
+
+echo ""
 echo "=== Installing fmtk in editable mode ==="
 conda run -n "$ENV_NAME" pip install -e . --no-deps
 

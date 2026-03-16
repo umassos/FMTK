@@ -31,17 +31,29 @@ fmtk/
 ```
 
 ## Installation
-Clone the repo
+
+Clone the repo and run the install script:
+```bash
+git clone <repo-url>
+cd FMTK
+bash install.sh           # creates env named 'fmtk'
+conda activate fmtk
 ```
+To use a custom environment name:
+```bash
+bash install.sh my_env_name
+conda activate my_env_name
+```
+The script creates a conda environment with all dependencies (including torch+CUDA, flash-attn, momentfm, and pyPPG) and installs FMTK in editable mode.
+
+### Deprecated installation (manual)
+> **Note:** This method is deprecated and will not install all required dependencies.
+```bash
 cd FMTK
 conda create -n fmtk python=3.10
 conda activate fmtk
 pip install -e .
+pip install pyPPG==1.0.41  # may conflict with other packages
 ```
-For working with PPG-BP data related tasks install
-```
-pip install pyPPG==1.0.41
-```
-Note: There might be a package conflict, but it should still function correctly.
 
 For quick start please check out [examples](./examples).
