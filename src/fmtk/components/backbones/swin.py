@@ -7,41 +7,42 @@ from transformers import AutoModel, AutoImageProcessor
 from peft import get_peft_model, PeftModel
 from functools import singledispatchmethod
 
+def get_swin_model_id(model_name):
+    if model_name in ['tiny', 'swin-tiny', 'microsoft/swin-tiny-patch4-window7-224']:
+        return 'microsoft/swin-tiny-patch4-window7-224'
+    elif model_name in ['small', 'swin-small', 'microsoft/swin-small-patch4-window7-224']:
+        return 'microsoft/swin-small-patch4-window7-224'
+    elif model_name in ['base', 'swin-base', 'microsoft/swin-base-patch4-window7-224']:
+        return 'microsoft/swin-base-patch4-window7-224'
+    elif model_name in ['large', 'swin-large', 'microsoft/swin-large-patch4-window7-224']:
+        return 'microsoft/swin-large-patch4-window7-224'
 
-def get_mae_model_id(model_name):
-    if model_name in ["base", "mae-base", "facebook/vit-mae-base"]:
-        return "facebook/vit-mae-base"
-    elif model_name in ["large", "mae-large", "facebook/vit-mae-large"]:
-        return "facebook/vit-mae-large"
-    elif model_name in ["huge", "mae-huge", "facebook/vit-mae-huge"]:
-        return "facebook/vit-mae-huge"
+def get_swin_embed_dim(model_id):
 
-
-def get_mae_embed_dim(model_id):
-    if model_id in ["base", "mae-base", "facebook/vit-mae-base"]:
+    if model_id in ['tiny', 'swin-tiny', 'microsoft/swin-tiny-patch4-window7-224']:
         return 768
-    elif model_id in ["large", "mae-large", "facebook/vit-mae-large"]:
+    elif model_id in ['small', 'swin-small', 'microsoft/swin-small-patch4-window7-224']:
+        return 768
+    elif model_id in ['base', 'swin-base', 'microsoft/swin-base-patch4-window7-224']:
         return 1024
-    elif model_id in ["huge", "mae-huge", "facebook/vit-mae-huge"]:
-        return 1280
+    elif model_id in ['large', 'swin-large', 'microsoft/swin-large-patch4-window7-224']:
+        return 1536
 
-
-class MAEModel(BaseModel):
+class SwinModel(BaseModel):
     """
-    ViT-MAE (Masked Autoencoder) backbone for vision tasks.
-    Uses Hugging Face transformers ViTMAEModel; returns encoder [CLS] or all patch tokens.
+    Swin Transformer backbone for vision tasks.
+    Uses Hugging Face transformers (SwinModel with pooling).
     """
 
     def __init__(self, device, model_name="base", model_config={}):
         super().__init__()
-        model_config = model_config or {}
         self.device = device
-        self.model_category = 'vision'
         self.return_all_tokens = model_config.get("return_all_tokens", False)
 
-        self.model_id = get_mae_model_id(model_name)
-        self.embed_dim = get_mae_embed_dim(self.model_id)
-        print(f"[MAE] Loading {self.model_id} on device {device}")
+        self.model_id = get_swin_model_id(model_name)
+        self.embed_dim = get_swin_embed_dim(self.model_id)
+
+        print(f"[Swin] Loading {self.model_id} on device {device}")
 
         self.model = AutoModel.from_pretrained(self.model_id)
         self.processor = AutoImageProcessor.from_pretrained(self.model_id)
@@ -62,16 +63,16 @@ class MAEModel(BaseModel):
         else:
             outputs = self.model(x)
 
-        last_hidden_state = outputs.last_hidden_state
-
         if self.return_all_tokens:
-            embeddings = last_hidden_state[:, 1:, :]
+            embeddings = outputs.last_hidden_state
         else:
-            embeddings = last_hidden_state[:, 0, :]
+            embeddings = outputs.pooler_output
+            if embeddings is None:
+                last_hidden_state = outputs.last_hidden_state
+                embeddings = last_hidden_state.mean(dim=1)
 
         return embeddings
 
-    # TODO: This should be moved to the abstract class
     @singledispatchmethod
     @torch.no_grad()
     def predict(self, data):
