@@ -7,6 +7,7 @@ import time
 import os
 from contextlib import nullcontext
 import json
+from huggingface_hub import hf_hub_download
 
 class Pipeline:
     def __init__(self, model_instance,logger=None):
@@ -57,7 +58,17 @@ class Pipeline:
             if not train:
                 self.decoders[decoder_name]= decoder_obj
                 category = self.model_instance.model_category
-                self.decoders[decoder_name].model.load_state_dict(torch.load(f"{self.base_dir}/../../models/{category}/finetuned/{path}/decoder.pth"))
+                decoder_file=f"{self.base_dir}/../../models/{category}/finetuned/{path}/decoder.pth"
+                if not os.path.exists(decoder_file):
+                    try:
+                        decoder_file = hf_hub_download(repo_id="umass-lass/fmtk-decoder-zoo",
+                                                       filename=f"decoder.pth",
+                                                       subfolder=f"{path}",
+                                                       local_dir=f"{self.base_dir}/../../models/{category}/finetuned",
+                                                       token=open(f"{self.base_dir}/../../hf-token.txt").read().strip())
+                    except Exception as e:
+                        raise ValueError(f"Decoder file not found at {decoder_file}")
+                self.decoders[decoder_name].model.load_state_dict(torch.load(f"{decoder_file}"))
                 
             else:
                 self.decoders[decoder_name] = decoder_obj
