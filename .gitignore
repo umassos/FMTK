@@ -13,8 +13,9 @@ data/
 logs/
 *.pth
 *.pt
-models/tsfm/finetuned/
 models/vlm/
 .claude/
 memory/
 project-2.zip
+models/llm/pretrained
+models/tsfm/pretrained
