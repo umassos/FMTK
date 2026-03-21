@@ -1,7 +1,7 @@
 import numpy as np
 import torch
 from sklearn.metrics import mean_absolute_error, accuracy_score
-
+from sklearn.metrics import mean_squared_error
 
 def get_mae(y_test, y_pred):
     if len(y_test.shape) > 2:
@@ -9,6 +9,8 @@ def get_mae(y_test, y_pred):
         y_pred = y_pred.reshape(-1, y_pred.shape[-1])
     return mean_absolute_error(y_test, y_pred)
 
+def get_mse(y_test, y_pred):
+    return float(np.mean((y_test - y_pred) ** 2))
 
 def get_accuracy(y_test, y_pred):
     def normalize(x):

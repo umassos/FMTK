@@ -8,11 +8,15 @@ import os
 root_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../")
 dataset_path = os.path.join(root_dir, "dataset/UWaveGestureLibraryAll")
 
+
 class UWaveGestureLibraryALLDataset(TimeSeriesDataset):
     def __init__(self, dataset_cfg, task_cfg, split):
         super().__init__(dataset_cfg, task_cfg, split)
-        self.seq_len = 945
-        self.train_file_path_and_name = f"{dataset_path}/UWaveGestureLibraryAll_TRAIN.ts"
+        self.seq_len = 315
+        self.num_channels = 3
+        self.train_file_path_and_name = (
+            f"{dataset_path}/UWaveGestureLibraryAll_TRAIN.ts"
+        )
         self.test_file_path_and_name = f"{dataset_path}/UWaveGestureLibraryAll_TEST.ts"
 
         self._read_data()
@@ -55,35 +59,42 @@ class UWaveGestureLibraryALLDataset(TimeSeriesDataset):
         self.num_timeseries = self.data.shape[0]
         self.len_timeseries = self.data.shape[2]
 
-        self.data = self.data.reshape(-1, self.len_timeseries)
-        self.scaler.fit(self.data)
-        self.data = self.scaler.transform(self.data)
-        self.data = self.data.reshape(self.num_timeseries, self.len_timeseries)
+        # self.data = self.data.reshape(-1, self.len_timeseries)
+        # self.scaler.fit(self.data)
+        # self.data = self.scaler.transform(self.data)
+        # self.data = self.data.reshape(self.num_timeseries, self.len_timeseries)
 
-        self.data = self.data.T
-        return self.data,self.labels
+        self.data = self.data.reshape(
+            self.num_timeseries, self.num_channels, self.seq_len
+        )
+
+        # self.data = self.data.T
+        return self.data, self.labels
 
     def __getitem__(self, index):
         assert index < self.__len__()
 
-        timeseries = self.data[:, index]
-        timeseries_len = len(timeseries)
+        # timeseries = self.data[:, index]
+        timeseries = self.data[index]
+
+        # timeseries_len = len(timeseries)
+        timeseries_len = timeseries.shape[-1]
 
         if timeseries_len > self.seq_len:
-            # keep last seq_len samples 
-            timeseries = timeseries[-self.seq_len:]
+            # keep last seq_len samples
+            timeseries = timeseries[-self.seq_len :]
             timeseries_len = self.seq_len
 
         labels = self.labels[index].astype(int)
         input_mask = np.ones(self.seq_len)
         if timeseries_len < self.seq_len:
             input_mask[: self.seq_len - timeseries_len] = 0
-            timeseries = np.pad(timeseries, (self.seq_len - timeseries_len, 0))
+            # timeseries = np.pad(timeseries, (self.seq_len - timeseries_len, 0))
+            timeseries = np.pad(
+                timeseries, ((0, 0), (self.seq_len - timeseries_len, 0))
+            )
 
-        return {'x':np.expand_dims(timeseries, axis=0),
-                'mask':input_mask,
-                'y':labels,
-                'idx':index}
+        return {"x": timeseries, "mask": input_mask, "y": labels, "idx": index}
 
     def preprocess(self):
         pass

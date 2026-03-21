@@ -15,6 +15,8 @@ from fmtk.components.backbones.moment import MomentModel
 from fmtk.components.decoders.forecasting.mlp import MLPDecoder
 from fmtk.components.decoders.forecasting.linear import LinearDecoder
 
+from fmtk.metrics import get_mae
+
 device = "cuda:0"
 seed = 42
 generator = torch.Generator()
@@ -72,12 +74,12 @@ def train_model(
         parts_to_train=["decoder"],
         train_cfg=train_config,
         inference_cfg=inference_config,
-        path="etth1_fore_momentbase_linear",
-        metric_fn=get_mse,
+        path="etth1single_fore_momentbase_linear",
+        metric_fn=get_mae,
         mlflow_cfg={
             "base_path": "/home/kgudipaty_umass_edu/FMTK/mlflow",
-            "experiment_name": "etth1_fore_momentbase_linear",
-            "run_name": "etth1_fore_momentbase_linear",
+            "experiment_name": "etth1single_fore_momentbase_linear",
+            "run_name": "etth1single_fore_momentbase_linear",
             "extra_params": {
                 "model_id": model_id,
                 "model_cfg": model_cfg,
@@ -103,10 +105,10 @@ if __name__ == "__main__":
     train_config = {
         "batch_size": 32,
         "shuffle": True,
-        "epochs": 50,
-        "lr": 1e-5,
+        "epochs": 20,
+        "lr": 1e-4,
         "scheduler": {"type": "cosine", "T_max": 10, "eta_min": 0},
-        "use_cache": True,
+        "use_cache": False,
     }
     inference_config = {"batch_size": 32, "shuffle": False}
     dataset_cfg = {

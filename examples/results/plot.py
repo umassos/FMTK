@@ -101,10 +101,15 @@ def plot_repa_backbone_comparison(samples, epoch=10):
         2. MAE base → DINOv2 base (mae-base_to_dinov2-base)
         3. Swin small → DINOv2 base (swin-small_to_dinov2-base)
     """
+    # backbones = {
+    #     "moment-base": "repa/uwave_moment-base_to_moment-small_accuracy_num_samples_",
+    #     "moment-large": "repa/uwave_moment-large_to_moment-small_accuracy_num_samples_",
+    #     "mantis-8M":   "repa/uwave_mantis-8M_to_moment-small_accuracy_num_samples_",
+        
+    # }
+
     backbones = {
-        "moment-base": "repa/uwave_moment-base_to_moment-small_accuracy_num_samples_",
-        "moment-large": "repa/uwave_moment-large_to_moment-small_accuracy_num_samples_",
-        "mantis-8M":   "repa/uwave_mantis-8M_to_moment-small_accuracy_num_samples_",
+        "moment-small": "repa/etth1/moment-small_to_moment-base_accuracy_num_samples_",
         
     }
 
@@ -173,10 +178,10 @@ def plot_repa_backbone_comparison(samples, epoch=10):
     plt.xlabel("Number of training samples")
     plt.ylabel("Accuracy")
 
-    plt.axhline(y=0.9017, color="red", linestyle="--")
+    plt.axhline(y=0.4257, color="red", linestyle="--")
     plt.xlim(left=0)
     plt.ylim(bottom=0)
-    plt.yticks([0.2, 0.4, 0.6, 0.8])
+    plt.yticks([0.2, 0.4, 0.6, 0.8, 1.0, 1.2, 1.4, 1.6, 1.8, 2.0])
 
     ticks = [*plt.gca().get_yticks(), 0.95]
     tick_labels = [*plt.gca().get_yticks(), "orig."]
@@ -186,16 +191,16 @@ def plot_repa_backbone_comparison(samples, epoch=10):
     handles, legend_labels = plt.gca().get_legend_handles_labels()
     handles = [h[0] for h in handles]
     plt.legend(handles, legend_labels, loc="lower right")
-    plt.savefig("repa/repa_backbone_comparison_uwave_2.pdf")
+    plt.savefig("repa/repa_etth1fore.pdf")
     plt.show()
 
 
 if __name__ == "__main__":
-    samples = [1, 5, 10, 50, 100, 500, 1000, 2000]
+    samples = [1, 5, 10, 50, 100, 500, 1000, 2000, 3000]
 
     # per-epoch plot (existing)
     # epochs = [1, 5, 10, 20]
     # plot_repa_decoder_accuracy(epochs, samples)
 
     # backbone comparison at epoch 10
-    plot_repa_backbone_comparison(samples, epoch=35)
+    plot_repa_backbone_comparison(samples, epoch=10)

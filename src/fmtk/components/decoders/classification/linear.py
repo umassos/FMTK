@@ -12,6 +12,7 @@ class LinearDecoder(nn.Module):
         self.device = device
         self.model = nn.Linear(in_features=cfg['input_dim'], out_features=cfg['output_dim'])
         self.criterion = nn.CrossEntropyLoss()
+        self.reduction = 'concat'
 
     def to_device(self):
         self.model.to(self.device)
@@ -26,10 +27,17 @@ class LinearDecoder(nn.Module):
     def preprocess(self,batch_x):
         x=batch_x
         x=x.to(torch.float32).to(self.device)
-        if x.ndimension() == 4:
-            x=x.mean(dim=2)
-        if x.ndimension() == 3:
-            x=x.mean(dim=1)
+        # shape will be [B, 3, 512] concat to [B, 3*512]
+        if self.reduction == 'concat':
+            x = x.view(x.size(0), -1)
+        elif self.reduction == 'mean':
+            if x.ndimension() == 4:
+                x=x.mean(dim=2)
+            if x.ndimension() == 3:
+                x=x.mean(dim=1)
+        else:
+            raise ValueError(f"Invalid reduction method: {self.reduction}")
+        
         return x
     
     def postprocess(self,embedding):

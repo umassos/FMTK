@@ -39,18 +39,19 @@ def train_model(
     train_config,
     inference_config,
     device,
+    forecast_horizon=96,
 ):
     backbone = MantisModel(device, model_id, model_cfg)
     P = Pipeline(backbone)
-    input_dim = get_mantis_embed_dim(model_id)
+    num_patches = 32
+    input_dim = get_mantis_embed_dim(model_id) * num_patches
     decoder = P.add_decoder(
         LinearDecoder(
             device,
             cfg={
                 "input_dim": input_dim,
-                "output_dim": 96,
-                "seq_len": 32,
-                "patch_len": 1,
+                "output_dim": forecast_horizon,
+                "head_dropout": 0.1,
             },
         ),
         load=True,
@@ -67,11 +68,11 @@ def train_model(
         parts_to_train=["decoder"],
         train_cfg=train_config,
         inference_cfg=inference_config,
-        path="etth1_fore_mantis8M_linear",
+        path="etth1single_fore_mantis8M_linear",
         metric_fn=get_mse,
         mlflow_cfg={
-            "experiment_name": "etth1_fore_mantis8M_linear",
-            "run_name": "etth1_fore_mantis8M_linear",
+            "experiment_name": "etth1single_fore_mantis8M_linear",
+            "run_name": "etth1single_fore_mantis8M_linear",
             "extra_params": {
                 "model_id": model_id,
                 "model_cfg": model_cfg,
@@ -98,9 +99,9 @@ if __name__ == "__main__":
         "batch_size": 32,
         "shuffle": False,
         "epochs": 20,
-        "lr": 1e-5,
+        "lr": 1e-6,
         "scheduler": {"type": "cosine", "T_max": 10, "eta_min": 0},
-        "use_cache": True,
+        "use_cache": False,
     }
     inference_config = {"batch_size": 32, "shuffle": False}
     dataset_cfg = {
@@ -139,5 +140,6 @@ if __name__ == "__main__":
         train_config,
         inference_config,
         device,
+        forecast_horizon,
     )
     print("MSE:", mse)

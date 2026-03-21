@@ -461,7 +461,7 @@ tasks = {
         'label': 'diasbp',
          'train': Train,
          'pipelines':[
-            # {
+            {
             # 'backbone':'momentlarge',
             # 'paths':[
             #         # {'decoder':'ridge_regression','parts_to_train':['decoder']},
@@ -489,11 +489,12 @@ tasks = {
             #         # {'decoder':'mlp_momentsmall_regression','adapter':'lora','parts_to_train':['decoder','adapter']},
             #         ]},
             # {
-            # 'backbone':'chronostiny',
-            #         # {'decoder':'ridge_regression','parts_to_train':['decoder']},
-            #         {'decoder':'mlp_chronostiny_regression','parts_to_train':['decoder'],'path':'diasbp_chronostiny_mlp'},
-            #         # {'decoder':'mlp_chronostiny_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
-            #         ]},
+            'backbone':'chronostiny',
+            'paths':[
+                    # {'decoder':'ridge_regression','parts_to_train':['decoder']},
+                    {'decoder':'mlp_chronostiny_regression','parts_to_train':['decoder'],'path':'diasbp_chronostiny_mlp'},
+                    # {'decoder':'mlp_chronostiny_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
+                    ]},
             # {'backbone':'chronosmini',
             # 'paths':[
             #         # {'decoder':'ridge_regression','parts_to_train':['decoder']},
@@ -548,7 +549,7 @@ tasks = {
         'train_config':{
             'batch_size': 32,
             'shuffle':False,
-            'epochs':50,
+            'epochs':1,
             'lr':1e-2,
         },
     },

@@ -13,7 +13,8 @@ from torch_ecg._preprocessors import Normalize
 import os
 
 root_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../")
-dataset_path = os.path.join(root_dir, "dataset/PPG-data")
+# dataset_path = os.path.join(root_dir, "dataset/PPG-data")
+dataset_path = "/project/pi_shenoy_umass_edu/hshastri/FMTK/dataset/PPG-data/"
 
 class PPGDataset(TimeSeriesDataset):
     def __init__(self, dataset_cfg, task_cfg, split):

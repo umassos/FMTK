@@ -1,11 +1,11 @@
 from sklearn.model_selection import train_test_split, GridSearchCV
-from timeseries.metrics import get_regression_metrics
+from fmtk.metrics import get_regression_metrics
 from torch.utils.data import DataLoader,ConcatDataset
 import psutil, os
-from timeseries.pipeline import Pipeline
-from timeseries.datasets.ppg import PPGDataset
-from timeseries.components.backbones.chronos import ChronosModel
-from timeseries.components.decoders.regression.ridge import RidgeDecoder
+from fmtk.pipeline import Pipeline
+from fmtk.datasets.ppg import PPGDataset
+from fmtk.components.backbones.chronos import ChronosModel
+from fmtk.components.decoders.regression.ridge import RidgeDecoder
 
 device='cuda:0'
 

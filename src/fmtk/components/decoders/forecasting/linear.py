@@ -3,8 +3,9 @@ import torch.nn as nn
 from fmtk.components.base import BaseModel
 
 
-class LinearDecoder(BaseModel):
+class LinearDecoder(nn.Module):
     def __init__(self, device, cfg):
+        super().__init__()
         self.device = device
         self.flatten = nn.Flatten(start_dim=-2)  # [B, C, P, D] -> [B, C, P*D]
         self.dropout = nn.Dropout(cfg.get("head_dropout", 0.1))
@@ -12,6 +13,7 @@ class LinearDecoder(BaseModel):
             in_features=cfg["input_dim"], out_features=cfg["output_dim"]
         )
         self.criterion = nn.MSELoss()
+        self.requires_model = True
 
     def to_device(self):
         self.flatten.to(self.device)
@@ -32,4 +34,4 @@ class LinearDecoder(BaseModel):
         x = self.flatten(x)      # [B, C, P*D] — keeps channel dim
         x = self.dropout(x)
         x = self.model(x)        # [B, C, forecast_horizon] — same weights per channel
-        return x.flatten(start_dim=1)  # [B, C * forecast_horizon]
+        return x  # [B, C * forecast_horizon]

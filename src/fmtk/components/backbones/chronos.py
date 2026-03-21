@@ -29,6 +29,8 @@ class ChronosModel(BaseModel):
             device_map=self.device,
             torch_dtype=torch.bfloat16
         )
+
+        self.return_all_tokens = model_config.get('return_all_tokens', True)
     
     def preprocess(self,batch_x,mask=None):
 
@@ -47,11 +49,13 @@ class ChronosModel(BaseModel):
         return output
     
     def postprocess(self,embedding):
-        output = embedding[:, :512, :].mean(dim=1)
+        _,E,_=embedding.shape #[batch size*segment size,token size, length]
+        output = embedding.view(self.B,self.S,E,-1)
+        if not self.return_all_tokens:
+            # TODO: What if we wanted to do min/max pooling?
+            output = output.mean(dim=2)  # mean pooling over the token dimension
+
         return output
-        # _,E,_=embedding.shape #[batch size*segment size,token size, length]
-        # output =embedding.view(self.B,self.S,E,-1)
-        # return output
     
     def predict(self,dataloader):
         """

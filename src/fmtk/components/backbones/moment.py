@@ -31,6 +31,7 @@ class MomentModel(BaseModel):
         
         self.model.init()     
         self.model.to(device)     
+        self.return_all_tokens = model_config.get("return_all_tokens", True)
 
     def preprocess(self,batch_x,mask=None):
         """
@@ -51,13 +52,23 @@ class MomentModel(BaseModel):
 
 
     def forward(self, batch_x, mask=None):
-        x, mask=self.preprocess(batch_x,mask)
+        x, mask = self.preprocess(batch_x, mask)
         if mask is None:
-            embedding=self.model(x_enc=x, reduction="none").embeddings
+            embedding = self.model(x_enc=x, reduction="none").embeddings
         else:
-            embedding=self.model(x_enc=x, input_mask=mask, reduction="none").embeddings
-        # return embedding.squeeze(1).mean(dim=1)
-        return embedding
+            embedding = self.model(x_enc=x, input_mask=mask, reduction="none").embeddings
+
+        if self.return_all_tokens:
+            return embedding
+        else:
+            # embedding: [B, n_channels, n_patches, d_model]
+            # Pool over tokens (dim=2)
+            output = embedding.mean(dim=2)
+            if output.shape[1] == 1:
+                output = output.squeeze(1)  # [B, d_model] for single channel
+            return output
+
+
     
     def postprocess(self, embedding):
         pass

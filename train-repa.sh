@@ -4,22 +4,22 @@
 #SBATCH -c 12
 #SBATCH -p gpu
 #SBATCH --gpus=1
-#SBATCH -t 2:00:00  # Job time limit
-#SBATCH -o train-eurosat-repa-%j.out  # %j = job ID
+#SBATCH -t 5:00:00  # Job time limit
+#SBATCH -o train-etth1-repa-%j.out  # %j = job ID
 #SBATCH --constraint=vram32|vram40|vram48
 
 eval "$(conda shell.bash hook)"
 conda activate fmtk
 
 cd /home/kgudipaty_umass_edu/FMTK/examples
-python3 train_uwave_repa.py -c config.yaml \
---num-samples-list 1,5,10,50,100,500,1000,3000 \
---model-from-name mantis \
---model-from-id  8M \
+python3 train_etth1_repa.py -c config.yaml \
+--num-samples-list 1,5,10,50,100,500,1000,2000,3000 \
+--model-from-name moment \
+--model-from-id  large \
 --model-to-name moment \
---model-to-id small \
---dataset-name uwave \
---epochs 50 \
+--model-to-id base \
+--dataset-name etth1 \
+--epochs 35 \
 --num-experiments 5 \
---name1 mantis-8M \
---name2 moment-small
+--name1 moment-large \
+--name2 moment-base

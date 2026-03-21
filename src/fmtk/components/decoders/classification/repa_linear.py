@@ -25,14 +25,22 @@ class Repa(nn.Module):
     def __init__(self, device, cfg):
         super().__init__()
         self.device = device
+        self.norm_in = nn.LayerNorm(cfg['input_dim'])
         self.repa = nn.Linear(in_features=cfg['input_dim'], out_features=cfg['repa_output_dim'], bias=False)
+        self.norm_out = nn.LayerNorm(cfg['repa_output_dim'])
         # self.repa = nn.Conv2d(in_channels=cfg['input_dim'], out_channels=cfg['repa_output_dim'], kernel_size=(1, 1), bias=False)
         self.criterion = RepaLoss(nn.MSELoss(), normalize=cfg.get('normalize', True))
         self.preprocess_fn = lambda x: x
-
+        self.postprocess_fn = lambda x: x
+        self.requires_model = True
+        
     def forward(self, x):
         x = self.preprocess_fn(x).float()
-        return self.repa(x)
+        x = self.norm_in(x)
+        x = self.repa(x)
+        x = self.norm_out(x)
+        x = self.postprocess_fn(x)
+        return x
 
     def save(self, path):
         torch.save(self.repa.state_dict(), path)
@@ -41,8 +49,9 @@ class Repa(nn.Module):
         self.repa.load_state_dict(torch.load(path))
 
     def preprocess(self, x):
-        if x.ndim == 3:
-            x = x.reshape(-1, int(x.shape[1]**0.5), int(x.shape[1]**0.5), x.shape[2]).permute(0, 3, 1, 2)
+        # for vision only 
+        # if x.ndim == 3:
+        #     x = x.reshape(-1, int(x.shape[1]**0.5), int(x.shape[1]**0.5), x.shape[2]).permute(0, 3, 1, 2)
         return x
         # return self.preprocess_fn(x)
 
@@ -58,7 +67,8 @@ class RepaWrappedDecoder(nn.Module):
         self.decoder = decoder
         self.model = decoder.model
         ignore_index = getattr(decoder, "ignore_index", 255)
-        self.criterion = nn.CrossEntropyLoss(ignore_index=ignore_index)
+        # self.criterion = nn.CrossEntropyLoss(ignore_index=ignore_index)
+        self.criterion = nn.MSELoss()
 
     def trainable_parameters(self):
         return self.parameters()

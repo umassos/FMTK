@@ -99,7 +99,7 @@ class ETTh1Dataset(TimeSeriesDataset):
                 seq_start = seq_end - self.seq_len
 
             timeseries = self.data[seq_start:seq_end, :].T
-            forecast = self.data[seq_end:pred_end, :].T.flatten()  # [C * forecast_horizon], channel-major
+            forecast = self.data[seq_end:pred_end, :].T
 
             return {
                 'x':timeseries,

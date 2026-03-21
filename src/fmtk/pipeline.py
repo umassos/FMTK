@@ -28,7 +28,8 @@ class Pipeline:
         self.adapter_id=0
         self.encoder_id=0
         self.base_dir = os.path.dirname(__file__)
-        self.embedding_cache = EmbeddingCache(embed_dim=512, cache_device='cpu', to_device=self.model_instance.device)
+        self.embedding_cache = EmbeddingCache(cache_device='cpu', to_device=self.model_instance.device)
+        self.predict_cache = EmbeddingCache(cache_device='cpu', to_device=self.model_instance.device)
     def add_adapter(self,peft_cfg, path=None):
         adapter_name=f'adapter_{self.adapter_id}'
         self.adapter_id+=1
@@ -302,6 +303,7 @@ class Pipeline:
                     x, y = batch["x"], batch["y"]
                     mask = batch.get("mask", None)
                     logits = self.forward(x, mask, idx, use_cache=use_cache)
+                    print(logits.shape)
                     
                     if (hasattr(self.active_decoder, "requires_model") and self.active_decoder.requires_model and hasattr(self.model_instance.model, "normalizer")):
                         logits = self.model_instance.model.normalizer(x=logits, mode="denorm")
@@ -378,21 +380,23 @@ class Pipeline:
         else:
             return
     
-    def forward(self,x,mask=None, idx=None, use_cache=False):
+    def forward(self, x, mask=None, idx=None, use_cache=False, cache_type="embedding"):
         if self.active_encoder is not None:
-            x= self.active_encoder.forward(x)
+            x = self.active_encoder.forward(x)
         self.set_eval_mode()
 
-        if use_cache and idx is not None: 
-            # TODO: Add function to partially use cache 
+        cache = self.predict_cache if cache_type == "predict" else self.embedding_cache
+
+        if use_cache and idx is not None:
+            # TODO: Add function to partially use cache
             # if only some of the idx are present
-            if self.embedding_cache.contains(idx):    # currently all idx need to be present in the cache
-                feats = self.embedding_cache.get(idx)
+            if cache.contains(idx):  # currently all idx need to be present in the cache
+                feats = cache.get(idx)
             else:
-                feats = self.model_instance.forward(x,mask)
-                self.embedding_cache.put(idx, feats)
+                feats = self.model_instance.forward(x, mask)
+                cache.put(idx, feats)
         else:
-            feats = self.model_instance.forward(x,mask)
+            feats = self.model_instance.forward(x, mask)
 
         if self.active_decoder:
             logits = self.active_decoder.forward((feats))
@@ -414,15 +418,16 @@ class Pipeline:
                         return self.active_decoder.predict(test_embed_loader)
                         
             else:
-                preds=[]
-                labels=[]
+                preds = []
+                labels = []
+                use_predict_cache = cfg.get("use_predict_cache", True) if cfg else True
                 for batch in tqdm(test_loader):
                     x = batch["x"]
                     y = batch["y"]
                     mask = batch.get("mask", None)
                     idx = batch.get("idx", None)
                     with (self.logger.measure("predict", device=self.logger.device) if self.logger else nullcontext()):
-                        logits=self.forward(x,mask,idx)
+                        logits = self.forward(x, mask, idx, use_cache=use_predict_cache, cache_type="predict")
                         if isinstance(self.active_decoder.criterion, (nn.CrossEntropyLoss)):
                             logits = torch.argmax(logits, dim=1)
                         if (hasattr(self.active_decoder, "requires_model") and self.active_decoder.requires_model and hasattr(self.model_instance.model, "normalizer")):
