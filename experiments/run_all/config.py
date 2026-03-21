@@ -1,6 +1,6 @@
 
 device="cuda:0"
-Train=True #set it to False for inference only
+Train=False #set it to False for inference only
 backbones={
     'papageip': {
         'model_type': 'papagei',
@@ -124,6 +124,67 @@ backbones={
         'model_type': 'minicpm',
         'model_name': 'minicpm',
         'model_id': 'openbmb/MiniCPM-V-2_6',
+    },
+    # ── Vision backbones ───────────────────────────────────────────────
+    'dinosmall': {
+        'model_type': 'dinov2',
+        'model_name': 'small',
+    },
+    'dinobase': {
+        'model_type': 'dinov2',
+        'model_name': 'base',
+    },
+    'dinolarge': {
+        'model_type': 'dinov2',
+        'model_name': 'large',
+    },
+    'dinogiant': {
+        'model_type': 'dinov2',
+        'model_name': 'giant',
+    },
+    'maebase': {
+        'model_type': 'mae',
+        'model_name': 'base',
+    },
+    'maelarge': {
+        'model_type': 'mae',
+        'model_name': 'large',
+    },
+    'maehuge': {
+        'model_type': 'mae',
+        'model_name': 'huge',
+    },
+    'swintiny': {
+        'model_type': 'swin',
+        'model_name': 'tiny',
+    },
+    'swinsmall': {
+        'model_type': 'swin',
+        'model_name': 'small',
+    },
+    'swinbase': {
+        'model_type': 'swin',
+        'model_name': 'base',
+    },
+    'swinlarge': {
+        'model_type': 'swin',
+        'model_name': 'large',
+    },
+    'vgg11': {
+        'model_type': 'vgg',
+        'model_name': 'vgg11',
+    },
+    'vgg13': {
+        'model_type': 'vgg',
+        'model_name': 'vgg13',
+    },
+    'vgg16': {
+        'model_type': 'vgg',
+        'model_name': 'vgg16',
+    },
+    'vgg19': {
+        'model_type': 'vgg',
+        'model_name': 'vgg19',
     },
     }
 decoders={
@@ -451,7 +512,116 @@ decoders={
             'device': device,
             'cfg':{'input_dim':512,'output_dim':1,'hidden_dim':128},
         }
-    }
+    },
+
+    # ── Vision decoders (linear, 10-class classification) ──────────────
+    'linear_dinosmall_imgclass10': {
+        'decoder_type': 'linear',
+        'decoder_config': {
+            'device': device,
+            'cfg': {'input_dim': 384, 'output_dim': 10},
+        }
+    },
+    'linear_dinobase_imgclass10': {
+        'decoder_type': 'linear',
+        'decoder_config': {
+            'device': device,
+            'cfg': {'input_dim': 768, 'output_dim': 10},
+        }
+    },
+    'linear_dinolarge_imgclass10': {
+        'decoder_type': 'linear',
+        'decoder_config': {
+            'device': device,
+            'cfg': {'input_dim': 1024, 'output_dim': 10},
+        }
+    },
+    'linear_dinogiant_imgclass10': {
+        'decoder_type': 'linear',
+        'decoder_config': {
+            'device': device,
+            'cfg': {'input_dim': 1536, 'output_dim': 10},
+        }
+    },
+    'linear_maebase_imgclass10': {
+        'decoder_type': 'linear',
+        'decoder_config': {
+            'device': device,
+            'cfg': {'input_dim': 768, 'output_dim': 10},
+        }
+    },
+    'linear_maelarge_imgclass10': {
+        'decoder_type': 'linear',
+        'decoder_config': {
+            'device': device,
+            'cfg': {'input_dim': 1024, 'output_dim': 10},
+        }
+    },
+    'linear_maehuge_imgclass10': {
+        'decoder_type': 'linear',
+        'decoder_config': {
+            'device': device,
+            'cfg': {'input_dim': 1280, 'output_dim': 10},
+        }
+    },
+    'linear_swintiny_imgclass10': {
+        'decoder_type': 'linear',
+        'decoder_config': {
+            'device': device,
+            'cfg': {'input_dim': 768, 'output_dim': 10},
+        }
+    },
+    'linear_swinsmall_imgclass10': {
+        'decoder_type': 'linear',
+        'decoder_config': {
+            'device': device,
+            'cfg': {'input_dim': 768, 'output_dim': 10},
+        }
+    },
+    'linear_swinbase_imgclass10': {
+        'decoder_type': 'linear',
+        'decoder_config': {
+            'device': device,
+            'cfg': {'input_dim': 1024, 'output_dim': 10},
+        }
+    },
+    'linear_swinlarge_imgclass10': {
+        'decoder_type': 'linear',
+        'decoder_config': {
+            'device': device,
+            'cfg': {'input_dim': 1536, 'output_dim': 10},
+        }
+    },
+    'linear_vgg_imgclass10': {
+        'decoder_type': 'linear',
+        'decoder_config': {
+            'device': device,
+            'cfg': {'input_dim': 4096, 'output_dim': 10},
+        }
+    },
+
+    # ── Vision decoders (spatial count regression) ─────────────────────
+    'spatialcount_dinobase': {
+        'decoder_type': 'spatial_count',
+        'decoder_config': {
+            'device': device,
+            'cfg': {'input_dim': 768, 'output_dim': 1, 'hidden_dim': 128},
+        }
+    },
+    'spatialcount_dinolarge': {
+        'decoder_type': 'spatial_count',
+        'decoder_config': {
+            'device': device,
+            'cfg': {'input_dim': 1024, 'output_dim': 1, 'hidden_dim': 128},
+        }
+    },
+    'spatialcount_dinosmall': {
+        'decoder_type': 'spatial_count',
+        'decoder_config': {
+            'device': device,
+            'cfg': {'input_dim': 384, 'output_dim': 1, 'hidden_dim': 128},
+        }
+    },
 }
 encoders={
     'linear':{
@@ -553,304 +723,318 @@ datasets={
         'json_file': 'val.json',
         'image_subdir': 'val2014',
     },
+
+    # ── Vision datasets ────────────────────────────────────────────────
+    'EuroSAT': {
+        'dataset_path': '/work/pi_shenoy_umass_edu/kgudipaty/datasets/EuroSAT',
+        'dataset_type': 'EuroSAT',
+    },
+    'CIFAR10': {
+        'dataset_path': '../../dataset/cifar-10',
+        'dataset_type': 'CIFAR10',
+    },
+    'ShanghaiTech': {
+        'dataset_path': '/work/pi_shenoy_umass_edu/kgudipaty/datasets/ShanghaiTech',
+        'dataset_type': 'ShanghaiTech',
+    },
     }
 
         
 tasks = {
-    'diasbp': {
-        'task_type': 'regression',
-        'datasets': ['PPG-data'],
-        'label': 'diasbp',
-         'train': Train,
-         'pipelines':[
-            {
-            'backbone':'momentlarge',
-            'paths':[
-                    # {'decoder':'ridge_regression','parts_to_train':['decoder']},
-                    {'decoder':'mlp_momentlarge_regression','parts_to_train':['decoder'],'path':'diasbp_momentlarge_mlp'},
-                    # {'decoder':'mlp_momentlarge_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
-                    # {'decoder':'mlp_momentlarge_regression','encoder':'linear','adapter':'lora','parts_to_train':['decoder','encoder','adapter']},
-                    # {'decoder':'mlp_momentlarge_regression','adapter':'lora','parts_to_train':['decoder','adapter']},
-                    ]},
-            {
-            'backbone':'momentbase',
-            'paths':[
-                    # {'decoder':'ridge_regression','parts_to_train':['decoder']},
-                    {'decoder':'mlp_momentbase_regression','parts_to_train':['decoder'],'path':'diasbp_momentbase_mlp'},
-                    # {'decoder':'mlp_momentbase_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
-                    # {'decoder':'mlp_momentbase_regression','encoder':'linear','adapter':'lora','parts_to_train':['decoder','encoder','adapter']},
-                    # {'decoder':'mlp_momentbase_regression','adapter':'lora','parts_to_train':['decoder','adapter']},
-                    ]},
-            {
-            'backbone':'momentsmall',
-            'paths':[
-                    # {'decoder':'ridge_regression','parts_to_train':['decoder']},
-                    {'decoder':'mlp_momentsmall_regression','parts_to_train':['decoder'],'path':'diasbp_momentsmall_mlp'},
-                    # {'decoder':'mlp_momentsmall_regression','encoder':'linear','parts_to_train':['decoder','encoder'],'path':'diasbp_momentsmall_mlp_mlp'},
-                    # {'decoder':'mlp_momentsmall_regression','encoder':'linear','adapter':'lora','parts_to_train':['decoder','encoder','adapter'],'path':'diasbp_momentsmall_mlp_mlp_lora'},
-                    # {'decoder':'mlp_momentsmall_regression','adapter':'lora','parts_to_train':['decoder','adapter']},
-                    ]},
-            {
-            'backbone':'chronostiny',
-            'paths':[
-                    # {'decoder':'ridge_regression','parts_to_train':['decoder']},
-                    {'decoder':'mlp_chronostiny_regression','parts_to_train':['decoder'],'path':'diasbp_chronostiny_mlp'},
-                    # {'decoder':'mlp_chronostiny_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
-                    ]},
-            {'backbone':'chronosmini',
-            'paths':[
-                    # {'decoder':'ridge_regression','parts_to_train':['decoder']},
-                    {'decoder':'mlp_chronosmini_regression','parts_to_train':['decoder'],'path':'diasbp_chronosmini_mlp'},
-                    # {'decoder':'mlp_chronosmini_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
-                    ]},
-            {'backbone':'chronossmall',
-            'paths':[
-                    # {'decoder':'ridge_regression','parts_to_train':['decoder']},
-                    {'decoder':'mlp_chronossmall_regression','parts_to_train':['decoder'],'path':'diasbp_chronossmall_mlp'},
-                    # {'decoder':'mlp_chronossmall_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
-                    ]},
-            {'backbone':'chronosbase',
-            'paths':[
-                    # {'decoder':'ridge_regression','parts_to_train':['decoder']},
-                    {'decoder':'mlp_chronosbase_regression','parts_to_train':['decoder'],'path':'diasbp_chronosbase_mlp'},
-                    # {'decoder':'mlp_chronosbase_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
-                    ]},
-            {'backbone':'chronoslarge',
-            'paths':[
-                    # {'decoder':'ridge_regression','parts_to_train':['decoder']},
-                    {'decoder':'mlp_chronoslarge_regression','parts_to_train':['decoder'],'path':'diasbp_chronoslarge_mlp'},
-                    # {'decoder':'mlp_chronoslarge_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
-                    ]},
-            {
-            'backbone':'papageis',
-            'paths':[
-                    # {'decoder':'ridge_regression','parts_to_train':['decoder']},
-                    {'decoder':'mlp_papageis_regression','parts_to_train':['decoder'],'path':'diasbp_papageis_mlp'},
-                    # {'decoder':'mlp_papageis_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
-                    ]},
-            {
-            'backbone':'papageip',
-            'paths':[
-                    # {'decoder':'ridge_regression','parts_to_train':['decoder']},
-                    {'decoder':'mlp_papageip_regression','parts_to_train':['decoder'],'path':'diasbp_papageip_mlp'},
-                    # {'decoder':'mlp_papageip_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
-                    ]},
-            {
-            'backbone':'papageissvri',
-            'paths':[
-                    # {'decoder':'ridge_regression','parts_to_train':['decoder']},
-                    {'decoder':'mlp_papageissvri_regression','parts_to_train':['decoder'],'path':'diasbp_papageissvri_mlp'},
-                    # {'decoder':'mlp_papageissvri_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
-                    ]           
-            }
-            ],
-        'inference_config': {
-            'batch_size': 1,
-            'shuffle':False
-            },    
-        'train_config':{
-            'batch_size': 32,
-            'shuffle':False,
-            'epochs':50,
-            'lr':1e-2,
-        },
-    },
-    'sysbp': {
-        'task_type': 'regression',
-        'datasets': ['PPG-data'],
-        'label': 'sysbp',
-        'train': Train,
-        'pipelines':[
-            {
-            'backbone':'momentlarge',
-            'paths':[
-                    # {'decoder':'ridge_regression','parts_to_train':['decoder']},
-                    {'decoder':'mlp_momentlarge_regression','parts_to_train':['decoder'],'path':'sysbp_momentlarge_mlp'},
-                    # {'decoder':'mlp_momentlarge_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
-                    # {'decoder':'mlp_momentlarge_regression','encoder':'linear','adapter':'lora','parts_to_train':['decoder','encoder','adapter']},
-                    # {'decoder':'mlp_momentlarge_regression','adapter':'lora','parts_to_train':['decoder','adapter']},
-                    ]},
-            {
-            'backbone':'momentbase',
-            'paths':[
-                    # {'decoder':'ridge_regression','parts_to_train':['decoder']},
-                    {'decoder':'mlp_momentbase_regression','parts_to_train':['decoder'],'path':'sysbp_momentbase_mlp'},
-                    # {'decoder':'mlp_momentbase_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
-                    # {'decoder':'mlp_momentbase_regression','encoder':'linear','adapter':'lora','parts_to_train':['decoder','encoder','adapter']},
-                    # {'decoder':'mlp_momentbase_regression','adapter':'lora','parts_to_train':['decoder','adapter']},
-                    ]},
-            {
-            'backbone':'momentsmall',
-            'paths':[
-                    # {'decoder':'ridge_regression','parts_to_train':['decoder']},
-                    {'decoder':'mlp_momentsmall_regression','parts_to_train':['decoder'],'path':'sysbp_momentsmall_mlp'},
-                    # {'decoder':'mlp_momentsmall_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
-                    # {'decoder':'mlp_momentsmall_regression','encoder':'linear','adapter':'lora','parts_to_train':['decoder','encoder','adapter']},
-                    # {'decoder':'mlp_momentsmall_regression','adapter':'lora','parts_to_train':['decoder','adapter']},
-                    ]},
-            {
-            'backbone':'chronostiny',
-            'paths':[
-                    # {'decoder':'ridge_regression','parts_to_train':['decoder']},
-                    {'decoder':'mlp_chronostiny_regression','parts_to_train':['decoder'],'path':'sysbp_chronostiny_mlp'},
-                    # {'decoder':'mlp_chronostiny_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
-                    ]},
-            {'backbone':'chronosmini',
-            'paths':[
-                    # {'decoder':'ridge_regression','parts_to_train':['decoder']},
-                    {'decoder':'mlp_chronosmini_regression','parts_to_train':['decoder'],'path':'sysbp_chronosmini_mlp'},
-                    # {'decoder':'mlp_chronosmini_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
-                    ]},
-            {'backbone':'chronossmall',
-            'paths':[
-                    # {'decoder':'ridge_regression','parts_to_train':['decoder']},
-                    {'decoder':'mlp_chronossmall_regression','parts_to_train':['decoder'],'path':'sysbp_chronossmall_mlp'},
-                    # {'decoder':'mlp_chronossmall_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
-                    ]},
-            {'backbone':'chronosbase',
-            'paths':[
-                    # {'decoder':'ridge_regression','parts_to_train':['decoder']},
-                    {'decoder':'mlp_chronosbase_regression','parts_to_train':['decoder'],'path':'sysbp_chronosbase_mlp'},
-                    # {'decoder':'mlp_chronosbase_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
-                    ]},
-            {'backbone':'chronoslarge',
-            'paths':[
-                    # {'decoder':'ridge_regression','parts_to_train':['decoder']},
-                    {'decoder':'mlp_chronoslarge_regression','parts_to_train':['decoder'],'path':'sysbp_chronoslarge_mlp'},
-                    # {'decoder':'mlp_chronoslarge_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
-                    ]},
-            {
-            'backbone':'papageis',
-            'paths':[
-                    # {'decoder':'ridge_regression','parts_to_train':['decoder']},
-                    {'decoder':'mlp_papageis_regression','parts_to_train':['decoder'],'path':'sysbp_papageis_mlp'},
-                    # {'decoder':'mlp_papageis_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
-                    ]},
-            {
-            'backbone':'papageip',
-            'paths':[
-                    # {'decoder':'ridge_regression','parts_to_train':['decoder']},
-                    {'decoder':'mlp_papageip_regression','parts_to_train':['decoder'],'path':'sysbp_papageip_mlp'},
-                    # {'decoder':'mlp_papageip_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
-                    ]},
-            {
-            'backbone':'papageissvri',
-            'paths':[
-                    # {'decoder':'ridge_regression','parts_to_train':['decoder']},
-                    {'decoder':'mlp_papageissvri_regression','parts_to_train':['decoder'],'path':'sysbp_papageissvri_mlp'},
-                    # {'decoder':'mlp_papageissvri_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
-                    ]           
-            }
-            ],
-        'inference_config': {
-            'batch_size': 1,
-            'shuffle':False
-            },    
-        'train_config':{
-            'batch_size': 32,
-            'shuffle':False,
-            'epochs':50,
-            'lr':1e-2
-        },
-    },
-    'heartrate': {
-        'task_type': 'regression',
-        'datasets': ['PPG-data'],
-        'label': 'hr',
-        'train': Train,
-        'pipelines':[
-            {
-            'backbone':'momentlarge',
-            'paths':[
-                    # {'decoder':'ridge_regression','parts_to_train':['decoder']},
-                    {'decoder':'mlp_momentlarge_regression','parts_to_train':['decoder'],'path':'heartrate_momentlarge_mlp'},
-                    # {'decoder':'mlp_momentlarge_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
-                    # {'decoder':'mlp_momentlarge_regression','encoder':'linear','adapter':'lora','parts_to_train':['decoder','encoder','adapter']},
-                    # {'decoder':'mlp_momentlarge_regression','adapter':'lora','parts_to_train':['decoder','adapter']},
-                    ]},
-            {
-            'backbone':'momentbase',
-            'paths':[
-                    # {'decoder':'ridge_regression','parts_to_train':['decoder']},
-                    {'decoder':'mlp_momentbase_regression','parts_to_train':['decoder'],'path':'heartrate_momentbase_mlp'},
-                    # {'decoder':'mlp_momentbase_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
-                    # {'decoder':'mlp_momentbase_regression','encoder':'linear','adapter':'lora','parts_to_train':['decoder','encoder','adapter']},
-                    # {'decoder':'mlp_momentbase_regression','adapter':'lora','parts_to_train':['decoder','adapter']},
-                    ]},
-            {
-            'backbone':'momentsmall',
-            'paths':[
-                    # {'decoder':'ridge_regression','parts_to_train':['decoder']},
-                    {'decoder':'mlp_momentsmall_regression','parts_to_train':['decoder'],'path':'heartrate_momentsmall_mlp'},
-                    # {'decoder':'mlp_momentsmall_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
-                    # {'decoder':'mlp_momentsmall_regression','encoder':'linear','adapter':'lora','parts_to_train':['decoder','encoder','adapter']},
-                    # {'decoder':'mlp_momentsmall_regression','adapter':'lora','parts_to_train':['decoder','adapter']},
-                    ]},
-            {
-            'backbone':'chronostiny',
-            'paths':[
-                    # {'decoder':'ridge_regression','parts_to_train':['decoder']},
-                    {'decoder':'mlp_chronostiny_regression','parts_to_train':['decoder'],'path':'heartrate_chronostiny_mlp'},
-                    # {'decoder':'mlp_chronostiny_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
-                    ]},
-            {'backbone':'chronosmini',
-            'paths':[
-                    # {'decoder':'ridge_regression','parts_to_train':['decoder']},
-                    {'decoder':'mlp_chronosmini_regression','parts_to_train':['decoder'],'path':'heartrate_chronosmini_mlp'},
-                    # {'decoder':'mlp_chronosmini_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
-                    ]},
-            {'backbone':'chronossmall',
-            'paths':[
-                    # {'decoder':'ridge_regression','parts_to_train':['decoder']},
-                    {'decoder':'mlp_chronossmall_regression','parts_to_train':['decoder'], 'path':'heartrate_chronossmall_mlp'},
-                    # {'decoder':'mlp_chronossmall_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
-                    ]},
-            {'backbone':'chronosbase',
-            'paths':[
-                    # {'decoder':'ridge_regression','parts_to_train':['decoder']},
-                    {'decoder':'mlp_chronosbase_regression','parts_to_train':['decoder'],'path':'heartrate_chronosbase_mlp'},
-                    # {'decoder':'mlp_chronosbase_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
-                    ]},
-            {'backbone':'chronoslarge',
-            'paths':[
-                    # {'decoder':'ridge_regression','parts_to_train':['decoder']},
-                    {'decoder':'mlp_chronoslarge_regression','parts_to_train':['decoder'],'path':'heartrate_chronoslarge_mlp'},
-                    # {'decoder':'mlp_chronoslarge_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
-                    ]},
-            {
-            'backbone':'papageis',
-            'paths':[
-                    # {'decoder':'ridge_regression','parts_to_train':['decoder']},
-                    {'decoder':'mlp_papageis_regression','parts_to_train':['decoder'],'path':'heartrate_papageis_mlp'},
-                    # {'decoder':'mlp_papageis_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
-                    ]},
-            {
-            'backbone':'papageip',
-            'paths':[
-                    # {'decoder':'ridge_regression','parts_to_train':['decoder']},
-                    {'decoder':'mlp_papageip_regression','parts_to_train':['decoder'],'path':'heartrate_papageip_mlp'},
-                    # {'decoder':'mlp_papageip_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
-                    ]},
-            {
-            'backbone':'papageissvri',
-            'paths':[
-                    # {'decoder':'ridge_regression','parts_to_train':['decoder']},
-                    {'decoder':'mlp_papageissvri_regression','parts_to_train':['decoder'],'path':'heartrate_papageissvri_mlp'},
-                    # {'decoder':'mlp_papageissvri_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
-                    ]           
-            }
-            ],
-        'inference_config': {
-            'batch_size': 1,
-            'shuffle':False
-            },    
-        'train_config':{
-            'batch_size': 32,
-            'shuffle':False,
-            'epochs':50,
-            'lr':1e-2
-        },
-    },
+    # 'diasbp': {
+    #     'task_type': 'regression',
+    #     'datasets': ['PPG-data'],
+    #     'label': 'diasbp',
+    #      'train': Train,
+    #      'pipelines':[
+    #         {
+    #         'backbone':'momentlarge',
+    #         'paths':[
+    #                 # {'decoder':'ridge_regression','parts_to_train':['decoder']},
+    #                 {'decoder':'mlp_momentlarge_regression','parts_to_train':['decoder'],'path':'diasbp_momentlarge_mlp'},
+    #                 # {'decoder':'mlp_momentlarge_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
+    #                 # {'decoder':'mlp_momentlarge_regression','encoder':'linear','adapter':'lora','parts_to_train':['decoder','encoder','adapter']},
+    #                 # {'decoder':'mlp_momentlarge_regression','adapter':'lora','parts_to_train':['decoder','adapter']},
+    #                 ]},
+    #         {
+    #         'backbone':'momentbase',
+    #         'paths':[
+    #                 # {'decoder':'ridge_regression','parts_to_train':['decoder']},
+    #                 {'decoder':'mlp_momentbase_regression','parts_to_train':['decoder'],'path':'diasbp_momentbase_mlp'},
+    #                 # {'decoder':'mlp_momentbase_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
+    #                 # {'decoder':'mlp_momentbase_regression','encoder':'linear','adapter':'lora','parts_to_train':['decoder','encoder','adapter']},
+    #                 # {'decoder':'mlp_momentbase_regression','adapter':'lora','parts_to_train':['decoder','adapter']},
+    #                 ]},
+    #         {
+    #         'backbone':'momentsmall',
+    #         'paths':[
+    #                 # {'decoder':'ridge_regression','parts_to_train':['decoder']},
+    #                 {'decoder':'mlp_momentsmall_regression','parts_to_train':['decoder'],'path':'diasbp_momentsmall_mlp'},
+    #                 # {'decoder':'mlp_momentsmall_regression','encoder':'linear','parts_to_train':['decoder','encoder'],'path':'diasbp_momentsmall_mlp_mlp'},
+    #                 # {'decoder':'mlp_momentsmall_regression','encoder':'linear','adapter':'lora','parts_to_train':['decoder','encoder','adapter'],'path':'diasbp_momentsmall_mlp_mlp_lora'},
+    #                 # {'decoder':'mlp_momentsmall_regression','adapter':'lora','parts_to_train':['decoder','adapter']},
+    #                 ]},
+    #         {
+    #         'backbone':'chronostiny',
+    #         'paths':[
+    #                 # {'decoder':'ridge_regression','parts_to_train':['decoder']},
+    #                 {'decoder':'mlp_chronostiny_regression','parts_to_train':['decoder'],'path':'diasbp_chronostiny_mlp'},
+    #                 # {'decoder':'mlp_chronostiny_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
+    #                 ]},
+    #         {'backbone':'chronosmini',
+    #         'paths':[
+    #                 # {'decoder':'ridge_regression','parts_to_train':['decoder']},
+    #                 {'decoder':'mlp_chronosmini_regression','parts_to_train':['decoder'],'path':'diasbp_chronosmini_mlp'},
+    #                 # {'decoder':'mlp_chronosmini_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
+    #                 ]},
+    #         {'backbone':'chronossmall',
+    #         'paths':[
+    #                 # {'decoder':'ridge_regression','parts_to_train':['decoder']},
+    #                 {'decoder':'mlp_chronossmall_regression','parts_to_train':['decoder'],'path':'diasbp_chronossmall_mlp'},
+    #                 # {'decoder':'mlp_chronossmall_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
+    #                 ]},
+    #         {'backbone':'chronosbase',
+    #         'paths':[
+    #                 # {'decoder':'ridge_regression','parts_to_train':['decoder']},
+    #                 {'decoder':'mlp_chronosbase_regression','parts_to_train':['decoder'],'path':'diasbp_chronosbase_mlp'},
+    #                 # {'decoder':'mlp_chronosbase_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
+    #                 ]},
+    #         {'backbone':'chronoslarge',
+    #         'paths':[
+    #                 # {'decoder':'ridge_regression','parts_to_train':['decoder']},
+    #                 {'decoder':'mlp_chronoslarge_regression','parts_to_train':['decoder'],'path':'diasbp_chronoslarge_mlp'},
+    #                 # {'decoder':'mlp_chronoslarge_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
+    #                 ]},
+    #         {
+    #         'backbone':'papageis',
+    #         'paths':[
+    #                 # {'decoder':'ridge_regression','parts_to_train':['decoder']},
+    #                 {'decoder':'mlp_papageis_regression','parts_to_train':['decoder'],'path':'diasbp_papageis_mlp'},
+    #                 # {'decoder':'mlp_papageis_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
+    #                 ]},
+    #         {
+    #         'backbone':'papageip',
+    #         'paths':[
+    #                 # {'decoder':'ridge_regression','parts_to_train':['decoder']},
+    #                 {'decoder':'mlp_papageip_regression','parts_to_train':['decoder'],'path':'diasbp_papageip_mlp'},
+    #                 # {'decoder':'mlp_papageip_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
+    #                 ]},
+    #         {
+    #         'backbone':'papageissvri',
+    #         'paths':[
+    #                 # {'decoder':'ridge_regression','parts_to_train':['decoder']},
+    #                 {'decoder':'mlp_papageissvri_regression','parts_to_train':['decoder'],'path':'diasbp_papageissvri_mlp'},
+    #                 # {'decoder':'mlp_papageissvri_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
+    #                 ]           
+    #         }
+    #         ],
+    #     'inference_config': {
+    #         'batch_size': 1,
+    #         'shuffle':False
+    #         },    
+    #     'train_config':{
+    #         'batch_size': 32,
+    #         'shuffle':False,
+    #         'epochs':50,
+    #         'lr':1e-2,
+    #     },
+    # },
+    # 'sysbp': {
+    #     'task_type': 'regression',
+    #     'datasets': ['PPG-data'],
+    #     'label': 'sysbp',
+    #     'train': Train,
+    #     'pipelines':[
+    #         {
+    #         'backbone':'momentlarge',
+    #         'paths':[
+    #                 # {'decoder':'ridge_regression','parts_to_train':['decoder']},
+    #                 {'decoder':'mlp_momentlarge_regression','parts_to_train':['decoder'],'path':'sysbp_momentlarge_mlp'},
+    #                 # {'decoder':'mlp_momentlarge_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
+    #                 # {'decoder':'mlp_momentlarge_regression','encoder':'linear','adapter':'lora','parts_to_train':['decoder','encoder','adapter']},
+    #                 # {'decoder':'mlp_momentlarge_regression','adapter':'lora','parts_to_train':['decoder','adapter']},
+    #                 ]},
+    #         {
+    #         'backbone':'momentbase',
+    #         'paths':[
+    #                 # {'decoder':'ridge_regression','parts_to_train':['decoder']},
+    #                 {'decoder':'mlp_momentbase_regression','parts_to_train':['decoder'],'path':'sysbp_momentbase_mlp'},
+    #                 # {'decoder':'mlp_momentbase_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
+    #                 # {'decoder':'mlp_momentbase_regression','encoder':'linear','adapter':'lora','parts_to_train':['decoder','encoder','adapter']},
+    #                 # {'decoder':'mlp_momentbase_regression','adapter':'lora','parts_to_train':['decoder','adapter']},
+    #                 ]},
+    #         {
+    #         'backbone':'momentsmall',
+    #         'paths':[
+    #                 # {'decoder':'ridge_regression','parts_to_train':['decoder']},
+    #                 {'decoder':'mlp_momentsmall_regression','parts_to_train':['decoder'],'path':'sysbp_momentsmall_mlp'},
+    #                 # {'decoder':'mlp_momentsmall_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
+    #                 # {'decoder':'mlp_momentsmall_regression','encoder':'linear','adapter':'lora','parts_to_train':['decoder','encoder','adapter']},
+    #                 # {'decoder':'mlp_momentsmall_regression','adapter':'lora','parts_to_train':['decoder','adapter']},
+    #                 ]},
+    #         {
+    #         'backbone':'chronostiny',
+    #         'paths':[
+    #                 # {'decoder':'ridge_regression','parts_to_train':['decoder']},
+    #                 {'decoder':'mlp_chronostiny_regression','parts_to_train':['decoder'],'path':'sysbp_chronostiny_mlp'},
+    #                 # {'decoder':'mlp_chronostiny_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
+    #                 ]},
+    #         {'backbone':'chronosmini',
+    #         'paths':[
+    #                 # {'decoder':'ridge_regression','parts_to_train':['decoder']},
+    #                 {'decoder':'mlp_chronosmini_regression','parts_to_train':['decoder'],'path':'sysbp_chronosmini_mlp'},
+    #                 # {'decoder':'mlp_chronosmini_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
+    #                 ]},
+    #         {'backbone':'chronossmall',
+    #         'paths':[
+    #                 # {'decoder':'ridge_regression','parts_to_train':['decoder']},
+    #                 {'decoder':'mlp_chronossmall_regression','parts_to_train':['decoder'],'path':'sysbp_chronossmall_mlp'},
+    #                 # {'decoder':'mlp_chronossmall_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
+    #                 ]},
+    #         {'backbone':'chronosbase',
+    #         'paths':[
+    #                 # {'decoder':'ridge_regression','parts_to_train':['decoder']},
+    #                 {'decoder':'mlp_chronosbase_regression','parts_to_train':['decoder'],'path':'sysbp_chronosbase_mlp'},
+    #                 # {'decoder':'mlp_chronosbase_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
+    #                 ]},
+    #         {'backbone':'chronoslarge',
+    #         'paths':[
+    #                 # {'decoder':'ridge_regression','parts_to_train':['decoder']},
+    #                 {'decoder':'mlp_chronoslarge_regression','parts_to_train':['decoder'],'path':'sysbp_chronoslarge_mlp'},
+    #                 # {'decoder':'mlp_chronoslarge_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
+    #                 ]},
+    #         {
+    #         'backbone':'papageis',
+    #         'paths':[
+    #                 # {'decoder':'ridge_regression','parts_to_train':['decoder']},
+    #                 {'decoder':'mlp_papageis_regression','parts_to_train':['decoder'],'path':'sysbp_papageis_mlp'},
+    #                 # {'decoder':'mlp_papageis_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
+    #                 ]},
+    #         {
+    #         'backbone':'papageip',
+    #         'paths':[
+    #                 # {'decoder':'ridge_regression','parts_to_train':['decoder']},
+    #                 {'decoder':'mlp_papageip_regression','parts_to_train':['decoder'],'path':'sysbp_papageip_mlp'},
+    #                 # {'decoder':'mlp_papageip_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
+    #                 ]},
+    #         {
+    #         'backbone':'papageissvri',
+    #         'paths':[
+    #                 # {'decoder':'ridge_regression','parts_to_train':['decoder']},
+    #                 {'decoder':'mlp_papageissvri_regression','parts_to_train':['decoder'],'path':'sysbp_papageissvri_mlp'},
+    #                 # {'decoder':'mlp_papageissvri_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
+    #                 ]           
+    #         }
+    #         ],
+    #     'inference_config': {
+    #         'batch_size': 1,
+    #         'shuffle':False
+    #         },    
+    #     'train_config':{
+    #         'batch_size': 32,
+    #         'shuffle':False,
+    #         'epochs':50,
+    #         'lr':1e-2
+    #     },
+    # },
+    # 'heartrate': {
+    #     'task_type': 'regression',
+    #     'datasets': ['PPG-data'],
+    #     'label': 'hr',
+    #     'train': Train,
+    #     'pipelines':[
+    #         {
+    #         'backbone':'momentlarge',
+    #         'paths':[
+    #                 # {'decoder':'ridge_regression','parts_to_train':['decoder']},
+    #                 {'decoder':'mlp_momentlarge_regression','parts_to_train':['decoder'],'path':'heartrate_momentlarge_mlp'},
+    #                 # {'decoder':'mlp_momentlarge_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
+    #                 # {'decoder':'mlp_momentlarge_regression','encoder':'linear','adapter':'lora','parts_to_train':['decoder','encoder','adapter']},
+    #                 # {'decoder':'mlp_momentlarge_regression','adapter':'lora','parts_to_train':['decoder','adapter']},
+    #                 ]},
+    #         {
+    #         'backbone':'momentbase',
+    #         'paths':[
+    #                 # {'decoder':'ridge_regression','parts_to_train':['decoder']},
+    #                 {'decoder':'mlp_momentbase_regression','parts_to_train':['decoder'],'path':'heartrate_momentbase_mlp'},
+    #                 # {'decoder':'mlp_momentbase_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
+    #                 # {'decoder':'mlp_momentbase_regression','encoder':'linear','adapter':'lora','parts_to_train':['decoder','encoder','adapter']},
+    #                 # {'decoder':'mlp_momentbase_regression','adapter':'lora','parts_to_train':['decoder','adapter']},
+    #                 ]},
+    #         {
+    #         'backbone':'momentsmall',
+    #         'paths':[
+    #                 # {'decoder':'ridge_regression','parts_to_train':['decoder']},
+    #                 {'decoder':'mlp_momentsmall_regression','parts_to_train':['decoder'],'path':'heartrate_momentsmall_mlp'},
+    #                 # {'decoder':'mlp_momentsmall_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
+    #                 # {'decoder':'mlp_momentsmall_regression','encoder':'linear','adapter':'lora','parts_to_train':['decoder','encoder','adapter']},
+    #                 # {'decoder':'mlp_momentsmall_regression','adapter':'lora','parts_to_train':['decoder','adapter']},
+    #                 ]},
+    #         {
+    #         'backbone':'chronostiny',
+    #         'paths':[
+    #                 # {'decoder':'ridge_regression','parts_to_train':['decoder']},
+    #                 {'decoder':'mlp_chronostiny_regression','parts_to_train':['decoder'],'path':'heartrate_chronostiny_mlp'},
+    #                 # {'decoder':'mlp_chronostiny_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
+    #                 ]},
+    #         {'backbone':'chronosmini',
+    #         'paths':[
+    #                 # {'decoder':'ridge_regression','parts_to_train':['decoder']},
+    #                 {'decoder':'mlp_chronosmini_regression','parts_to_train':['decoder'],'path':'heartrate_chronosmini_mlp'},
+    #                 # {'decoder':'mlp_chronosmini_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
+    #                 ]},
+    #         {'backbone':'chronossmall',
+    #         'paths':[
+    #                 # {'decoder':'ridge_regression','parts_to_train':['decoder']},
+    #                 {'decoder':'mlp_chronossmall_regression','parts_to_train':['decoder'], 'path':'heartrate_chronossmall_mlp'},
+    #                 # {'decoder':'mlp_chronossmall_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
+    #                 ]},
+    #         {'backbone':'chronosbase',
+    #         'paths':[
+    #                 # {'decoder':'ridge_regression','parts_to_train':['decoder']},
+    #                 {'decoder':'mlp_chronosbase_regression','parts_to_train':['decoder'],'path':'heartrate_chronosbase_mlp'},
+    #                 # {'decoder':'mlp_chronosbase_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
+    #                 ]},
+    #         {'backbone':'chronoslarge',
+    #         'paths':[
+    #                 # {'decoder':'ridge_regression','parts_to_train':['decoder']},
+    #                 {'decoder':'mlp_chronoslarge_regression','parts_to_train':['decoder'],'path':'heartrate_chronoslarge_mlp'},
+    #                 # {'decoder':'mlp_chronoslarge_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
+    #                 ]},
+    #         {
+    #         'backbone':'papageis',
+    #         'paths':[
+    #                 # {'decoder':'ridge_regression','parts_to_train':['decoder']},
+    #                 {'decoder':'mlp_papageis_regression','parts_to_train':['decoder'],'path':'heartrate_papageis_mlp'},
+    #                 # {'decoder':'mlp_papageis_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
+    #                 ]},
+    #         {
+    #         'backbone':'papageip',
+    #         'paths':[
+    #                 # {'decoder':'ridge_regression','parts_to_train':['decoder']},
+    #                 {'decoder':'mlp_papageip_regression','parts_to_train':['decoder'],'path':'heartrate_papageip_mlp'},
+    #                 # {'decoder':'mlp_papageip_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
+    #                 ]},
+    #         {
+    #         'backbone':'papageissvri',
+    #         'paths':[
+    #                 # {'decoder':'ridge_regression','parts_to_train':['decoder']},
+    #                 {'decoder':'mlp_papageissvri_regression','parts_to_train':['decoder'],'path':'heartrate_papageissvri_mlp'},
+    #                 # {'decoder':'mlp_papageissvri_regression','encoder':'linear','parts_to_train':['decoder','encoder']},
+    #                 ]           
+    #         }
+    #         ],
+    #     'inference_config': {
+    #         'batch_size': 1,
+    #         'shuffle':False
+    #         },    
+    #     'train_config':{
+    #         'batch_size': 32,
+    #         'shuffle':False,
+    #         'epochs':50,
+    #         'lr':1e-2
+    #     },
+    # },
     # 'ecgclass': {
     # 'task_type': 'classification',
     # 'datasets': ['ecg5000'],
@@ -934,89 +1118,89 @@ tasks = {
     #     'lr':1e-2,
     #     },
     # },
-    'gestureclass': {
-        'task_type': 'classification',
-        'datasets': ['UWaveGestureLibraryAll'],
-        'train': Train,
-        'pipelines':[
-            {
-            'backbone':'momentlarge',
-            'paths':[
-                {'decoder':'mlp_momentlarge_gesture_class','parts_to_train':['decoder'],'path':'gestureclass_momentlarge_mlp'},
-                ]
-            },
-            {
-            'backbone':'momentsmall',
-            'paths':[
-                {'decoder':'mlp_momentsmall_gesture_class','parts_to_train':['decoder'],'path':'gestureclass_momentsmall_mlp'},
-                ]
-            },
-            {
-            'backbone':'momentbase',
-            'paths':[
-                {'decoder':'mlp_momentbase_gesture_class','parts_to_train':['decoder'],'path':'gestureclass_momentbase_mlp'},
-                ]
-            },
-            {
-            'backbone':'chronostiny',
-            'paths':[
-                {'decoder':'mlp_chronostiny_gesture_class','parts_to_train':['decoder'],'path':'gestureclass_chronostiny_mlp'},
-                ]
-            },
-            {
-            'backbone':'chronosmini',
-            'paths':[
-                {'decoder':'mlp_chronosmini_gesture_class','parts_to_train':['decoder'],'path':'gestureclass_chronosmini_mlp'},
-                ]
-            },
-            {
-            'backbone':'chronossmall',
-            'paths':[
-                {'decoder':'mlp_chronossmall_gesture_class','parts_to_train':['decoder'],'path':'gestureclass_chronossmall_mlp'},
-                ]
-            },
-            {
-            'backbone':'chronosbase',
-            'paths':[
-                {'decoder':'mlp_chronosbase_gesture_class','parts_to_train':['decoder'],'path':'gestureclass_chronosbase_mlp'},
-                ]
-            },
-            {
-            'backbone':'chronoslarge',
-            'paths':[
-                {'decoder':'mlp_chronoslarge_gesture_class','parts_to_train':['decoder'],'path':'gestureclass_chronoslarge_mlp'},
-                ]
-            },
-            {
-            'backbone':'papageis',
-            'paths':[
-                {'decoder':'mlp_papageis_gesture_class','parts_to_train':['decoder'],'path':'gestureclass_papageis_mlp'},
-                ]   
-            },
-            {
-            'backbone':'papageip',
-            'paths':[
-                {'decoder':'mlp_papageip_gesture_class','parts_to_train':['decoder'],'path':'gestureclass_papageip_mlp'},
-                ]   
-            },
-            {
-            'backbone':'papageissvri',
-            'paths':[       
-                {'decoder':'mlp_papageissvri_gesture_class','parts_to_train':['decoder'],'path':'gestureclass_papageissvri_mlp'},
-                ]   
-            }
-            ],
-        'inference_config': {
-            'batch_size': 1,
-            'shuffle':False
-            },
-        'train_config': {
-            'batch_size': 32,
-            'shuffle':False,
-            'epochs':50,
-            'lr':1e-2,
-        },
-    },
+    # 'gestureclass': {
+    #     'task_type': 'classification',
+    #     'datasets': ['UWaveGestureLibraryAll'],
+    #     'train': Train,
+    #     'pipelines':[
+    #         {
+    #         'backbone':'momentlarge',
+    #         'paths':[
+    #             {'decoder':'mlp_momentlarge_gesture_class','parts_to_train':['decoder'],'path':'gestureclass_momentlarge_mlp'},
+    #             ]
+    #         },
+    #         {
+    #         'backbone':'momentsmall',
+    #         'paths':[
+    #             {'decoder':'mlp_momentsmall_gesture_class','parts_to_train':['decoder'],'path':'gestureclass_momentsmall_mlp'},
+    #             ]
+    #         },
+    #         {
+    #         'backbone':'momentbase',
+    #         'paths':[
+    #             {'decoder':'mlp_momentbase_gesture_class','parts_to_train':['decoder'],'path':'gestureclass_momentbase_mlp'},
+    #             ]
+    #         },
+    #         {
+    #         'backbone':'chronostiny',
+    #         'paths':[
+    #             {'decoder':'mlp_chronostiny_gesture_class','parts_to_train':['decoder'],'path':'gestureclass_chronostiny_mlp'},
+    #             ]
+    #         },
+    #         {
+    #         'backbone':'chronosmini',
+    #         'paths':[
+    #             {'decoder':'mlp_chronosmini_gesture_class','parts_to_train':['decoder'],'path':'gestureclass_chronosmini_mlp'},
+    #             ]
+    #         },
+    #         {
+    #         'backbone':'chronossmall',
+    #         'paths':[
+    #             {'decoder':'mlp_chronossmall_gesture_class','parts_to_train':['decoder'],'path':'gestureclass_chronossmall_mlp'},
+    #             ]
+    #         },
+    #         {
+    #         'backbone':'chronosbase',
+    #         'paths':[
+    #             {'decoder':'mlp_chronosbase_gesture_class','parts_to_train':['decoder'],'path':'gestureclass_chronosbase_mlp'},
+    #             ]
+    #         },
+    #         {
+    #         'backbone':'chronoslarge',
+    #         'paths':[
+    #             {'decoder':'mlp_chronoslarge_gesture_class','parts_to_train':['decoder'],'path':'gestureclass_chronoslarge_mlp'},
+    #             ]
+    #         },
+    #         {
+    #         'backbone':'papageis',
+    #         'paths':[
+    #             {'decoder':'mlp_papageis_gesture_class','parts_to_train':['decoder'],'path':'gestureclass_papageis_mlp'},
+    #             ]   
+    #         },
+    #         {
+    #         'backbone':'papageip',
+    #         'paths':[
+    #             {'decoder':'mlp_papageip_gesture_class','parts_to_train':['decoder'],'path':'gestureclass_papageip_mlp'},
+    #             ]   
+    #         },
+    #         {
+    #         'backbone':'papageissvri',
+    #         'paths':[       
+    #             {'decoder':'mlp_papageissvri_gesture_class','parts_to_train':['decoder'],'path':'gestureclass_papageissvri_mlp'},
+    #             ]   
+    #         }
+    #         ],
+    #     'inference_config': {
+    #         'batch_size': 1,
+    #         'shuffle':False
+    #         },
+    #     'train_config': {
+    #         'batch_size': 32,
+    #         'shuffle':False,
+    #         'epochs':50,
+    #         'lr':1e-2,
+    #     },
+    # },
     # 'etth1fore':{
     #     'task_type': 'forecasting',
     #     'datasets': ['ETTh1'],
@@ -1179,37 +1363,37 @@ tasks = {
     #         },
     # },
 
-    # ── VLM tasks ──────────────────────────────────────────────────────
-    'vlm_crowd': {
-        'task_type': 'vlm',
-        'vlm_task_key': 'crowd',
-        'datasets': ['vlm_crowd_counting'],
-        'train': False,
-        'parser': 'parse_crowd_label',
-        'evaluator': 'evaluate_crowd',
-        'pipelines': [
-            {'backbone': 'llama-vision', 'paths': [{}]},
-            {'backbone': 'minicpm', 'paths': [{}]},
-            {'backbone': 'molmo', 'paths': [{}]},
-            {'backbone': 'phi', 'paths': [{}]},
-        ],
-        'inference_config': {'batch_size': 1, 'shuffle': False},
-    },
-    'vlm_scene': {
-        'task_type': 'vlm',
-        'vlm_task_key': 'scene',
-        'datasets': ['vlm_scene_classification'],
-        'train': False,
-        'parser': 'parse_scene_label',
-        'evaluator': 'evaluate_scene',
-        'pipelines': [
-            {'backbone': 'llama-vision', 'paths': [{}]},
-            {'backbone': 'minicpm', 'paths': [{}]},
-            {'backbone': 'molmo', 'paths': [{}]},
-            {'backbone': 'phi', 'paths': [{}]},
-        ],
-        'inference_config': {'batch_size': 1, 'shuffle': False},
-    },
+    # # # ── VLM tasks ──────────────────────────────────────────────────────
+    # 'vlm_crowd': {
+    #     'task_type': 'vlm',
+    #     'vlm_task_key': 'crowd',
+    #     'datasets': ['vlm_crowd_counting'],
+    #     'train': False,
+    #     'parser': 'parse_crowd_label',
+    #     'evaluator': 'evaluate_crowd',
+    #     'pipelines': [
+    #         {'backbone': 'llama-vision', 'paths': [{}]},
+    #         {'backbone': 'minicpm', 'paths': [{}]},
+    #         {'backbone': 'molmo', 'paths': [{}]},
+    #         {'backbone': 'phi', 'paths': [{}]},
+    #     ],
+    #     'inference_config': {'batch_size': 1, 'shuffle': False},
+    # },
+    # 'vlm_scene': {
+    #     'task_type': 'vlm',
+    #     'vlm_task_key': 'scene',
+    #     'datasets': ['vlm_scene_classification'],
+    #     'train': False,
+    #     'parser': 'parse_scene_label',
+    #     'evaluator': 'evaluate_scene',
+    #     'pipelines': [
+    #         {'backbone': 'llama-vision', 'paths': [{}]},
+    #         {'backbone': 'minicpm', 'paths': [{}]},
+    #         {'backbone': 'molmo', 'paths': [{}]},
+    #         {'backbone': 'phi', 'paths': [{}]},
+    #     ],
+    #     'inference_config': {'batch_size': 1, 'shuffle': False},
+    # },
     'vlm_ocr': {
         'task_type': 'vlm',
         'vlm_task_key': 'ocr',
@@ -1218,104 +1402,172 @@ tasks = {
         'parser': 'parse_ocr_digit',
         'evaluator': 'evaluate_ocr',
         'pipelines': [
-            {'backbone': 'llama-vision', 'paths': [{}]},
-            {'backbone': 'minicpm', 'paths': [{}]},
-            {'backbone': 'molmo', 'paths': [{}]},
+            # {'backbone': 'llama-vision', 'paths': [{}]},
+            # {'backbone': 'minicpm', 'paths': [{}]},
+            # {'backbone': 'molmo', 'paths': [{}]},
             {'backbone': 'phi', 'paths': [{}]},
         ],
         'inference_config': {'batch_size': 1, 'shuffle': False},
     },
-    'vlm_vqa': {
-        'task_type': 'vlm',
-        'vlm_task_key': 'vqa',
-        'datasets': ['vlm_vqa'],
-        'train': False,
-        'parser': 'parse_vqa_label',
-        'evaluator': 'evaluate_vqa',
-        'pipelines': [
-            {'backbone': 'llama-vision', 'paths': [{}]},
-            {'backbone': 'minicpm', 'paths': [{}]},
-            {'backbone': 'molmo', 'paths': [{}]},
-            {'backbone': 'phi', 'paths': [{}]},
-        ],
-        'inference_config': {'batch_size': 1, 'shuffle': False},
-    },
-    'vlm_traffic': {
-        'task_type': 'vlm',
-        'vlm_task_key': 'traffic',
-        'datasets': ['vlm_traffic_classification'],
-        'train': False,
-        'parser': 'parse_traffic_label',
-        'evaluator': 'evaluate_substring_match',
-        'pipelines': [
-            {'backbone': 'llama-vision', 'paths': [{}]},
-            {'backbone': 'minicpm', 'paths': [{}]},
-            {'backbone': 'molmo', 'paths': [{}]},
-            {'backbone': 'phi', 'paths': [{}]},
-        ],
-        'inference_config': {'batch_size': 1, 'shuffle': False},
-    },
-    'vlm_gesture': {
-        'task_type': 'vlm',
-        'vlm_task_key': 'gesture',
-        'datasets': ['vlm_gesture_recognition'],
-        'train': False,
-        'parser': 'parse_gesture_label',
-        'evaluator': 'evaluate_substring_match',
-        'pipelines': [
-            {'backbone': 'llama-vision', 'paths': [{}]},
-            {'backbone': 'minicpm', 'paths': [{}]},
-            {'backbone': 'molmo', 'paths': [{}]},
-            {'backbone': 'phi', 'paths': [{}]},
-        ],
-        'inference_config': {'batch_size': 1, 'shuffle': False},
-    },
-    'vlm_activity': {
-        'task_type': 'vlm',
-        'vlm_task_key': 'activity',
-        'datasets': ['vlm_activity_recognition'],
-        'train': False,
-        'parser': 'parse_activity_label',
-        'evaluator': 'evaluate_substring_match',
-        'pipelines': [
-            {'backbone': 'llama-vision', 'paths': [{}]},
-            {'backbone': 'minicpm', 'paths': [{}]},
-            {'backbone': 'molmo', 'paths': [{}]},
-            {'backbone': 'phi', 'paths': [{}]},
-        ],
-        'inference_config': {'batch_size': 1, 'shuffle': False},
-    },
-    'vlm_object_detection': {
-        'task_type': 'vlm',
-        'vlm_task_key': 'object_detection',
-        'datasets': ['vlm_object_detection'],
-        'train': False,
-        'parser': 'parse_object_detection_label',
-        'evaluator': 'evaluate_object_detection',
-        'pipelines': [
-            {'backbone': 'llama-vision', 'paths': [{}]},
-            {'backbone': 'minicpm', 'paths': [{}]},
-            {'backbone': 'molmo', 'paths': [{}]},
-            {'backbone': 'phi', 'paths': [{}]},
-        ],
-        'inference_config': {'batch_size': 1, 'shuffle': False},
-    },
-    'vlm_image_classification': {
-        'task_type': 'vlm',
-        'vlm_task_key': 'image_classification',
-        'datasets': ['vlm_image_classification'],
-        'train': False,
-        'parser': 'parse_classification_label',
-        'evaluator': 'evaluate_image_classification',
-        'pipelines': [
-            {'backbone': 'llama-vision', 'paths': [{}]},
-            {'backbone': 'minicpm', 'paths': [{}]},
-            {'backbone': 'molmo', 'paths': [{}]},
-            {'backbone': 'phi', 'paths': [{}]},
-        ],
-        'inference_config': {'batch_size': 1, 'shuffle': False},
-    },
+    # 'vlm_vqa': {
+    #     'task_type': 'vlm',
+    #     'vlm_task_key': 'vqa',
+    #     'datasets': ['vlm_vqa'],
+    #     'train': False,
+    #     'parser': 'parse_vqa_label',
+    #     'evaluator': 'evaluate_vqa',
+    #     'pipelines': [
+    #         {'backbone': 'llama-vision', 'paths': [{}]},
+    #         {'backbone': 'minicpm', 'paths': [{}]},
+    #         {'backbone': 'molmo', 'paths': [{}]},
+    #         {'backbone': 'phi', 'paths': [{}]},
+    #     ],
+    #     'inference_config': {'batch_size': 1, 'shuffle': False},
+    # },
+    # 'vlm_traffic': {
+    #     'task_type': 'vlm',
+    #     'vlm_task_key': 'traffic',
+    #     'datasets': ['vlm_traffic_classification'],
+    #     'train': False,
+    #     'parser': 'parse_traffic_label',
+    #     'evaluator': 'evaluate_substring_match',
+    #     'pipelines': [
+    #         {'backbone': 'llama-vision', 'paths': [{}]},
+    #         {'backbone': 'minicpm', 'paths': [{}]},
+    #         {'backbone': 'molmo', 'paths': [{}]},
+    #         {'backbone': 'phi', 'paths': [{}]},
+    #     ],
+    #     'inference_config': {'batch_size': 1, 'shuffle': False},
+    # },
+    # 'vlm_gesture': {
+    #     'task_type': 'vlm',
+    #     'vlm_task_key': 'gesture',
+    #     'datasets': ['vlm_gesture_recognition'],
+    #     'train': False,
+    #     'parser': 'parse_gesture_label',
+    #     'evaluator': 'evaluate_substring_match',
+    #     'pipelines': [
+    #         {'backbone': 'llama-vision', 'paths': [{}]},
+    #         {'backbone': 'minicpm', 'paths': [{}]},
+    #         {'backbone': 'molmo', 'paths': [{}]},
+    #         {'backbone': 'phi', 'paths': [{}]},
+    #     ],
+    #     'inference_config': {'batch_size': 1, 'shuffle': False},
+    # },
+    # 'vlm_activity': {
+    #     'task_type': 'vlm',
+    #     'vlm_task_key': 'activity',
+    #     'datasets': ['vlm_activity_recognition'],
+    #     'train': False,
+    #     'parser': 'parse_activity_label',
+    #     'evaluator': 'evaluate_substring_match',
+    #     'pipelines': [
+    #         {'backbone': 'llama-vision', 'paths': [{}]},
+    #         {'backbone': 'minicpm', 'paths': [{}]},
+    #         {'backbone': 'molmo', 'paths': [{}]},
+    #         {'backbone': 'phi', 'paths': [{}]},
+    #     ],
+    #     'inference_config': {'batch_size': 1, 'shuffle': False},
+    # },
+    # 'vlm_object_detection': {
+    #     'task_type': 'vlm',
+    #     'vlm_task_key': 'object_detection',
+    #     'datasets': ['vlm_object_detection'],
+    #     'train': False,
+    #     'parser': 'parse_object_detection_label',
+    #     'evaluator': 'evaluate_object_detection',
+    #     'pipelines': [
+    #         {'backbone': 'llama-vision', 'paths': [{}]},
+    #         {'backbone': 'minicpm', 'paths': [{}]},
+    #         {'backbone': 'molmo', 'paths': [{}]},
+    #         {'backbone': 'phi', 'paths': [{}]},
+    #     ],
+    #     'inference_config': {'batch_size': 1, 'shuffle': False},
+    # },
+    # 'vlm_image_classification': {
+    #     'task_type': 'vlm',
+    #     'vlm_task_key': 'image_classification',
+    #     'datasets': ['vlm_image_classification'],
+    #     'train': False,
+    #     'parser': 'parse_classification_label',
+    #     'evaluator': 'evaluate_image_classification',
+    #     'pipelines': [
+    #         {'backbone': 'llama-vision', 'paths': [{}]},
+    #         {'backbone': 'minicpm', 'paths': [{}]},
+    #         {'backbone': 'molmo', 'paths': [{}]},
+    #         {'backbone': 'phi', 'paths': [{}]},
+    #     ],
+    #     'inference_config': {'batch_size': 1, 'shuffle': False},
+    # },
+
+    # ── Vision tasks ───────────────────────────────────────────────────
+    # 'eurosat_imgclass': {
+    #     'task_type': 'classification',
+    #     'datasets': ['EuroSAT'],
+    #     'train': Train,
+    #     'pipelines': [
+            # {'backbone': 'dinosmall',  'paths': [{'decoder': 'linear_dinosmall_imgclass10',  'parts_to_train': ['decoder'], 'path': 'eurosat_dinosmall_linear'}]},
+            # {'backbone': 'dinobase',   'paths': [{'decoder': 'linear_dinobase_imgclass10',   'parts_to_train': ['decoder'], 'path': 'eurosatclass_dinobase_linear'}]},
+            # {'backbone': 'dinolarge',  'paths': [{'decoder': 'linear_dinolarge_imgclass10',  'parts_to_train': ['decoder'], 'path': 'eurosat_dinolarge_linear'}]},
+            # {'backbone': 'dinogiant',  'paths': [{'decoder': 'linear_dinogiant_imgclass10',  'parts_to_train': ['decoder'], 'path': 'eurosat_dinogiant_linear'}]},
+            # {'backbone': 'maebase',    'paths': [{'decoder': 'linear_maebase_imgclass10',    'parts_to_train': ['decoder'], 'path': 'eurosatclass_maebase_linear'}]},
+            # {'backbone': 'maelarge',   'paths': [{'decoder': 'linear_maelarge_imgclass10',   'parts_to_train': ['decoder'], 'path': 'eurosat_maelarge_linear'}]},
+            # {'backbone': 'maehuge',    'paths': [{'decoder': 'linear_maehuge_imgclass10',    'parts_to_train': ['decoder'], 'path': 'eurosat_maehuge_linear'}]},
+            # {'backbone': 'swintiny',   'paths': [{'decoder': 'linear_swintiny_imgclass10',   'parts_to_train': ['decoder'], 'path': 'eurosatclass_swintiny_linear'}]},
+            # {'backbone': 'swinsmall',  'paths': [{'decoder': 'linear_swinsmall_imgclass10',  'parts_to_train': ['decoder'], 'path': 'eurosatclass_swinsmall_linear'}]},
+            # {'backbone': 'swinbase',   'paths': [{'decoder': 'linear_swinbase_imgclass10',   'parts_to_train': ['decoder'], 'path': 'eurosatclass_swinbase_linear'}]},
+            # {'backbone': 'swinlarge',  'paths': [{'decoder': 'linear_swinlarge_imgclass10',  'parts_to_train': ['decoder'], 'path': 'eurosatclass_swinlarge_linear'}]},
+            # {'backbone': 'vgg16',      'paths': [{'decoder': 'linear_vgg_imgclass10',        'parts_to_train': ['decoder'], 'path': 'eurosat_vgg16_linear'}]},
+    #     ],
+    #     'inference_config': {'batch_size': 32, 'shuffle': False},
+    #     'train_config': {
+    #         'batch_size': 32,
+    #         'shuffle': False,
+    #         'epochs': 20,
+    #         'lr': 1e-3,
+    #         'scheduler': {'type': 'cosine', 'T_max': 10, 'eta_min': 0},
+    #     },
+    # },
+    # 'cifar10_imgclass': {
+    #     'task_type': 'classification',
+    #     'datasets': ['CIFAR10'],
+    #     'train': Train,
+    #     'pipelines': [
+    #         {'backbone': 'dinosmall', 'paths': [{'decoder': 'linear_dinosmall_imgclass10', 'parts_to_train': ['decoder'], 'path': 'cifar10_dinosmall_linear'}]},
+    #         {'backbone': 'dinobase',  'paths': [{'decoder': 'linear_dinobase_imgclass10',  'parts_to_train': ['decoder'], 'path': 'cifar10_dinobase_linear'}]},
+    #         {'backbone': 'dinolarge', 'paths': [{'decoder': 'linear_dinolarge_imgclass10', 'parts_to_train': ['decoder'], 'path': 'cifar10_dinolarge_linear'}]},
+    #     ],
+    #     'inference_config': {'batch_size': 32, 'shuffle': False},
+    #     'train_config': {
+    #         'batch_size': 32,
+    #         'shuffle': False,
+    #         'epochs': 50,
+    #         'lr': 1e-2,
+    #     },
+    # },
+    # 'shanghaitech_count': {
+    #     'task_type': 'regression',
+    #     'datasets': ['ShanghaiTech'],
+    #     'train': Train,
+    #     'pipelines': [
+    #         {'backbone': 'dinosmall', 'paths': [{'decoder': 'spatialcount_dinosmall', 'parts_to_train': ['decoder'], 'path': 'shanghaitech_dinosmall_spatialcount'}]},
+    #         {'backbone': 'dinobase',  'paths': [{'decoder': 'spatialcount_dinobase',  'parts_to_train': ['decoder'], 'path': 'shanghaitech_dinobase_spatialcount'}]},
+    #         {'backbone': 'dinolarge', 'paths': [{'decoder': 'spatialcount_dinolarge', 'parts_to_train': ['decoder'], 'path': 'shanghaitech_dinolarge_spatialcount'}]},
+    #     ],
+    #     'inference_config': {'batch_size': 32, 'shuffle': False},
+    #     'train_config': {
+    #         'batch_size': 32,
+    #         'shuffle': True,
+    #         'epochs': 100,
+    #         'lr': 1e-5,
+    #         'scheduler': {'type': 'cosine', 'T_max': 10, 'eta_min': 0},
+    #     },
+    # },
+
 }
+#segmentation, regression, classification
+#eurosat, cifar, 
+#vgg, resnet, swin, mae, dinov2
 
 log_file= "combined_metrics.csv"
 vlm_log_file= "vlm_metrics.csv"

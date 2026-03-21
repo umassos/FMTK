@@ -32,5 +32,14 @@ def get_dataset_class(dataset_type):
     elif dataset_type=='vlm':
         from fmtk.datasetloaders.vlm_dataset import VLMDataset
         return VLMDataset
+    elif dataset_type=='EuroSAT':
+        from fmtk.datasetloaders.EuroSAT import EuroSATDataset
+        return EuroSATDataset
+    elif dataset_type=='CIFAR10':
+        from fmtk.datasetloaders.cifar10 import CIFAR10Dataset
+        return CIFAR10Dataset
+    elif dataset_type=='ShanghaiTech':
+        from fmtk.datasetloaders.ShanghaiTech import ShanghaiTechDataset
+        return ShanghaiTechDataset
 
     raise ValueError(f"Unknown dataset type: {dataset_type}")

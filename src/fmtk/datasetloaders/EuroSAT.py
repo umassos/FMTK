@@ -26,6 +26,8 @@ class EuroSATDataset(VisionDataset):
 
         dataset_path = dataset_cfg.get("dataset_path", "./data")
         csv_path = os.path.join(dataset_path, f"{split}.csv")
+        if not os.path.exists(csv_path) and split == "val":
+            csv_path = os.path.join(dataset_path, "validation.csv")
 
         self._dataset_path = dataset_path
         self._df = pd.read_csv(csv_path)

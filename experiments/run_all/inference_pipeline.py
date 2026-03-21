@@ -61,7 +61,7 @@ class InferencePipeline:
         logger = Logger(device, f"vlm_{self.pipeline['backbone']}_{self.task_name}")
 
         with logger.measure("backbone", device=logger.device):
-            fm_instance = backbone_class(self.device, self.model_name, self.backbone_cfg.get('model_config', None))
+            fm_instance = backbone_class(self.device, self.model_name, self.backbone_cfg.get('model_config', {}))
 
         load_rec = next((r for r in logger.records if r["section"] == "backbone"), {})
         model_load_duration_sec = load_rec.get("wall_time_sec", 0)
@@ -138,7 +138,7 @@ class InferencePipeline:
         backbone_class = get_model_class(self.backbone_cfg['model_type'])
         logger=Logger(device,'log')
         with (logger.measure("backbone", device=logger.device) if logger else nullcontext()):
-            fm_instance = backbone_class(self.device,self.model_name,self.backbone_cfg.get('model_config',None))
+            fm_instance = backbone_class(self.device,self.model_name,self.backbone_cfg.get('model_config',{}))
 
         P=Pipeline(fm_instance,logger=logger)
         for path in self.pipeline['paths']:
@@ -181,9 +181,14 @@ class InferencePipeline:
             if not self.train:
                 base_dir = os.path.dirname(__file__)
                 category = P.model_instance.model_category
-                with open(f"{base_dir}/../../models/{category}/finetuned/{path['path']}/pipeline.json", 'r') as file:
-                    data = json.load(file)
-                summary.update({'train':data['train']})
+                #some pipelines don't have training data times
+                try:
+                    with open(f"{base_dir}/../../models/{category}/finetuned/{path['path']}/pipeline.json", 'r') as file:
+                        data = json.load(file)
+                    summary.update({'train':data['train']})
+                except Exception as e:
+                    print(f"Could not load training data for {path['path']}: {e}")
+                    summary.update({'train':{"gpu time": None, "gpu peak": None, "gpu energy": None}})
 
             if self.task_cfg['task_type']=='regression' or self.task_cfg['task_type']=='forecasting':
                     metrics = {
