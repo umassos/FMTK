@@ -10,9 +10,8 @@ from fmtk.pipeline import Pipeline
 end_time = timeit.default_timer()
 print(f"Time taken to import fmtk pipeline: {end_time - start_time} seconds")
 
-from fmtk.components.backbones.dinov3 import DinoV3Model, get_dinov3_embed_dim
 from fmtk.components.backbones.dinov2 import DinoV2Model, get_dinov2_embed_dim
-from fmtk.components.decoders.segmnetation.LinearSemanticSegmenter import (
+from fmtk.components.decoders.segmentation.LinearSemanticSegmenter import (
     LinearSemanticSegmenter,
 )
 from fmtk.metrics import get_mIoU
@@ -112,40 +111,23 @@ def train_model(
     linear_decoder = P.add_decoder(
         LinearSemanticSegmenter(device, cfg=decoder_cfg),
         load=True,
-        path="semseg_dinov2_voc_base",
-        train=False,
+        path="vocseg_dinobase_linsemseg",
     )
     end_time = timeit.default_timer()
     print(f"Time taken to load model: {end_time - start_time} seconds")
 
-    def miou_metric(y_true, y_pred):
-        result = get_mIoU(y_true, y_pred, num_classes=NUM_CLASSES, ignore_index=255)
-        print(f"  per-class IoU: {result['per_class_iou']}")
-        return result["mIoU"]
-
     print("Training...")
-    # P.train_eval(
-    #     dataloader_train,
-    #     parts_to_train=["decoder"],
-    #     cfg=train_config,
-    #     path="semseg_dinov2_voc_base",
-    #     test_loader=dataloader_test,
-    #     metric_fn=miou_metric,
-    #     mlflow_cfg={
-    #         "experiment_name": "dinov2-voc",
-    #         "run_name": f"dinov2-voc-base",
-    #         "extra_params": {
-    #             "model_id": model_id,
-    #             "model_cfg": str(model_cfg),
-    #             "train_config": str(train_config),
-    #         },
-    #     },
-    # )
+    P.train(
+        dataloader_train,
+        parts_to_train=["decoder"],
+        cfg=train_config,
+        path="vocseg_dinobase_linsemseg",
+    )
 
-    # y_test, y_pred = P.predict(dataloader_test, cfg=inference_config)
-    # result = get_mIoU(y_test, y_pred, num_classes=NUM_CLASSES, ignore_index=255)
-    # print("mIoU:", result["mIoU"])
-    # print("Per-class IoU:", result["per_class_iou"])
+    y_test, y_pred = P.predict(dataloader_test, cfg=inference_config)
+    result = get_mIoU(y_test, y_pred, num_classes=NUM_CLASSES, ignore_index=255)
+    print("mIoU:", result["mIoU"])
+    print("Per-class IoU:", result["per_class_iou"])
 
     save_segmentation_example(P, dataloader_test.dataset, save_path="results/dinov2_voc_base_segmentation_example.png")
 
@@ -153,7 +135,7 @@ def train_model(
     del P, linear_decoder, backbone
     torch.cuda.empty_cache()
     torch.cuda.synchronize()
-    # return result["mIoU"], result["per_class_iou"]
+    return result["mIoU"], result["per_class_iou"]
 
 
 if __name__ == "__main__":
