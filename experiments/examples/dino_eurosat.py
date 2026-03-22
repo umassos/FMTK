@@ -40,17 +40,19 @@ def train_model(
     linear_decoder = P.add_decoder(
         LinearDecoder(device, cfg={"input_dim": embed_dim, "output_dim": 10}),
         load=True,
+        train=False,
+        path=f"eurosatclass_dinobase_linear",
     )
     end_time = timeit.default_timer()
     print(f"Time taken to load model: {end_time - start_time} seconds")
 
-    print("Training...")
-    P.train(
-        dataloader_train,
-        parts_to_train=["decoder"],
-        cfg=train_config,
-        path=f"eurosatclass_dino{model_id}_linear",
-    )
+    # print("Training...")
+    # P.train(
+    #     dataloader_train,
+    #     parts_to_train=["decoder"],
+    #     cfg=train_config,
+    #     path="imgclass_dinobase_eurosat",
+    # )
 
     y_test, y_pred = P.predict(dataloader_test, cfg=inference_config)
     result = get_accuracy(y_test, y_pred)

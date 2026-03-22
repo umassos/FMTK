@@ -29,6 +29,18 @@ def get_model_class(model_type):
     elif model_type == 'qwen':
         from fmtk.components.backbones.qwen import QwenModel
         return QwenModel
+    elif model_type == 'dinov2':
+        from fmtk.components.backbones.dinov2 import DinoV2Model
+        return DinoV2Model
+    elif model_type == 'mae':
+        from fmtk.components.backbones.mae import MAEModel
+        return MAEModel
+    elif model_type == 'swin':
+        from fmtk.components.backbones.swin import SwinModel
+        return SwinModel
+    elif model_type == 'vgg':
+        from fmtk.components.backbones.vgg import VGGModel
+        return VGGModel
     raise ValueError(f"Unknown model type: {model_type}")
 
 def get_decoder_class(task_type,decoder_type):
@@ -39,6 +51,9 @@ def get_decoder_class(task_type,decoder_type):
         elif decoder_type == 'mlp':
             from fmtk.components.decoders.regression.mlp import MLPDecoder
             return MLPDecoder
+        elif decoder_type == 'spatial_count':
+            from fmtk.components.decoders.regression.spatial_count import SpatialCountDecoder
+            return SpatialCountDecoder
     elif task_type=='classification':
         if decoder_type == 'logistic':
             from fmtk.components.decoders.classification.logisticregression import LogisticDecoder
@@ -55,6 +70,9 @@ def get_decoder_class(task_type,decoder_type):
         elif decoder_type == 'mlp':
             from fmtk.components.decoders.classification.mlp import MLPDecoder
             return MLPDecoder
+        elif decoder_type == 'linear':
+            from fmtk.components.decoders.classification.linear import LinearDecoder
+            return LinearDecoder
     elif task_type=='forecasting':
         if decoder_type == 'mlp':
             from fmtk.components.decoders.forecasting.mlp import MLPDecoder

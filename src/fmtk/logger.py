@@ -49,25 +49,10 @@ class Logger:
             if isinstance(v, (int, float)):
                 self.log_scalar(k, v, step=step, section=section)
 
-    def get_gpu_util_pct(self):
-        """Read current GPU utilisation % via NVML — matches unified_inference.py."""
-        if self._nvml_handle is None:
-            return 0.0
-        return nvml.nvmlDeviceGetUtilizationRates(self._nvml_handle).gpu
-
-    def get_gpu_mem_mb(self):
-        """Read current GPU memory used (MB) via NVML — matches unified_inference.py."""
-        if self._nvml_handle is None:
-            return 0.0
-        return nvml.nvmlDeviceGetMemoryInfo(self._nvml_handle).used / (1024 ** 2)
-
-    def log_vlm_sample(self, latency_ms, prompt_tokens, gen_tokens, gpu_util_pct, gpu_mem_delta_mb):
+    def log_vlm_sample(self, prompt_tokens, gen_tokens):
         self.vlm_samples.append({
-            "latency_ms": latency_ms,
             "prompt_tokens": prompt_tokens,
             "gen_tokens": gen_tokens,
-            "gpu_util_pct": gpu_util_pct,
-            "gpu_mem_delta_mb": gpu_mem_delta_mb,
         })
 
     @contextmanager
@@ -76,18 +61,14 @@ class Logger:
 
         # CPU memory
         rss_before = PROC.memory_info().rss if HAS_PSUTIL else None
-        
-        # GPU energy
-        nvml_handle = None
+
+        # GPU energy — read before
         energy_before_mJ = None
-        power_start_mW = None
-        gpu_index = device.index if isinstance(device, torch.device) else int(str(device).split(":")[1])
-        if HAS_NVML and gpu_index is not None:
+        if self._nvml_handle is not None:
             try:
-                nvml_handle = nvml.nvmlDeviceGetHandleByIndex(gpu_index)
-                energy_before_mJ = nvml.nvmlDeviceGetTotalEnergyConsumption(nvml_handle)
+                energy_before_mJ = nvml.nvmlDeviceGetTotalEnergyConsumption(self._nvml_handle)
             except nvml.NVMLError:
-                nvml_handle = None
+                pass
 
         # GPU memory and time
         if HAS_TORCH and torch.cuda.is_available() and device is not None and "cuda" in str(device):
@@ -113,19 +94,20 @@ class Logger:
             # GPU measures
             if HAS_TORCH and torch.cuda.is_available() and device is not None and "cuda" in str(device):
                 end_event.record()
-                if cuda_sync: 
+                if cuda_sync:
                     torch.cuda.synchronize()
                 rec["gpu_time_ms"] = start_event.elapsed_time(end_event)
                 rec["gpu_alloc_before"] = alloc_before
                 rec["gpu_alloc_peak"] = torch.cuda.max_memory_allocated(device)
                 rec["gpu_reserved_before"] = reserv_before
                 rec["gpu_reserved_peak"] = torch.cuda.max_memory_reserved(device)
-            
-            if nvml_handle is not None:
+
+            if self._nvml_handle is not None:
                 try:
                     if cuda_sync: torch.cuda.synchronize()
-                    energy_after_mJ = nvml.nvmlDeviceGetTotalEnergyConsumption(nvml_handle)
-                    if energy_after_mJ >= energy_before_mJ:
+                    rec["gpu_util_pct"] = nvml.nvmlDeviceGetUtilizationRates(self._nvml_handle).gpu
+                    energy_after_mJ = nvml.nvmlDeviceGetTotalEnergyConsumption(self._nvml_handle)
+                    if energy_before_mJ is not None and energy_after_mJ >= energy_before_mJ:
                         rec["gpu_energy_mJ"] = int(energy_after_mJ - energy_before_mJ)
                     else:
                         rec["gpu_energy_mJ"] = None
@@ -196,7 +178,7 @@ class Logger:
                 s[section].update({"gpu time":gpu})
 
             if any("gpu_alloc_peak" in r for r in records):
-                gpu_peak = sum(r.get("gpu_alloc_peak", 0) for r in records) / n
+                gpu_peak = sum(r.get("gpu_alloc_peak", 0)-r.get("gpu_alloc_before", 0) for r in records) / n
                 line += f", gpu_peak={gpu_peak/1e6:.1f}MB"
                 s[section].update({"gpu peak":gpu_peak/1e6})
 
@@ -205,28 +187,20 @@ class Logger:
                 line += f", gpu_energy={gpu_energy/1000:.3f}J"
                 s[section].update({"gpu energy":gpu_energy/1000})
 
+            if any("gpu_util_pct" in r for r in records):
+                avg_util = sum(r.get("gpu_util_pct", 0) for r in records) / n
+                s[section].update({"avg gpu util pct": avg_util})
+
             if any("cpu_rss_delta" in r for r in records):
                 cpu = sum(r.get("cpu_rss_delta", 0) for r in records) / n
                 line += f", cpu_dRSS={cpu/1e6:.1f}MB"
                 s[section].update({"cpu dRSS":cpu/1e6})
 
         if self.vlm_samples:
-            n = len(self.vlm_samples)
-            total_prompt_tokens = sum(r["prompt_tokens"] for r in self.vlm_samples)
-            total_gen_tokens = sum(r["gen_tokens"] for r in self.vlm_samples)
-            avg_latency_ms = sum(r["latency_ms"] for r in self.vlm_samples) / n
-            total_time_s = sum(r["latency_ms"] for r in self.vlm_samples) / 1000
-            throughput_tps = total_gen_tokens / total_time_s if total_time_s > 0 else 0
-            avg_gpu_util = sum(r["gpu_util_pct"] for r in self.vlm_samples) / n
-            avg_gpu_mem_delta = sum(r["gpu_mem_delta_mb"] for r in self.vlm_samples) / n
             s["vlm"] = {
-                "num_samples": n,
-                "avg_latency_ms": avg_latency_ms,
-                "throughput_tps": throughput_tps,
-                "total_prompt_tokens": total_prompt_tokens,
-                "total_gen_tokens": total_gen_tokens,
-                "avg_gpu_util_pct": avg_gpu_util,
-                "avg_gpu_mem_delta_mb": avg_gpu_mem_delta,
+                "num_samples": len(self.vlm_samples),
+                "total_prompt_tokens": sum(r["prompt_tokens"] for r in self.vlm_samples),
+                "total_gen_tokens": sum(r["gen_tokens"] for r in self.vlm_samples),
             }
 
         return s

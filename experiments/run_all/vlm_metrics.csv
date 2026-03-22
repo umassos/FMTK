@@ -1,8 +1,2 @@
-model_name,dataset_name,device,model_load_duration_sec,gpu_load_memory_mb,avg_cpu_memory_usage_mb,avg_cpu_usage_percent,avg_gpu_usage_percent,avg_gpu_memory_usage_mb,total_prompt_tokens,total_generated_tokens,ttft_ms,avg_latency_ms,throughput_tps,accuracy,total_time,num_samples,gpu_name
-Phi-3.5-vision-instruct,ocr,cuda:0,3.3982698179315776,8293.510144,173.801472,0,97.17,7.1,3300,100,0,596.6267681121826,1.6760897322192756,0.75,59.7570698170457,100,NVIDIA GeForce RTX 3090 Ti
-Phi-3.5-vision-instruct,ocr,cuda:0,3.302990664029494,8293.510144,174.587904,0,97.22,7.1,3300,100,0,599.2286348342896,1.66881210587765,0.75,60.019196033943444,100,NVIDIA GeForce RTX 3090 Ti
-Phi-3.5-vision-instruct,ocr,cuda:0,3.4602994539309293,8293.510144,174.194688,0,97.28,7.1,3300,100,0,597.7867937088013,1.6728372231105662,0.75,59.87189741805196,100,NVIDIA GeForce RTX 3090 Ti
-Phi-3.5-vision-instruct,ocr,cuda:0,3.615929974941537,8293.510144,174.587904,0,97.13,7.1,3300,100,0,599.8374152183533,1.667118413472056,0.75,60.08423340297304,100,NVIDIA GeForce RTX 3090 Ti
-Phi-3.5-vision-instruct,ocr,cuda:0,3.3900376257952303,8293.510144,177.340416,0,97.24,7.1,3300,100,0,602.1498322486877,1.6607162311505888,0.75,60.31101304595359,100,NVIDIA GeForce RTX 3090 Ti
-Phi-3.5-vision-instruct,ocr,cuda:0,23.326030959840864,8293.510144,177.733632,0,94.72,7.1,3300,100,0,654.8493456840515,1.5270687931365439,0.75,66.51009396184236,100,NVIDIA GeForce RTX 3090 Ti
-Phi-3.5-vision-instruct,ocr,cuda:0,3.7693745368160307,8293.510144,176.750592,0,95.04,7.1,3300,100,0,664.1974210739136,1.505576457046673,0.75,66.53809153009206,100,NVIDIA GeForce RTX 3090 Ti
+backbone,decoder,encoder,adapter,dataset_name,device,task_name,metric,result,backbone memory(MB),backbone load time(ms),decoder memory(MB),decoder load time(ms),train time(ms),train mem peak(MB),train energy(mJ),inference time(ms),inference mem peak(MB),inference energy(mJ),avg_gpu_usage_percent,total_prompt_tokens,total_generated_tokens,throughput_tps,num_samples
+Phi-3.5-vision-instruct,,,,ocr,NVIDIA A16,vlm_ocr,accuracy,1.0,8293.510144,273462.7692560898,,0,,,,3657.4787829304114,245.011968,205.266,98.0,33,1,0.2695805243143162,1
