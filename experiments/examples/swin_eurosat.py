@@ -15,6 +15,7 @@ from fmtk.metrics import get_accuracy
 from torch.utils.data import DataLoader, Subset
 from fmtk.datasetloaders.EuroSAT import EuroSATDataset
 import traceback
+from fmtk.logger import Logger
 
 device = "cuda:0"
 seed = 42
@@ -33,8 +34,9 @@ def train_model(
 ):
 
     backbone = SwinModel(device, model_id, model_cfg)
+    swin_logger = Logger(device, 'swin_eurosat')
     embed_dim = get_swin_embed_dim(model_id)
-    P = Pipeline(backbone)
+    P = Pipeline(backbone, swin_logger)
     linear_decoder = P.add_decoder(
         LinearDecoder(device, cfg={"input_dim": embed_dim, "output_dim": 10}),
         load=True,
@@ -47,7 +49,7 @@ def train_model(
         dataloader_train,
         parts_to_train=["decoder"],
         cfg=train_config,
-        path="imgclass_swinsmall_eurosat",
+        path=f"eurosatclass_swin{model_id}_linear",
     )
 
     y_test, y_pred = P.predict(dataloader_test, cfg=inference_config)
@@ -116,6 +118,7 @@ if __name__ == "__main__":
         "epochs": 20,
         "lr": 1e-3,
         "scheduler": {"type": "cosine", "T_max": 10, "eta_min": 0},
+        "use_cache": True,
     }
     inference_config = {"batch_size": 32, "shuffle": False}
     dataset_cfg = {
@@ -124,7 +127,7 @@ if __name__ == "__main__":
     }
     model_cfg = {"return_all_tokens": False}
 
-    model_id = "small"
+    model_id = "large"
     samples_per_class = [1000]
     train_data = EuroSATDataset(dataset_cfg, task_cfg, split="train")
     test_data = EuroSATDataset(dataset_cfg, task_cfg, split="test")

@@ -56,7 +56,7 @@ def train_model(
         dataloader_train,
         parts_to_train=["decoder"],
         cfg=train_config,
-        path="imgreg_dinobase_shanghaitech",
+        path="shanghaitechcount_dinobase_spatialcount",
     )
 
     y_test, y_pred = P.predict(dataloader_test, cfg=inference_config)

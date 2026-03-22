@@ -9,6 +9,52 @@ def get_mae(y_test, y_pred):
         y_pred = y_pred.reshape(-1, y_pred.shape[-1])
     return mean_absolute_error(y_test, y_pred)
 
+def get_mIoU(y_test, y_pred, num_classes, ignore_index=255):
+    """
+    Compute mean Intersection over Union for semantic segmentation.
+
+    Args:
+        y_test: ground-truth masks, numpy array of shape (N, H, W) or flattened (N*H*W,)
+        y_pred: predicted class logits (N, C, H, W) or predicted class indices (N, H, W)
+        num_classes: number of foreground + background classes
+        ignore_index: pixel label to exclude (e.g. 255 for VOC border pixels)
+
+    Returns:
+        dict with keys "mIoU" (float) and "per_class_iou" (list of floats, nan for absent classes)
+    """
+    import torch
+
+    if isinstance(y_pred, np.ndarray):
+        y_pred = torch.from_numpy(y_pred)
+    if isinstance(y_test, np.ndarray):
+        y_test = torch.from_numpy(y_test)
+
+    if y_pred.ndim == 4:
+        y_pred = torch.argmax(y_pred, dim=1)
+
+    y_pred = y_pred.reshape(-1).long()
+    y_test = y_test.reshape(-1).long()
+
+    mask = y_test != ignore_index
+    y_pred = y_pred[mask]
+    y_test = y_test[mask]
+
+    iou_per_class = []
+    for cls in range(num_classes):
+        pred_cls = y_pred == cls
+        true_cls = y_test == cls
+        intersection = (pred_cls & true_cls).sum().item()
+        union = (pred_cls | true_cls).sum().item()
+        if union == 0:
+            iou_per_class.append(float("nan"))
+        else:
+            iou_per_class.append(intersection / union)
+
+    valid = [v for v in iou_per_class if not np.isnan(v)]
+    miou = float(np.mean(valid)) if valid else 0.0
+    return {"mIoU": miou, "per_class_iou": iou_per_class}
+
+
 def get_accuracy(y_test, y_pred):
     def normalize(x):
         if isinstance(x, str):

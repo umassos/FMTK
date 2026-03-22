@@ -13,7 +13,7 @@ end_time = timeit.default_timer()
 print(f"Time taken to import fmtk pipeline: {end_time - start_time} seconds")
 
 from fmtk.components.backbones.dinov2 import DinoV2Model, get_dinov2_embed_dim
-from fmtk.components.decoders.detection.rfdetr_decoder import RFDetrDecoder
+from fmtk.components.decoders.detection.rfdetr import RFDetrDecoder
 from fmtk.datasets.COCO import COCODetectionDataset, coco_collate_fn
 
 device = "cuda:0"

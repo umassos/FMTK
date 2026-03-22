@@ -64,6 +64,7 @@ class DinoV3Model(BaseModel):
     def __init__(self, device, model_name="vitb16", return_all_tokens=False):
         super().__init__()
         self.device = device
+        self.model_category = 'vision'
         self.return_all_tokens = return_all_tokens
         
         # Default to base model if not specified or not recognized
