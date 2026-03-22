@@ -37,6 +37,7 @@ class SwinModel(BaseModel):
     def __init__(self, device, model_name="base", model_config={}):
         super().__init__()
         self.device = device
+        self.model_category = 'vision'
         self.return_all_tokens = model_config.get("return_all_tokens", False)
 
         self.model_id = get_swin_model_id(model_name)

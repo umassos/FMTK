@@ -9,7 +9,7 @@ from fmtk.pipeline import Pipeline
 end_time = timeit.default_timer()
 print(f"Time taken to import fmtk pipeline: {end_time - start_time} seconds")
 
-from fmtk.components.backbones.dinov2 import DinoV2Model, get_dinov2_embed_dim
+from fmtk.components.backbones.swin import SwinModel, get_swin_embed_dim
 from fmtk.components.decoders.regression.monocular_depth import MonocularDepthDecoder
 from fmtk.metrics import get_mae
 from fmtk.datasetloaders.nyudepthv2 import NYUDepthV2Dataset
@@ -32,9 +32,9 @@ def train_model(
     inference_config,
     device,
 ):
-    backbone = DinoV2Model(device, model_id, model_cfg)
-    nyu_logger=Logger(device,'nyu_depth_v2')
-    P = Pipeline(backbone,nyu_logger)
+    backbone = SwinModel(device, model_id, model_cfg)
+    nyu_logger = Logger(device, 'nyu_depth_v2')
+    P = Pipeline(backbone, nyu_logger)
 
     depth_decoder = MonocularDepthDecoder(device, cfg=decoder_cfg)
     P.add_decoder(depth_decoder, load=True)
@@ -47,7 +47,7 @@ def train_model(
         dataloader_train,
         parts_to_train=["decoder"],
         cfg=train_config,
-        path="nyudepth_dinolarge_monocular",
+        path="nyudepth_swinsmall_monocular",
     )
 
     y_test, y_pred = P.predict(dataloader_test, cfg=inference_config)
@@ -81,12 +81,14 @@ if __name__ == "__main__":
         "normalize_depth": True,   # depth in [0, 1]; MAE will be in normalised units
     }
 
-    model_id = "large"
+    model_id = "small"
     model_cfg = {"return_all_tokens": True}  # patch tokens required for spatial decoder
 
-    embed_dim = get_dinov2_embed_dim(model_id)
-    patch_size = 14                           # DINOv2 uses 14x14 patches
-    grid_size = target_size // patch_size     # 224 / 14 = 16
+    embed_dim = get_swin_embed_dim(model_id)
+    # Swin: 4px patch + 3 merge stages → effective patch size = 4 * 2^3 = 32
+    # giving a 7x7 spatial grid for 224x224 input
+    patch_size = 32
+    grid_size = target_size // patch_size     # 224 / 32 = 7
 
     decoder_cfg = {
         "input_dim": embed_dim,

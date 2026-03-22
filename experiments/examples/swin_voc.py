@@ -10,7 +10,7 @@ from fmtk.pipeline import Pipeline
 end_time = timeit.default_timer()
 print(f"Time taken to import fmtk pipeline: {end_time - start_time} seconds")
 
-from fmtk.components.backbones.dinov2 import DinoV2Model, get_dinov2_embed_dim
+from fmtk.components.backbones.swin import SwinModel, get_swin_embed_dim
 from fmtk.components.decoders.segmentation.LinearSemanticSegmenter import (
     LinearSemanticSegmenter,
 )
@@ -18,6 +18,7 @@ from fmtk.metrics import get_mIoU
 from torch.utils.data import DataLoader
 from fmtk.datasetloaders.voc12 import VOC12Dataset, VOC_CLASSES
 from fmtk.logger import Logger
+
 VOC_CMAP = np.array([
     [0,0,0],[128,0,0],[0,128,0],[128,128,0],[0,0,128],
     [128,0,128],[0,128,128],[128,128,128],[64,0,0],[192,0,0],
@@ -29,11 +30,11 @@ VOC_CMAP = np.array([
 device = "cuda:0"
 seed = 42
 NUM_CLASSES = 21
-TARGET_SIZE = 448
-PATCH_SIZE = 14
-# ViT: 512/16 = 32x32 = 1024 tokens. ConvNeXt: 16x16 = 256 tokens
-GRID_SIZE_VIT = TARGET_SIZE // PATCH_SIZE  # 32
-GRID_SIZE_CONVNEXT = 16
+TARGET_SIZE = 224
+# Swin: 4px patch + 3 merge stages → effective patch size = 4 * 2^3 = 32
+# giving a 7x7 spatial grid for 224x224 input
+PATCH_SIZE = 32
+GRID_SIZE = TARGET_SIZE // PATCH_SIZE  # 7
 
 generator = torch.Generator()
 generator.manual_seed(seed)
@@ -89,30 +90,24 @@ def train_model(
     inference_config,
     device,
 ):
-    # backbone = DinoV3Model(device, model_id, model_cfg)
-    backbone = DinoV2Model(device, model_id, model_cfg)
-    # embed_dim = get_dinov3_embed_dim(model_id)
-    embed_dim = get_dinov2_embed_dim(model_id)
-
-    is_convnext = "convnext" in model_id.lower()
-    grid_size = GRID_SIZE_CONVNEXT if is_convnext else GRID_SIZE_VIT
+    backbone = SwinModel(device, model_id, model_cfg)
+    embed_dim = get_swin_embed_dim(model_id)
 
     decoder_cfg = {
         "input_dim": embed_dim,
         "output_dim": NUM_CLASSES,
-        "height": grid_size,
-        "width": grid_size,
+        "height": GRID_SIZE,
+        "width": GRID_SIZE,
         "pixel_height": TARGET_SIZE,
         "pixel_width": TARGET_SIZE,
         "ignore_index": 255,
     }
 
-    voc_logger = Logger(device,'voc_logger')
-    P = Pipeline(backbone,voc_logger)
+    voc_logger = Logger(device, 'voc_logger')
+    P = Pipeline(backbone, voc_logger)
     linear_decoder = P.add_decoder(
         LinearSemanticSegmenter(device, cfg=decoder_cfg),
         load=True,
-        # path="vocseg_dinosmall_linsemseg",
     )
     end_time = timeit.default_timer()
     print(f"Time taken to load model: {end_time - start_time} seconds")
@@ -122,15 +117,13 @@ def train_model(
         dataloader_train,
         parts_to_train=["decoder"],
         cfg=train_config,
-        path="vocseg_dinogiant_linsemseg",
+        path=f"vocseg_swin{model_id}_linsemseg",
     )
 
     y_test, y_pred = P.predict(dataloader_test, cfg=inference_config)
     result = get_mIoU(y_test, y_pred, num_classes=NUM_CLASSES, ignore_index=255)
     print("mIoU:", result["mIoU"])
     print("Per-class IoU:", result["per_class_iou"])
-
-    # save_segmentation_example(P, dataloader_test.dataset, save_path="results/dinov2_voc_base_segmentation_example.png")
 
     gc.collect()
     del P, linear_decoder, backbone
@@ -156,8 +149,7 @@ if __name__ == "__main__":
     }
     model_cfg = {"return_all_tokens": True}
 
-    # model_id = "vitb16"
-    model_id = "giant"
+    model_id = "large"
 
     train_data = VOC12Dataset(dataset_cfg, task_cfg, split="trainval")
     test_data = VOC12Dataset(dataset_cfg, task_cfg, split="test")
