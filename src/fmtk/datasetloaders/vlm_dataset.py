@@ -40,7 +40,7 @@ from PIL import Image
 from torchvision import transforms
 from fmtk.datasetloaders.base import VisionDataset
 
-MAX_SAMPLES = 100
+MAX_SAMPLES = None  # overridden per split by task_cfg
 
 
 def vlm_collate_fn(batch):
@@ -75,6 +75,10 @@ class VLMDataset(VisionDataset):
         # ToTensor only — no forced resize.
         # Each VLM processor applies its own model-specific resizing.
         self.to_tensor = transforms.ToTensor()
+        self.split = split
+        self.train_max = task_cfg.get('train_config', {}).get('max_samples', None)
+        self.test_max = task_cfg.get('inference_config', {}).get('max_samples', None)
+        self.train_ratio = task_cfg.get('train_ratio', 0.8)
 
         self._read_data()
 
@@ -115,15 +119,13 @@ class VLMDataset(VisionDataset):
 
             normalised.append(rec)
 
-        # Cap at MAX_SAMPLES — consistent with unified_inference.py
-        normalised = normalised[:MAX_SAMPLES]
-
-        # VLM tasks do not train; only 'test' returns data.
-        # 'train' and 'val' are empty so InferencePipeline doesn't crash.
-        if self.split == 'test':
-            self.data = normalised
+        split_idx = int(len(normalised) * self.train_ratio)
+        if self.split == 'train':
+            pool = normalised[:split_idx]
+            self.data = pool[:self.train_max] if self.train_max is not None else pool
         else:
-            self.data = []
+            pool = normalised[split_idx:]
+            self.data = pool[:self.test_max] if self.test_max is not None else pool
 
     # ------------------------------------------------------------------
     def __len__(self):

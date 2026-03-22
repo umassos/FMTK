@@ -21,13 +21,13 @@ def _patched_torch_all(input, *args, **kwargs):
     return _orig_torch_all(input, *args, **kwargs)
 torch.all = _patched_torch_all
 
-_MODEL_CACHE = str(Path(__file__).resolve().parents[4] / "models" / "vlm")
+_MODEL_CACHE = str(Path(__file__).resolve().parents[4] / "models" / "vlm" / "pretrained")
 
 class MolmoModel(BaseModel):
     def __init__(self,device,model_name=None,model_config=None):
         super().__init__()
         self.device=device
-        self.model_category = 'vlms'
+        self.model_category = 'vlm'
         models_directory = _MODEL_CACHE
         if model_name=="molmo":
             model_id='allenai/Molmo-7B-D-0924'

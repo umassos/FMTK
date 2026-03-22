@@ -1,6 +1,6 @@
 
 device="cuda:0"
-Train=False #set it to False for inference only
+Train=True #set it to False for inference only
 backbones={
     'papageip': {
         'model_type': 'papagei',
@@ -636,7 +636,14 @@ adapters={
                 'lora_alpha':32,
                 'target_modules':["q", "v"],
                 'lora_dropout':0.05}
-        }
+        },
+    'lora_vlm':{
+        'adapter_type': 'lora',
+        'adapter_config':{'r':16,
+                'lora_alpha':32,
+                'target_modules':["q_proj", "v_proj"],
+                'lora_dropout':0.05}
+        },
 }
 
 datasets={
@@ -1035,11 +1042,11 @@ tasks = {
     #         'lr':1e-2
     #     },
     # },
-    'ecgclass': {
-    'task_type': 'classification',
-    'datasets': ['ecg5000'],
-    'train': Train,
-    'pipelines':[
+    # 'ecgclass': {
+    # 'task_type': 'classification',
+    # 'datasets': ['ecg5000'],
+    # 'train': Train,
+    # 'pipelines':[
             # {
             # 'backbone':'momentlarge',
             # 'paths':[
@@ -1058,12 +1065,12 @@ tasks = {
             #     {'decoder':'mlp_momentbase_class','parts_to_train':['decoder'],'path':'ecgclass_momentbase_mlp'},
             #     ]
             # },
-            {
-            'backbone':'chronostiny',
-            'paths':[
-                {'decoder':'mlp_chronostiny_class','parts_to_train':['decoder'],'path':'ecgclass_chronostiny_mlp'},
-                ]
-            },
+            # {
+            # 'backbone':'chronostiny',
+            # 'paths':[
+            #     {'decoder':'mlp_chronostiny_class','parts_to_train':['decoder'],'path':'ecgclass_chronostiny_mlp'},
+            #     ]
+            # },
             # {
             # 'backbone':'chronosmini',
             # 'paths':[
@@ -1106,18 +1113,18 @@ tasks = {
             #     {'decoder':'mlp_papageissvri_class','parts_to_train':['decoder'],'path':'ecgclass_papageissvri_mlp'},
             #     ]   
             # }
-            ],    
-    'inference_config': {
-        'batch_size': 1,
-        'shuffle':False
-        },
-    'train_config': {
-        'batch_size': 32,
-        'shuffle':False,
-        'epochs':50,
-        'lr':1e-2,
-        },
-    },
+            # ],    
+    # 'inference_config': {
+    #     'batch_size': 1,
+    #     'shuffle':False
+    #     },
+    # 'train_config': {
+    #     'batch_size': 32,
+    #     'shuffle':False,
+    #     'epochs':50,
+    #     'lr':1e-2,
+    #     },
+    # },
     # 'gestureclass': {
     #     'task_type': 'classification',
     #     'datasets': ['UWaveGestureLibraryAll'],
@@ -1398,16 +1405,21 @@ tasks = {
         'task_type': 'vlm',
         'vlm_task_key': 'ocr',
         'datasets': ['vlm_ocr'],
-        'train': False,
+        'train': Train,
         'parser': 'parse_ocr_digit',
         'evaluator': 'evaluate_ocr',
+        'train_ratio': 0.8,
+        'train_config': {'batch_size': 1, 'shuffle': True, 'lr': 1e-4, 'epochs': 1,'max_samples': 10},
         'pipelines': [
             # {'backbone': 'llama-vision', 'paths': [{}]},
             # {'backbone': 'minicpm', 'paths': [{}]},
             # {'backbone': 'molmo', 'paths': [{}]},
-            {'backbone': 'phi', 'paths': [{}]},
+            {'backbone': 'phi', 'paths': [
+                # {},
+                {'adapter': 'lora_vlm', 'parts_to_train': ['adapter'], 'path': 'vlm_ocr_phi_lora'},
+            ]},
         ],
-        'inference_config': {'batch_size': 1, 'shuffle': False},
+        'inference_config': {'batch_size': 1, 'shuffle': False,'max_samples': 1},
     },
     # 'vlm_vqa': {
     #     'task_type': 'vlm',

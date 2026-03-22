@@ -1,2 +1,0 @@
-backbone,decoder,encoder,adapter,dataset_name,device,task_name,metric,result,backbone memory(MB),backbone load time(ms),decoder memory(MB),decoder load time(ms),train time(ms),train mem peak(MB),train energy(mJ),inference time(ms),inference mem peak(MB),inference energy(mJ),avg_gpu_usage_percent
-chronostiny,mlp,,,ecg5000,NVIDIA A16,ecgclass,accuracy,0.824,16.789504,462.27911196183413,0.134656,53.50883898790926,10485.720703125,489.074176,2098.356,4.230045988172707,16.336741262222223,0.15517644444444445,27.363555555555557

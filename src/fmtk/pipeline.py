@@ -115,8 +115,7 @@ class Pipeline:
         if trains_adapter:
             adapter_params = list(self.model_instance.adapter_trainable_parameters())
             param_groups.append({"params": adapter_params, "lr": cfg['lr']})
-            if hasattr(self.active_decoder,'fit'):
-                "Has own fit non differentiable"
+            if self.active_decoder and hasattr(self.active_decoder, 'fit'):
                 raise ValueError("Need differentiable decoder as attached adapter. Because how will backward propagation happen")
         if trains_decoder:
             if hasattr(self.active_decoder,'fit'):
@@ -137,20 +136,33 @@ class Pipeline:
 
         with (self.logger.measure("train", device=self.logger.device) if self.logger else nullcontext()):
             optimizer = torch.optim.Adam(param_groups)
-            criterion = getattr(self.active_decoder, "criterion")
-            for _ in range(cfg['epochs']):
-                for batch in tqdm(train_loader):
+            if self.active_decoder is None:
+                # No decoder — generative model (VLM) trains via its own loss (e.g. causal LM)
+                # AMP GradScaler keeps optimizer state in fp32, avoids float16 overflow
+                scaler = torch.cuda.amp.GradScaler()
+                for _ in range(cfg['epochs']):
+                    for batch in tqdm(train_loader):
+                        optimizer.zero_grad()
+                        with torch.cuda.amp.autocast():
+                            loss = self.model_instance.train_step(batch)
+                        scaler.scale(loss).backward()
+                        scaler.step(optimizer)
+                        scaler.update()
+            else:
+                criterion = getattr(self.active_decoder, "criterion")
+                for _ in range(cfg['epochs']):
+                    for batch in tqdm(train_loader):
                         optimizer.zero_grad()
                         x, y = batch["x"], batch["y"]
                         mask = batch.get("mask", None)
-                        logits=self.forward(x,mask)
+                        logits = self.forward(x, mask)
                         if (hasattr(self.active_decoder, "requires_model") and self.active_decoder.requires_model and hasattr(self.model_instance.model, "normalizer")):
                             logits = self.model_instance.model.normalizer(x=logits, mode="denorm")
-                        if isinstance(criterion, (nn.MSELoss, nn.L1Loss, nn.SmoothL1Loss)): 
+                        if isinstance(criterion, (nn.MSELoss, nn.L1Loss, nn.SmoothL1Loss)):
                             logits = logits.float()
-                            y = y.to(self.active_decoder.device).float() 
-                        elif isinstance(criterion, (nn.CrossEntropyLoss)): 
-                            y = y.to(self.active_decoder.device)            
+                            y = y.to(self.active_decoder.device).float()
+                        elif isinstance(criterion, (nn.CrossEntropyLoss)):
+                            y = y.to(self.active_decoder.device)
                         loss = criterion(logits, y)
                         loss.backward()
                         optimizer.step()
@@ -221,12 +233,13 @@ class Pipeline:
                 return np.concatenate(labels), np.concatenate(preds)
         else:
             preds, labels = [], []
+            self.set_eval_mode()
             for batch in tqdm(test_loader):
                 x = (batch['x'], batch['question'])
                 y = batch['y']
 
                 with (self.logger.measure("predict", device=self.logger.device) if self.logger else nullcontext()):
-                    with torch.no_grad():
+                    with torch.no_grad(), torch.cuda.amp.autocast():
                         output = self.model_instance.forward(x, None)
                     preds.extend(output)
 

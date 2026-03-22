@@ -36,7 +36,10 @@ class InferencePipeline:
             self.task_cfg['prompt'] = TASK_REGISTRY[vlm_task_key]['prompt']
 
             from fmtk.datasetloaders.vlm_dataset import vlm_collate_fn
+            self.dataset_instance_train = dataset_class(self.dataset_cfg, self.task_cfg, split='train')
             self.dataset_instance_test = dataset_class(self.dataset_cfg, self.task_cfg, split='test')
+            self.dataloader_train = DataLoader(self.dataset_instance_train, batch_size=self.task_cfg['train_config']['batch_size'],
+                                               shuffle=self.task_cfg['train_config']['shuffle'], collate_fn=vlm_collate_fn)
             self.dataloader_test = DataLoader(self.dataset_instance_test, batch_size=1,
                                               shuffle=self.task_cfg['inference_config']['shuffle'], collate_fn=vlm_collate_fn)
         else:
@@ -74,25 +77,28 @@ class InferencePipeline:
 
             if 'encoder' in path:
                 encoder_class = get_encoder_class(encoders[path['encoder']]['encoder_type'])
-                if 'encoder_config' in encoders[path['encoder']]:
-                    encoder_instance = encoder_class(**encoders[path['encoder']]['encoder_config'])
-                else:
-                    encoder_instance = encoder_class()
-                P.add_encoder(encoder_instance, load=True)
+                with logger.measure("encoder", device=logger.device):
+                    if 'encoder_config' in encoders[path['encoder']]:
+                        encoder_instance = encoder_class(**encoders[path['encoder']]['encoder_config'])
+                    else:
+                        encoder_instance = encoder_class()
+                    P.add_encoder(encoder_instance, load=True)
             else:
                 P.unload_encoder()
 
             if 'adapter' in path:
                 adapter_class = get_adapter_class(adapters[path['adapter']]['adapter_type'])
-                if 'adapter_config' in adapters[path['adapter']]:
-                    adapter_instance = adapter_class(**adapters[path['adapter']]['adapter_config'])
-                else:
-                    adapter_instance = adapter_class()
-                P.add_adapter(adapter_instance)
+                with logger.measure("adapter", device=logger.device):
+                    if 'adapter_config' in adapters[path['adapter']]:
+                        adapter_instance = adapter_class(**adapters[path['adapter']]['adapter_config'])
+                    else:
+                        adapter_instance = adapter_class()
+                    P.add_adapter(adapter_instance)
             else:
                 P.unload_adapter()
 
-            if self.train:
+            if 'parts_to_train' in path and self.train:
+                print(f"Training parts: {path['parts_to_train']} for path: {path['path']}")
                 P.train(self.dataloader_train, parts_to_train=path['parts_to_train'],
                         cfg=self.task_cfg['train_config'], path=path['path'])
                 print("Training complete")
@@ -139,7 +145,11 @@ class InferencePipeline:
                     "backbone memory(MB)":     summary['backbone']['gpu peak'],
                     "backbone load time(ms)":  summary['backbone'].get('wall time', 0),
                     "decoder memory(MB)":      summary.get('decoder', {}).get('gpu peak', None),
-                    "decoder load time(ms)":   summary.get('decoder', {}).get('wall time', 0),
+                    "decoder load time(ms)":   summary.get('decoder', {}).get('wall time', None),
+                    "encoder memory(MB)":      summary.get('encoder', {}).get('gpu peak', None),
+                    "encoder load time(ms)":   summary.get('encoder', {}).get('wall time', None),
+                    "adapter memory(MB)":      summary.get('adapter', {}).get('gpu peak', None),
+                    "adapter load time(ms)":   summary.get('adapter', {}).get('wall time', None),
                     "train time(ms)":         summary['train']['gpu time'],
                     "train mem peak(MB)":     summary['train']['gpu peak'],
                     "train energy(mJ)":       summary['train']['gpu energy'],
@@ -183,6 +193,10 @@ class InferencePipeline:
                     "backbone load time(ms)": summary['backbone'].get('wall time', 0),
                     "decoder memory(MB)":     summary['decoder']['gpu peak'],
                     "decoder load time(ms)":  summary['decoder'].get('wall time', 0),
+                    "encoder memory(MB)":     summary.get('encoder', {}).get('gpu peak', None),
+                    "encoder load time(ms)":  summary.get('encoder', {}).get('wall time', None),
+                    "adapter memory(MB)":     summary.get('adapter', {}).get('gpu peak', None),
+                    "adapter load time(ms)":  summary.get('adapter', {}).get('wall time', None),
                     "train time(ms)":         summary['train']['gpu time'],
                     "train mem peak(MB)":     summary['train']['gpu peak'],
                     "train energy(mJ)":       summary['train']['gpu energy'],

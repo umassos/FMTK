@@ -9,13 +9,13 @@ from fmtk.components.base import BaseModel
 from torchvision import transforms
 from qwen_vl_utils import process_vision_info
 
-_MODEL_CACHE = str(Path(__file__).resolve().parents[4] / "models" / "vlm")
+_MODEL_CACHE = str(Path(__file__).resolve().parents[4] / "models" / "vlm" / "pretrained")
 
 class QwenModel(BaseModel):
     def __init__(self,device,model_name=None,model_config=None):
         super().__init__()
         self.device=device
-        self.model_category = 'vlms'
+        self.model_category = 'vlm'
         models_directory = _MODEL_CACHE
         if model_name=="qwen-3B":
             model_id='Qwen/Qwen2.5-VL-3B-Instruct'
