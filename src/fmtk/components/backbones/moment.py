@@ -4,19 +4,23 @@ import torch
 import numpy as np
 import pandas as pd
 import inspect
+from pathlib import Path
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from peft import LoraConfig, get_peft_model
+
+_MODEL_CACHE = str(Path(__file__).resolve().parents[4] / "models" / "tsfm" / "pretrained")
 
 class MomentModel(BaseModel):
     def __init__(self,device,model_name=None,model_config=None):
         super().__init__()
         self.device=device
+        self.model_category = 'tsfm'
         if model_name=='large':
             model_path='AutonLab/MOMENT-1-large'
         elif model_name=='base':
             model_path='AutonLab/MOMENT-1-base'
-        elif model_name=='small':     
+        elif model_name=='small':
             model_path='AutonLab/MOMENT-1-small'
         else:
             model_path='AutonLab/MOMENT-1-large'
@@ -25,11 +29,11 @@ class MomentModel(BaseModel):
         self.peft_enable=False
         print(f"[Moment] Loading {model_path} on device {device}")
         self.model=MOMENTPipeline.from_pretrained(
-            f'{model_path}', 
+            f'{model_path}',
+            cache_dir=_MODEL_CACHE,
             model_kwargs={'task_name': 'embedding','enable_gradient_checkpointing': False}, # We are loading the model in `embedding` mode to learn representations
             )
-        
-        self.model.init()     
+        self.model.init()
         self.model.to(device)     
 
     def preprocess(self,batch_x,mask=None):
