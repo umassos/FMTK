@@ -21,26 +21,38 @@ class Pipeline:
         self.encoder_id=0
         self.base_dir = os.path.dirname(__file__)
         
-    def add_adapter(self,peft_cfg):
-        adapter_name=f'adapter_{self.adapter_id}'
-        self.adapter_id+=1
-        if self.model_instance.peft_enable:
-            with (self.logger.measure("add_adapter", device=self.logger.device) if self.logger else nullcontext()):
+    def add_adapter(self, peft_cfg, load=True, train=True, path=None):
+        adapter_name = f'adapter_{self.adapter_id}'
+        self.adapter_id += 1
+        with (self.logger.measure(f"add_adapter_{path}", device=self.logger.device) if self.logger else nullcontext()):
+            if not train:
+                category = self.model_instance.model_category
+                adapter_dir = f"{self.base_dir}/../../models/{category}/finetuned/{path}/adapter.pth"
+                if not self.model_instance.peft_enable:
+                    self.model_instance.enable_peft(peft_cfg)
+                self.model_instance.model.load_adapter(adapter_dir, adapter_name=adapter_name)
+                return adapter_name
+            # training path
+            if self.model_instance.peft_enable:
                 self.model_instance.model.add_adapter(adapter_name=adapter_name, peft_config=peft_cfg)
-            return adapter_name
-        else:
-            self.model_instance.enable_peft(peft_cfg)
-            return 'default'
+                return adapter_name
+            else:
+                self.model_instance.enable_peft(peft_cfg)
+                return 'default'
         
+    def set_adapter(self, adapter_name: str):
+        if self.model_instance.peft_enable:
+            self.model_instance.model.set_adapter(adapter_name)
+
     def unload_adapter(self):
-        if hasattr(self.model_instance,'peft_enable') and self.model_instance.peft_enable:
-            self.model_instance.disable_adapters()
+        if hasattr(self.model_instance, 'peft_enable') and self.model_instance.peft_enable:
+            self.model_instance.model.disable_adapter_layers()
 
 
 
-    def add_encoder(self,encoder_obj,load=True):
+    def add_encoder(self,encoder_obj,load=True,train=True,path=None):
         encoder_name=f'encoder_{self.encoder_id}'
-        with (self.logger.measure("add_encoder", device=self.logger.device) if self.logger else nullcontext()):
+        with (self.logger.measure(f"add_encoder_{path}", device=self.logger.device) if self.logger else nullcontext()):
             self.encoders[encoder_name] = encoder_obj
         self.encoder_id+=1
         if load:
