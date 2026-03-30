@@ -41,5 +41,42 @@ def get_dataset_class(dataset_type):
     elif dataset_type=='ShanghaiTech':
         from fmtk.datasetloaders.ShanghaiTech import ShanghaiTechDataset
         return ShanghaiTechDataset
+    elif dataset_type=='NYUDepthV2':
+        from fmtk.datasetloaders.nyudepthv2 import NYUDepthV2Dataset
+        return NYUDepthV2Dataset
+    elif dataset_type=='VOC12':
+        from fmtk.datasetloaders.voc12 import VOC12Dataset
+        return VOC12Dataset
+    # ── LLM (text-only) datasets ──────────────────────────────────────
+    elif dataset_type == 'sst2':
+        from fmtk.datasetloaders.sst2 import SST2Dataset
+        return SST2Dataset
+    elif dataset_type == 'ag_news':
+        from fmtk.datasetloaders.ag_news import AGNewsDataset
+        return AGNewsDataset
+    elif dataset_type == 'conll2003':
+        from fmtk.datasetloaders.conll2003 import CoNLL2003Dataset
+        return CoNLL2003Dataset
+    elif dataset_type == 'squad':
+        from fmtk.datasetloaders.squad import SQuADDataset
+        return SQuADDataset
+    elif dataset_type == 'cnn_dailymail':
+        from fmtk.datasetloaders.cnn_dailymail import CNNDailyMailDataset
+        return CNNDailyMailDataset
+    elif dataset_type == 'flores':
+        from fmtk.datasetloaders.flores import FLORESDataset
+        return FLORESDataset
+    elif dataset_type == 'gsm8k':
+        from fmtk.datasetloaders.gsm8k import GSM8KDataset
+        return GSM8KDataset
+    elif dataset_type == 'humaneval':
+        from fmtk.datasetloaders.humaneval import HumanEvalDataset
+        return HumanEvalDataset
+    elif dataset_type == 'hellaswag':
+        from fmtk.datasetloaders.hellaswag import HellaSwagDataset
+        return HellaSwagDataset
+    elif dataset_type == 'fever':
+        from fmtk.datasetloaders.fever import FEVERDataset
+        return FEVERDataset
 
     raise ValueError(f"Unknown dataset type: {dataset_type}")
