@@ -32,7 +32,7 @@ class SQuADDataset(LLMDataset):
         # Gold answer: first answer text
         answer = item['answers']['text'][0] if item['answers']['text'] else ''
         prompt = PROMPT_TEMPLATE.format(context=context, question=question)
-        return {'x': prompt, 'y': answer}
+        return {'question': prompt, 'y': answer}
 
     def preprocess(self):
         pass

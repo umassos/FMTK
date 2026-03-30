@@ -51,7 +51,7 @@ class CoNLL2003Dataset(LLMDataset):
         gold_tags = ' '.join(ID2TAG[t] for t in ner_tags)
 
         prompt = PROMPT_TEMPLATE.format(sentence=sentence)
-        return {'x': prompt, 'y': gold_tags, 'tokens': tokens}
+        return {'question': prompt, 'y': gold_tags, 'tokens': tokens}
 
     def preprocess(self):
         pass

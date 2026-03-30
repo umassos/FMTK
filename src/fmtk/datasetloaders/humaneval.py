@@ -32,7 +32,7 @@ class HumanEvalDataset(LLMDataset):
         item = self.data[idx]
         prompt = PROMPT_TEMPLATE.format(prompt=item['prompt'])
         # canonical_solution is the gold reference
-        return {'x': prompt, 'y': item['canonical_solution']}
+        return {'question': prompt, 'y': item['canonical_solution']}
 
     def preprocess(self):
         pass

@@ -29,7 +29,7 @@ class CNNDailyMailDataset(LLMDataset):
         article = item['article'][:2000]
         highlights = item['highlights']
         prompt = PROMPT_TEMPLATE.format(article=article)
-        return {'x': prompt, 'y': highlights}
+        return {'question': prompt, 'y': highlights}
 
     def preprocess(self):
         pass

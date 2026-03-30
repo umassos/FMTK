@@ -32,7 +32,7 @@ class SST2Dataset(LLMDataset):
         item = self.data[idx]
         label = LABEL_MAP[item['label']]
         prompt = PROMPT_TEMPLATE.format(text=item['sentence'])
-        return {'x': prompt, 'y': label}
+        return {'question': prompt, 'y': label}
 
     def preprocess(self):
         pass

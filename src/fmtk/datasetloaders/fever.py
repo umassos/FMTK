@@ -40,7 +40,7 @@ class FEVERDataset(LLMDataset):
         label_names = ['SUPPORTS', 'REFUTES', 'NOT_ENOUGH_INFO', 'DISPUTED']
         label = LABEL_MAP.get(label_names[label_int], label_names[label_int]).lower()
         prompt = PROMPT_TEMPLATE.format(claim=item['claim'])
-        return {'x': prompt, 'y': label}
+        return {'question': prompt, 'y': label}
 
     def preprocess(self):
         pass

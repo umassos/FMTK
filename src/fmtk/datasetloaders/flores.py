@@ -52,7 +52,7 @@ class FLORESDataset(LLMDataset):
         prompt = PROMPT_TEMPLATE.format(
             src_lang=src_name, tgt_lang=tgt_name, text=src_text
         )
-        return {'x': prompt, 'y': tgt_text}
+        return {'question': prompt, 'y': tgt_text}
 
     def preprocess(self):
         pass

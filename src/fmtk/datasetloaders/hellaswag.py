@@ -45,7 +45,7 @@ class HellaSwagDataset(LLMDataset):
             choice_c=endings[2],
             choice_d=endings[3],
         )
-        return {'x': prompt, 'y': gold_label}
+        return {'question': prompt, 'y': gold_label}
 
     def preprocess(self):
         pass

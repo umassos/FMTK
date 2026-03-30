@@ -39,7 +39,7 @@ class GSM8KDataset(LLMDataset):
         # Gold label: just the numeric answer
         gold_answer = extract_answer(item['answer'])
         prompt = PROMPT_TEMPLATE.format(question=question)
-        return {'x': prompt, 'y': gold_answer}
+        return {'question': prompt, 'y': gold_answer}
 
     def preprocess(self):
         pass

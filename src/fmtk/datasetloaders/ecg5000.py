@@ -69,10 +69,7 @@ class ECG5000Dataset(TimeSeriesDataset):
         self.data = self.data.reshape(self.num_timeseries, self.len_timeseries)
 
         self.data = self.data.T
-        # return {
-        #     'x':self.data,
-        #     'y':self.labels,
-        # }
+
         return self.data, self.labels
 
     def __getitem__(self, index):
