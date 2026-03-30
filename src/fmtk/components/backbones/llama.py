@@ -48,8 +48,9 @@ class LlamaModel(BaseModel):
         batch_x: list of prompt strings (already formatted by dataset loader).
         Returns list of raw generated strings (prompt stripped off).
         """
+        (_,batch_x_prompt)=batch_x
         responses = []
-        for prompt in batch_x:
+        for prompt in batch_x_prompt:
             messages = [{"role": "user", "content": prompt}]
             text = self.tokenizer.apply_chat_template(
                 messages, tokenize=False, add_generation_prompt=True

@@ -46,8 +46,11 @@ class QwenVLLMModel(BaseModel):
         self.device = device
         # vLLM 0.6.x selects the GPU via CUDA_VISIBLE_DEVICES; the 'device'
         # kwarg was added in later versions and is not available here.
-        gpu_index = int(device.split(':')[1]) if ':' in device else 0
-        os.environ['CUDA_VISIBLE_DEVICES'] = str(gpu_index)
+        # Only set CUDA_VISIBLE_DEVICES if not already set externally (e.g. by
+        # the SSH launcher), so the caller controls which physical GPU is used.
+        if 'CUDA_VISIBLE_DEVICES' not in os.environ:
+            gpu_index = int(device.split(':')[1]) if ':' in device else 0
+            os.environ['CUDA_VISIBLE_DEVICES'] = str(gpu_index)
 
         self.model_category = 'llm'
         model_config = model_config or {}

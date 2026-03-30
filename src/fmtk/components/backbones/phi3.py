@@ -5,25 +5,26 @@ import numpy as np
 from fmtk.components.base import BaseModel
 from tqdm import tqdm
 
-MISTRAL_MODELS = {
-    'mistral-7b':     'mistralai/Mistral-7B-Instruct-v0.3',
-    'mistral-nemo':   'mistralai/Mistral-Nemo-Instruct-2407',
+PHI3_MODELS = {
+    'phi3-mini':   'microsoft/Phi-3-mini-4k-instruct',
+    'phi3-small':  'microsoft/Phi-3-small-8k-instruct',
+    'phi3-medium': 'microsoft/Phi-3-medium-4k-instruct',
 }
 
-class MistralModel(BaseModel):
-    def __init__(self, device, model_name='mistral-7b', model_config=None):
+class Phi3Model(BaseModel):
+    def __init__(self, device, model_name='phi3-mini', model_config=None):
         super().__init__()
         self.device = device
         self.model_category = 'llm'
         model_config = model_config or {}
         base_dir = os.path.dirname(__file__)
-        models_directory = os.path.join(base_dir, '../../../../models/llm/pretrained')
+        models_directory = os.path.abspath(os.path.join(base_dir, '../../../../models/llm/pretrained'))
 
-        model_id = MISTRAL_MODELS.get(model_name, model_name)
-        print(f"[Mistral] Loading {model_id} on device {device}")
+        model_id = PHI3_MODELS.get(model_name, model_name)
+        print(f"[Phi-3] Loading {model_id} on device {device}")
 
         self.tokenizer = AutoTokenizer.from_pretrained(
-            model_id, cache_dir=models_directory
+            model_id, cache_dir=models_directory, trust_remote_code=True
         )
         if self.tokenizer.pad_token is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token
@@ -32,6 +33,7 @@ class MistralModel(BaseModel):
             model_id,
             cache_dir=models_directory,
             torch_dtype=torch.bfloat16,
+            trust_remote_code=True,
             attn_implementation="flash_attention_2",
             device_map={"": device},
         )

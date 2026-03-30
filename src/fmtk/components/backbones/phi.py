@@ -28,7 +28,7 @@ class PhiModel(BaseModel):
         self.device=device
         self.model_category = 'vlm'
         models_directory = _MODEL_CACHE
-        if model_name in ("phi", "phi-3.5-vision-instruct"):
+        if model_name in ("phi-3.5-vision-instruct"):
             model_id='microsoft/Phi-3.5-vision-instruct'
         self.peft_enable = False
         self.processor = AutoProcessor.from_pretrained(model_id, cache_dir=models_directory, trust_remote_code=True)
