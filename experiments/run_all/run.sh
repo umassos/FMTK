@@ -6,5 +6,5 @@
 #SBATCH -o ./logs/slurm-a16.out  # %j = job ID
 
 module load conda/latest
-conda activate fmtk_vlm
+conda activate fmtk
 python main.py combined_metrics_a16.csv

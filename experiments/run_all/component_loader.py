@@ -26,6 +26,9 @@ def get_model_class(model_type):
     elif model_type == 'phi':
         from fmtk.components.backbones.phi import PhiModel
         return PhiModel
+    elif model_type == 'phi_vllm':
+        from fmtk.components.backbones.phi import PhiVLLMModel
+        return PhiVLLMModel
     elif model_type == 'qwen':
         from fmtk.components.backbones.qwen import QwenModel
         return QwenModel
@@ -41,6 +44,19 @@ def get_model_class(model_type):
     elif model_type == 'vgg':
         from fmtk.components.backbones.vgg import VGGModel
         return VGGModel
+    # ── LLM (text-only) backbones ──────────────────────────────────────
+    elif model_type == 'llama_text':
+        from fmtk.components.backbones.llama import LlamaModel
+        return LlamaModel
+    elif model_type == 'mistral_text':
+        from fmtk.components.backbones.mistral import MistralModel
+        return MistralModel
+    elif model_type == 'phi3_text':
+        from fmtk.components.backbones.phi3 import Phi3Model
+        return Phi3Model
+    elif model_type == 'qwen_text':
+        from fmtk.components.backbones.qwen import QwenTextModel
+        return QwenTextModel
     raise ValueError(f"Unknown model type: {model_type}")
 
 def get_decoder_class(task_type,decoder_type):
@@ -54,6 +70,13 @@ def get_decoder_class(task_type,decoder_type):
         elif decoder_type == 'spatial_count':
             from fmtk.components.decoders.regression.spatial_count import SpatialCountDecoder
             return SpatialCountDecoder
+        elif decoder_type == 'monocular_depth':
+            from fmtk.components.decoders.regression.monocular_depth import MonocularDepthDecoder
+            return MonocularDepthDecoder
+    elif task_type=='segmentation':
+        if decoder_type == 'linear_seg':
+            from fmtk.components.decoders.segmentation.LinearSemanticSegmenter import LinearSemanticSegmenter
+            return LinearSemanticSegmenter
     elif task_type=='classification':
         if decoder_type == 'logistic':
             from fmtk.components.decoders.classification.logisticregression import LogisticDecoder
