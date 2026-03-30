@@ -246,20 +246,22 @@ class Pipeline:
         else:
             preds, labels = [], []
             self.set_eval_mode()
+            is_llm = getattr(self.model_instance, 'model_category', None) == 'llm'
             for batch in tqdm(test_loader):
-                x = (batch['x'], batch['question'])
                 y = batch['y']
-
+                x = (batch.get('x', None), batch.get('question', None))
                 with (self.logger.measure("predict", device=self.logger.device) if self.logger else nullcontext()):
-                    with torch.no_grad(), torch.cuda.amp.autocast():
+                    autocast_ctx = nullcontext() if is_llm else torch.cuda.amp.autocast()
+                    with torch.no_grad(), autocast_ctx:
                         output = self.model_instance.forward(x, None)
                     preds.extend(output)
 
                 if self.logger:
-                    self.logger.log_vlm_sample(
-                        prompt_tokens=len(batch['question'][0].split()),
-                        gen_tokens=len(output[0].split()),
-                    )
+                    if batch.get('question', None) is not None:
+                        self.logger.log_vlm_sample(
+                            prompt_tokens=len(batch['question'][0].split()),
+                            gen_tokens=len(output[0].split()),
+                        )
 
                 labels.extend(y.tolist() if isinstance(y, torch.Tensor) else list(y))
 
