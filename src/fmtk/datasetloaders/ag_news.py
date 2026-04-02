@@ -32,7 +32,7 @@ class AGNewsDataset(LLMDataset):
         text = item['text']
         label = LABEL_MAP[item['label']]
         prompt = PROMPT_TEMPLATE.format(text=text[:1000])
-        return {'x': prompt, 'y': label}
+        return {'question': prompt, 'y': label}
 
     def preprocess(self):
         pass
