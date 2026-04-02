@@ -5,23 +5,25 @@ dependencies:
   - python=3.10
   - pip
   - pip:
-      - --extra-index-url https://download.pytorch.org/whl/cu118
+      - --extra-index-url https://download.pytorch.org/whl/cu121
       # Core ML
-      - torch==2.4.1+cu118
-      - torchvision==0.19.1+cu118
-      - torchaudio==2.4.1+cu118
-      - transformers==4.46.3
+      - torch==2.5.1+cu121
+      - torchvision==0.20.1+cu121
+      - torchaudio==2.5.1+cu121
+      - transformers==4.48.0
       - accelerate==0.34.2
       - peft==0.10.0
       - safetensors
-      - tokenizers==0.20.3
-      - huggingface-hub==0.24.0
+      - tokenizers==0.21.0
+      - huggingface-hub==0.26.0
+      # Inference
+      - vllm==0.6.6
       # Time-series models
-      - chronos-forecasting==1.5.0
+      - chronos-forecasting==2.2.2
       # momentfm: installed in install.sh with --no-deps (strict hub pin conflicts)
       # VLM
       - qwen-vl-utils==0.0.14
-      - flash-attn @ https://github.com/Dao-AILab/flash-attention/releases/download/v2.6.3/flash_attn-2.6.3+cu118torch2.4cxx11abiFALSE-cp310-cp310-linux_x86_64.whl
+      # flash-attn: installed in install.sh (large wheel, GitHub download handled separately)
       - av>=16.0
       - einops
       # Data & science
@@ -53,7 +55,6 @@ dependencies:
       - torch-ecg<=0.0.28
       - biosppy
       - peakutils
-      # pyPPG: installed in install.sh with --no-deps (strict scipy==1.9.1 pin conflicts)
       - pytorch-metric-learning
       - torch-optimizer
       # Build
