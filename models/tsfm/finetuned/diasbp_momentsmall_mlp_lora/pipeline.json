@@ -1,0 +1,34 @@
+{
+  "backbone": {
+    "wall time": 4125.633457209915,
+    "gpu time": 4125.7626953125,
+    "gpu peak": 151.835648,
+    "gpu energy": 109.588,
+    "avg gpu util pct": 0.0,
+    "cpu dRSS": 193.35168
+  },
+  "add_decoder_diasbp_momentsmall_mlp_lora": {
+    "wall time": 0.16685295850038528,
+    "gpu time": 0.18432000279426575,
+    "gpu peak": 0.26368,
+    "gpu energy": 0.0,
+    "avg gpu util pct": 0.0,
+    "cpu dRSS": 0.0
+  },
+  "add_adapter_diasbp_momentsmall_mlp_lora": {
+    "wall time": 18.20041425526142,
+    "gpu time": 18.232608795166016,
+    "gpu peak": 3.670016,
+    "gpu energy": 2.703,
+    "avg gpu util pct": 0.0,
+    "cpu dRSS": 0.0
+  },
+  "train": {
+    "wall time": 70595.73262417689,
+    "gpu time": 70761.1796875,
+    "gpu peak": 1935.392256,
+    "gpu energy": 4181.617,
+    "avg gpu util pct": 99.0,
+    "cpu dRSS": 486.539264
+  }
+}
