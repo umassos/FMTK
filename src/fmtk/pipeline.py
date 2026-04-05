@@ -67,20 +67,26 @@ class Pipeline:
         decoder_name=f"decoder_{self.decoder_id}"
         with (self.logger.measure(f"add_decoder_{path}", device=self.logger.device) if self.logger else nullcontext()):
             if not train:
-                self.decoders[decoder_name]= decoder_obj
-                category = self.model_instance.model_category
-                decoder_file=f"{self.base_dir}/../../models/{category}/finetuned/{path}/decoder.pth"
-                if not os.path.exists(decoder_file):
-                    try:
-                        decoder_file = hf_hub_download(repo_id="umass-lass/fmtk-decoder-zoo",
-                                                       filename=f"decoder.pth",
-                                                       subfolder=f"{path}",
-                                                       local_dir=f"{self.base_dir}/../../models/{category}/finetuned",
-                                                       token=open(f"{self.base_dir}/../../hf-token.txt").read().strip())
-                    except Exception as e:
-                        raise ValueError(f"Decoder file not found at {decoder_file}")
-                self.decoders[decoder_name].model.load_state_dict(torch.load(f"{decoder_file}"))
-                
+                if path==None:
+                    #randomly init decoder if no path provided. 
+                    # This is for testing purposes, not recommended for actual use since the decoder won't be trained at all.
+                    print("No path provided for decoder, randomly initializing. This is not recommended for actual use since the decoder won't be trained at all.")
+                    self.decoders[decoder_name]= decoder_obj
+                else:
+                    self.decoders[decoder_name]= decoder_obj
+                    category = self.model_instance.model_category
+                    decoder_file=f"{self.base_dir}/../../models/{category}/finetuned/{path}/decoder.pth"
+                    if not os.path.exists(decoder_file):
+                        try:
+                            decoder_file = hf_hub_download(repo_id="umass-lass/fmtk-decoder-zoo",
+                                                        filename=f"decoder.pth",
+                                                        subfolder=f"{path}",
+                                                        local_dir=f"{self.base_dir}/../../models/{category}/finetuned",
+                                                        token=open(f"{self.base_dir}/../../hf-token.txt").read().strip())
+                        except Exception as e:
+                            raise ValueError(f"Decoder file not found at {decoder_file}")
+                    self.decoders[decoder_name].model.load_state_dict(torch.load(f"{decoder_file}"))
+                    
             else:
                 self.decoders[decoder_name] = decoder_obj
             self.decoder_id+=1

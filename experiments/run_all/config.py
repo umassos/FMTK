@@ -694,28 +694,28 @@ decoders={
         'decoder_type': 'linear_seg',
         'decoder_config': {
             'device': device,
-            'cfg': {'input_dim': 384, 'output_dim': 21, 'height': 32, 'width': 32, 'pixel_height': 448, 'pixel_width': 448, 'ignore_index': 255},
+            'cfg': {'input_dim': 384, 'output_dim': 21, 'height': 16, 'width': 16, 'pixel_height': 224, 'pixel_width': 224, 'ignore_index': 255},
         }
     },
     'linseg_dinobase_voc': {
         'decoder_type': 'linear_seg',
         'decoder_config': {
             'device': device,
-            'cfg': {'input_dim': 768, 'output_dim': 21, 'height': 32, 'width': 32, 'pixel_height': 448, 'pixel_width': 448, 'ignore_index': 255},
+            'cfg': {'input_dim': 768, 'output_dim': 21, 'height': 16, 'width': 16, 'pixel_height': 224, 'pixel_width': 224, 'ignore_index': 255},
         }
     },
     'linseg_dinolarge_voc': {
         'decoder_type': 'linear_seg',
         'decoder_config': {
             'device': device,
-            'cfg': {'input_dim': 1024, 'output_dim': 21, 'height': 32, 'width': 32, 'pixel_height': 448, 'pixel_width': 448, 'ignore_index': 255},
+            'cfg': {'input_dim': 1024, 'output_dim': 21, 'height': 16, 'width': 16, 'pixel_height': 224, 'pixel_width': 224, 'ignore_index': 255},
         }
     },
     'linseg_dinogiant_voc': {
         'decoder_type': 'linear_seg',
         'decoder_config': {
             'device': device,
-            'cfg': {'input_dim': 1536, 'output_dim': 21, 'height': 32, 'width': 32, 'pixel_height': 448, 'pixel_width': 448, 'ignore_index': 255},
+            'cfg': {'input_dim': 1536, 'output_dim': 21, 'height': 16, 'width': 16, 'pixel_height': 224, 'pixel_width': 224, 'ignore_index': 255},
         }
     },
 
@@ -885,7 +885,7 @@ datasets={
     'VOC12': {
         'dataset_path': '/work/pi_shenoy_umass_edu/kgudipaty/datasets/PASCAL-VOC',
         'dataset_type': 'VOC12',
-        'target_size': 448,
+        'target_size': 224,
     },
     'NYUDepthV2': {
         'dataset_path': '/work/pi_shenoy_umass_edu/kgudipaty/datasets/nyu-depth-v2',
@@ -1784,10 +1784,10 @@ tasks = {
     #     'datasets': ['NYUDepthV2'],
     #     'train': Train,
     #     'pipelines': [
-    #         {'backbone': 'dinosmall-patch',  'paths': [{'decoder': 'monodepth_dinosmall',  'parts_to_train': ['decoder'], 'path': 'nyudepth_dinosmall_monocular'}]},
+    #         # {'backbone': 'dinosmall-patch',  'paths': [{'decoder': 'monodepth_dinosmall',  'parts_to_train': ['decoder'], 'path': 'nyudepth_dinosmall_monocular'}]},
     #         {'backbone': 'dinobase-patch',   'paths': [{'decoder': 'monodepth_dinobase',   'parts_to_train': ['decoder'], 'path': 'nyudepth_dinobase_monocular'}]},
-    #         {'backbone': 'dinolarge-patch',  'paths': [{'decoder': 'monodepth_dinolarge',  'parts_to_train': ['decoder'], 'path': 'nyudepth_dinolarge_monocular'}]},
-    #         {'backbone': 'dinogiant-patch',  'paths': [{'decoder': 'monodepth_dinogiant',  'parts_to_train': ['decoder'], 'path': 'nyudepth_dinogiant_monocular'}]},
+    #         # {'backbone': 'dinolarge-patch',  'paths': [{'decoder': 'monodepth_dinolarge',  'parts_to_train': ['decoder'], 'path': 'nyudepth_dinolarge_monocular'}]},
+    #         # {'backbone': 'dinogiant-patch',  'paths': [{'decoder': 'monodepth_dinogiant',  'parts_to_train': ['decoder'], 'path': 'nyudepth_dinogiant_monocular'}]},
     #     ],
     #     'inference_config': {'batch_size': 1, 'shuffle': False},
     #     'train_config': {
@@ -1799,26 +1799,26 @@ tasks = {
     #         'use_cache': True,
     #     },
     # },
-    # 'voc_seg': {
-    #     'task_type': 'segmentation',
-    #     'datasets': ['VOC12'],
-    #     'train': Train,
-    #     'pipelines': [
-    #         {'backbone': 'dinosmall-patch',  'paths': [{'decoder': 'linseg_dinosmall_voc',  'parts_to_train': ['decoder'], 'path': 'vocseg_dinosmall_linsemseg'}]},
-    #         {'backbone': 'dinobase-patch',   'paths': [{'decoder': 'linseg_dinobase_voc',   'parts_to_train': ['decoder'], 'path': 'vocseg_dinobase_linsemseg'}]},
-    #         {'backbone': 'dinolarge-patch',  'paths': [{'decoder': 'linseg_dinolarge_voc',  'parts_to_train': ['decoder'], 'path': 'vocseg_dinolarge_linsemseg'}]},
-    #         # {'backbone': 'dinogiant-patch',  'paths': [{'decoder': 'linseg_dinogiant_voc',  'parts_to_train': ['decoder'], 'path': 'vocseg_dinogiant_linsemseg'}]},
-    #     ],
-    #     'inference_config': {'batch_size': 1, 'shuffle': False},
-    #     'train_config': {
-    #         'batch_size': 8,
-    #         'shuffle': True,
-    #         'epochs': 10,
-    #         'lr': 1e-3,
-    #         'scheduler': {'type': 'cosine', 'T_max': 10, 'eta_min': 0},
-    #         'use_cache': True,
-    #     },
-    # },
+    'voc_seg': {
+        'task_type': 'segmentation',
+        'datasets': ['VOC12'],
+        'train': Train,
+        'pipelines': [
+            # {'backbone': 'dinosmall-patch',  'paths': [{'decoder': 'linseg_dinosmall_voc',  'parts_to_train': ['decoder'], 'path': 'vocseg_dinosmall_linsemseg'}]},
+            {'backbone': 'dinobase-patch',   'paths': [{'decoder': 'linseg_dinobase_voc',   'parts_to_train': ['decoder'], 'path': None}]},
+            # {'backbone': 'dinolarge-patch',  'paths': [{'decoder': 'linseg_dinolarge_voc',  'parts_to_train': ['decoder'], 'path': 'vocseg_dinolarge_linsemseg'}]},
+            # {'backbone': 'dinogiant-patch',  'paths': [{'decoder': 'linseg_dinogiant_voc',  'parts_to_train': ['decoder'], 'path': 'vocseg_dinogiant_linsemseg'}]},
+        ],
+        'inference_config': {'batch_size': 1, 'shuffle': False},
+        'train_config': {
+            'batch_size': 8,
+            'shuffle': True,
+            'epochs': 10,
+            'lr': 1e-3,
+            'scheduler': {'type': 'cosine', 'T_max': 10, 'eta_min': 0},
+            'use_cache': True,
+        },
+    },
 
     # # ── LLM (text-only) tasks ──────────────────────────────────────────
     # 'llm_sst2': {
@@ -1851,20 +1851,20 @@ tasks = {
     #         # {'backbone': 'qwen2.5-7b',   'paths': [{'path': ''}]},
     #     ],
     # },
-    'llm_conll2003': {
-        'task_type': 'ner',
-        'datasets': ['conll2003'],
-        'train': False,
-        'train_config': {'batch_size': 1, 'shuffle': False},
-        'inference_config': {'batch_size': [1,2,4,6,8,10], 'shuffle': False},
-        'pipelines': [
-            # {'backbone': 'phi3-mini',    'paths': [{'path': ''}]},
-            # {'backbone': 'llama-3.1-8b', 'paths': [{'path': ''}]},
-            # {'backbone': 'mistral-7b',   'paths': [{'path': ''}]},
-            {'backbone': 'qwen2.5-0.5b',   'paths': [{'path': ''}]},
-            # {'backbone': 'qwen2.5-7b',   'paths': [{'path': ''}]},
-        ],
-    },
+    # 'llm_conll2003': {
+    #     'task_type': 'ner',
+    #     'datasets': ['conll2003'],
+    #     'train': False,
+    #     'train_config': {'batch_size': 1, 'shuffle': False},
+    #     'inference_config': {'batch_size': [1,2,4,6,8,10], 'shuffle': False},
+    #     'pipelines': [
+    #         # {'backbone': 'phi3-mini',    'paths': [{'path': ''}]},
+    #         # {'backbone': 'llama-3.1-8b', 'paths': [{'path': ''}]},
+    #         # {'backbone': 'mistral-7b',   'paths': [{'path': ''}]},
+    #         {'backbone': 'qwen2.5-0.5b',   'paths': [{'path': ''}]},
+    #         # {'backbone': 'qwen2.5-7b',   'paths': [{'path': ''}]},
+    #     ],
+    # },
     # 'llm_squad': {
     #     'task_type': 'qa',
     #     'datasets': ['squad'],
