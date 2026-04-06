@@ -44,6 +44,7 @@ def train_model(
             "input_dim": embed_dim,
             "output_dim": 1,
             "hidden_dim": 128,
+            "mode": "PATCH",
         },
     )
 

@@ -37,18 +37,18 @@ def train_model(
     P = Pipeline(backbone,nyu_logger)
 
     depth_decoder = MonocularDepthDecoder(device, cfg=decoder_cfg)
-    P.add_decoder(depth_decoder, load=True)
+    P.add_decoder(depth_decoder, load=True, train=False)
 
     end_time = timeit.default_timer()
     print(f"Time taken to load model: {end_time - start_time} seconds")
 
-    print("Training...")
-    P.train(
-        dataloader_train,
-        parts_to_train=["decoder"],
-        cfg=train_config,
-        path="nyudepth_dinolarge_monocular",
-    )
+    # print("Training...")
+    # P.train(
+    #     dataloader_train,
+    #     parts_to_train=["decoder"],
+    #     cfg=train_config,
+    #     path="nyudepth_dinolarge_monocular",
+    # )
 
     y_test, y_pred = P.predict(dataloader_test, cfg=inference_config)
     result = get_mae(y_test, y_pred)
@@ -94,6 +94,7 @@ if __name__ == "__main__":
         "width": grid_size,
         "pixel_height": target_size,
         "pixel_width": target_size,
+        "mode": "PATCH",
     }
 
     print("Loading datasets...")

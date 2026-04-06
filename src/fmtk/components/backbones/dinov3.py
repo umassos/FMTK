@@ -93,23 +93,27 @@ class DinoV3Model(BaseModel):
         x, mask = self.preprocess(batch_x, mask)
 
         # The model returns a BaseModelOutputWithPooling object
-        if isinstance(self.model, PeftModel) and len(adapters) > 0:
-            outputs = self.model(x, adapters=adapters)
-        else:
-            outputs = self.model(x)
+        # if isinstance(self.model, PeftModel) and len(adapters) > 0:
+        #     outputs = self.model(x, adapters=adapters)
+        # else:
+        #     outputs = self.model(x)
+        #
+        # if self.return_all_tokens:
+        #     # Strip CLS token (index 0) and any register tokens
+        #     num_register = getattr(self.model.config, "num_register_tokens", 0)
+        #     embeddings = outputs.last_hidden_state[:, 1 + num_register:, :]
+        # else:
+        #     # Extract the pooled output (CLS token representation)
+        #     embeddings = outputs.pooler_output
+        #     # If pooler_output is not available, use the last hidden state's CLS token
+        #     if embeddings is None:
+        #         last_hidden_state = outputs.last_hidden_state
+        #         embeddings = last_hidden_state[:, 0, :]  # [batch_size, hidden_size]
+        #
+        # return embeddings
 
-        if self.return_all_tokens:
-            # Strip CLS token (index 0) and any register tokens
-            num_register = getattr(self.model.config, "num_register_tokens", 0)
-            embeddings = outputs.last_hidden_state[:, 1 + num_register:, :]
-        else:
-            # Extract the pooled output (CLS token representation)
-            embeddings = outputs.pooler_output
-            # If pooler_output is not available, use the last hidden state's CLS token
-            if embeddings is None:
-                last_hidden_state = outputs.last_hidden_state
-                embeddings = last_hidden_state[:, 0, :]  # [batch_size, hidden_size]
-
+        outputs = self.model(x)
+        embeddings = outputs.last_hidden_state
         return embeddings
 
     @torch.no_grad()

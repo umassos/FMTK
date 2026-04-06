@@ -1,11 +1,12 @@
 import torch.nn as nn
+from fmtk.components.decoders.base import BaseVisionDecoder
 
-
-class LinearSemanticSegmenter(nn.Module):
+class LinearSemanticSegmenter(nn.Module, BaseVisionDecoder):
     def __init__(self, device, cfg):
         super().__init__()
         self.device = device
         self.cfg = cfg
+        self.mode = cfg.get('mode', None)
         self.model = nn.Conv2d(
             in_channels=cfg["input_dim"],
             out_channels=cfg["output_dim"],
@@ -30,6 +31,8 @@ class LinearSemanticSegmenter(nn.Module):
 
     def preprocess(self, batch_x):
         x = batch_x.to(self.device)
+        if self.mode is not None:
+            x = self.select_embeddings(x)
         if x.ndim == 3:
             x = x.reshape(-1, self.height, self.width, self.cfg["input_dim"])
             x = x.permute(0, 3, 1, 2)

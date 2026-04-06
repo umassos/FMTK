@@ -38,19 +38,19 @@ def train_model(
     embed_dim = get_swin_embed_dim(model_id)
     P = Pipeline(backbone, swin_logger)
     linear_decoder = P.add_decoder(
-        LinearDecoder(device, cfg={"input_dim": embed_dim, "output_dim": 10}),
+        LinearDecoder(device, cfg={"input_dim": embed_dim, "output_dim": 10, "mode": "ALL"}),
         load=True,
     )
     end_time = timeit.default_timer()
     print(f"Time taken to load model: {end_time - start_time} seconds")
 
-    print("Training...")
-    P.train(
-        dataloader_train,
-        parts_to_train=["decoder"],
-        cfg=train_config,
-        path=f"eurosatclass_swin{model_id}_linear",
-    )
+    # print("Training...")
+    # P.train(
+    #     dataloader_train,
+    #     parts_to_train=["decoder"],
+    #     cfg=train_config,
+    #     path=f"eurosatclass_swin{model_id}_linear",
+    # )
 
     y_test, y_pred = P.predict(dataloader_test, cfg=inference_config)
     result = get_accuracy(y_test, y_pred)

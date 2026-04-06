@@ -101,6 +101,7 @@ def train_model(
         "pixel_height": TARGET_SIZE,
         "pixel_width": TARGET_SIZE,
         "ignore_index": 255,
+        "mode": "ALL",
     }
 
     voc_logger = Logger(device, 'voc_logger')

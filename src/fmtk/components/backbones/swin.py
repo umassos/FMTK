@@ -59,19 +59,23 @@ class SwinModel(BaseModel):
     def forward(self, batch_x, mask=None, adapters=[]):
         x, mask = self.preprocess(batch_x, mask)
 
-        if isinstance(self.model, PeftModel) and len(adapters) > 0:
-            outputs = self.model(x, adapters=adapters)
-        else:
-            outputs = self.model(x)
+        # if isinstance(self.model, PeftModel) and len(adapters) > 0:
+        #     outputs = self.model(x, adapters=adapters)
+        # else:
+        #     outputs = self.model(x)
+        #
+        # if self.return_all_tokens:
+        #     embeddings = outputs.last_hidden_state
+        # else:
+        #     embeddings = outputs.pooler_output
+        #     if embeddings is None:
+        #         last_hidden_state = outputs.last_hidden_state
+        #         embeddings = last_hidden_state.mean(dim=1)
+        #
+        # return embeddings
 
-        if self.return_all_tokens:
-            embeddings = outputs.last_hidden_state
-        else:
-            embeddings = outputs.pooler_output
-            if embeddings is None:
-                last_hidden_state = outputs.last_hidden_state
-                embeddings = last_hidden_state.mean(dim=1)
-
+        outputs = self.model(x)
+        embeddings = outputs.last_hidden_state
         return embeddings
 
     @singledispatchmethod

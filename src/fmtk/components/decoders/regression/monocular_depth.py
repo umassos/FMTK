@@ -1,8 +1,9 @@
 import torch
 import torch.nn as nn
+from fmtk.components.decoders.base import BaseVisionDecoder
 
 
-class MonocularDepthDecoder(nn.Module):
+class MonocularDepthDecoder(nn.Module, BaseVisionDecoder):
     """
     Pixel-wise monocular depth decoder inspired by LinearSemanticSegmenter.
 
@@ -22,7 +23,7 @@ class MonocularDepthDecoder(nn.Module):
         super().__init__()
         self.device = device
         self.cfg = cfg
-
+        self.mode = cfg.get('mode', None)
         self.model = nn.Conv2d(
             in_channels=cfg["input_dim"],
             out_channels=1,
@@ -48,6 +49,8 @@ class MonocularDepthDecoder(nn.Module):
 
     def preprocess(self, batch_x):
         x = batch_x.to(self.device).float()
+        if self.mode is not None:
+            x = self.select_embeddings(x)
         if x.ndim == 3:
             B, N, C = x.shape
             # [B, N, C] -> [B, C, H_patch, W_patch]

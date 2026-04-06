@@ -36,7 +36,7 @@ def train_model(
     P = Pipeline(backbone)
     embed_dim = get_vgg_embed_dim(model_id)
     linear_decoder = P.add_decoder(
-        LinearDecoder(device, cfg={"input_dim": embed_dim, "output_dim": 10}),
+        LinearDecoder(device, cfg={"input_dim": embed_dim, "output_dim": 10, "mode": "ALL"}),
         load=True,
     )
     end_time = timeit.default_timer()

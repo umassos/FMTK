@@ -57,18 +57,22 @@ class MAEModel(BaseModel):
     def forward(self, batch_x, mask=None, adapters=[]):
         x, mask = self.preprocess(batch_x, mask)
 
-        if isinstance(self.model, PeftModel) and len(adapters) > 0:
-            outputs = self.model(x, adapters=adapters)
-        else:
-            outputs = self.model(x)
+        # if isinstance(self.model, PeftModel) and len(adapters) > 0:
+        #     outputs = self.model(x, adapters=adapters)
+        # else:
+        #     outputs = self.model(x)
+        #
+        # last_hidden_state = outputs.last_hidden_state
+        #
+        # if self.return_all_tokens:
+        #     embeddings = last_hidden_state[:, 1:, :]
+        # else:
+        #     embeddings = last_hidden_state[:, 0, :]
+        #
+        # return embeddings
 
-        last_hidden_state = outputs.last_hidden_state
-
-        if self.return_all_tokens:
-            embeddings = last_hidden_state[:, 1:, :]
-        else:
-            embeddings = last_hidden_state[:, 0, :]
-
+        outputs = self.model(x)
+        embeddings = outputs.last_hidden_state
         return embeddings
 
     # TODO: This should be moved to the abstract class

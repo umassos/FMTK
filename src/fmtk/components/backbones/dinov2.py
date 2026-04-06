@@ -62,23 +62,25 @@ class DinoV2Model(BaseModel):
         x, mask = self.preprocess(batch_x, mask)
 
         # The model returns a BaseModelOutputWithPooling object
-        if isinstance(self.model, PeftModel) and len(adapters) > 0:
-            outputs = self.model(x, adapters=adapters)
-        else:
-            outputs = self.model(x)
+        # if isinstance(self.model, PeftModel) and len(adapters) > 0:
+        #     outputs = self.model(x, adapters=adapters)
+        # else:
+        #     outputs = self.model(x)
 
-        if self.return_all_tokens:
+        # if self.return_all_tokens:
 
-            # Extract all tokens for a detr style decoder
-            embeddings = outputs.last_hidden_state[:, 1:, :]
-        else:
-            # Extract the pooled output (CLS token representation)
-            embeddings = outputs.pooler_output
-            # If pooler_output is not available, use the last hidden state's CLS token
-            if embeddings is None:
-                last_hidden_state = outputs.last_hidden_state
-                embeddings = last_hidden_state[:, 0, :]  # [batch_size, hidden_size]
+        #     # Extract all tokens for a detr style decoder
+        #     embeddings = outputs.last_hidden_state[:, 1:, :]
+        # else:
+        #     # Extract the pooled output (CLS token representation)
+        #     embeddings = outputs.pooler_output
+        #     # If pooler_output is not available, use the last hidden state's CLS token
+        #     if embeddings is None:
+        #         last_hidden_state = outputs.last_hidden_state
+        #         embeddings = last_hidden_state[:, 0, :]  # [batch_size, hidden_size]
 
+        outputs = self.model(x)
+        embeddings = outputs.last_hidden_state
         return embeddings
 
     @singledispatchmethod
