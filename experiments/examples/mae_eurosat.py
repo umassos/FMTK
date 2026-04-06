@@ -36,21 +36,21 @@ def train_model(
     P = Pipeline(backbone)
     embed_dim = get_mae_embed_dim(model_id)
     linear_decoder = P.add_decoder(
-        LinearDecoder(device, cfg={"input_dim": embed_dim, "output_dim": 10}),
+        LinearDecoder(device, cfg={"input_dim": embed_dim, "output_dim": 10, "mode": "CLS"}),
         load=True,
     )
     end_time = timeit.default_timer()
     print(f"Time taken to load model: {end_time - start_time} seconds")
 
-    print("Training...")
-    P.train_eval(
-        train_loader=dataloader_train,
-        test_loader=dataloader_test,
-        parts_to_train=["decoder"],
-        cfg=train_config,
-        path="imgclass_maebase_eurosat",
-        metric_fn=get_accuracy,
-    )
+    # print("Training...")
+    # P.train_eval(
+    #     train_loader=dataloader_train,
+    #     test_loader=dataloader_test,
+    #     parts_to_train=["decoder"],
+    #     cfg=train_config,
+    #     path="imgclass_maebase_eurosat",
+    #     metric_fn=get_accuracy,
+    # )
 
     y_test, y_pred = P.predict(dataloader_test, cfg=inference_config)
     result = get_accuracy(y_test, y_pred)

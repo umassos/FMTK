@@ -1,12 +1,12 @@
 import torch.nn as nn
+from fmtk.components.decoders.base import BaseVisionDecoder
 
-
-class SpatialCountDecoder(nn.Module):
+class SpatialCountDecoder(nn.Module, BaseVisionDecoder):
     def __init__(self, device, cfg=None):
         super().__init__()
         self.device = device
         self.cfg = cfg
-
+        self.mode = cfg.get('mode', None)
         # Standard regression head: features -> density map
         self.model = nn.Sequential(
             nn.Conv2d(
@@ -27,8 +27,13 @@ class SpatialCountDecoder(nn.Module):
         self.model.to("cpu")
         self.criterion.to("cpu")
 
-    def forward(self, embeddings):
+    def preprocess(self, embeddings):
+        if self.mode is not None:
+            embeddings = self.select_embeddings(embeddings)
+        return embeddings
 
+    def forward(self, embeddings):
+        embeddings = self.preprocess(embeddings)
         # Assuming most common 224 x 224 input image size.
 
         B, N, C = embeddings.shape

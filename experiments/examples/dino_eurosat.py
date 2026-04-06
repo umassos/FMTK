@@ -38,7 +38,7 @@ def train_model(
     P = Pipeline(backbone, eurosat_logger)
     embed_dim = get_dinov2_embed_dim(model_id)
     linear_decoder = P.add_decoder(
-        LinearDecoder(device, cfg={"input_dim": embed_dim, "output_dim": 10}),
+        LinearDecoder(device, cfg={"input_dim": embed_dim, "output_dim": 10, "mode": 'CLS'}),
         load=True,
         train=False,
         path=f"eurosatclass_dinobase_linear",
@@ -129,7 +129,7 @@ if __name__ == "__main__":
     }
     model_cfg = {"return_all_tokens": False}
 
-    model_id = "large"
+    model_id = "base"
     samples_per_class = [1000]
     train_data = EuroSATDataset(dataset_cfg, task_cfg, split="train")
     test_data = EuroSATDataset(dataset_cfg, task_cfg, split="test")

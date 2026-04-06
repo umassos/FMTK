@@ -4,14 +4,16 @@ import torch.nn as nn
 import torch
 import torch.nn as nn
 from fmtk.components.base import BaseModel
+from fmtk.components.decoders.base import BaseVisionDecoder
 
 
-class LinearDecoder(nn.Module):
+class LinearDecoder(nn.Module, BaseVisionDecoder):
     def __init__(self, device, cfg):
         super().__init__()
         self.device = device
         self.model = nn.Linear(in_features=cfg['input_dim'], out_features=cfg['output_dim'])
         self.criterion = nn.CrossEntropyLoss()
+        self.mode = cfg.get('mode', None)
 
     def to_device(self):
         self.model.to(self.device)
@@ -26,6 +28,10 @@ class LinearDecoder(nn.Module):
     def preprocess(self,batch_x):
         x=batch_x
         x=x.to(torch.float32).to(self.device)
+        print('[LinearDecoder] Preprocess input shape: ', x.shape)
+        if self.mode is not None:
+            x = self.select_embeddings(x)
+        print('[LinearDecoder] Postprocess input shape: ', x.shape)
         if x.ndimension() == 4:
             x=x.mean(dim=2)
         if x.ndimension() == 3:
