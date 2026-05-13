@@ -26,11 +26,25 @@ class Pipeline:
         self.adapter_id += 1
         with (self.logger.measure(f"add_adapter_{path}", device=self.logger.device) if self.logger else nullcontext()):
             if not train:
-                category = self.model_instance.model_category
-                adapter_dir = f"{self.base_dir}/../../models/{category}/finetuned/{path}/adapter.pth"
                 if not self.model_instance.peft_enable:
                     self.model_instance.enable_peft(peft_cfg)
-                self.model_instance.model.load_adapter(adapter_dir, adapter_name=adapter_name)
+                category = self.model_instance.model_category
+                adapter_dir = (
+                    f"{self.base_dir}/../../models/{category}/finetuned/{path}/adapter.pth"
+                    if path is not None else None
+                )
+                if adapter_dir is not None and os.path.exists(adapter_dir):
+                    self.model_instance.model.load_adapter(adapter_dir, adapter_name=adapter_name)
+                else:
+                    # Fallback: register a fresh peft adapter slot with random
+                    # init (same call the training path uses). Use when the
+                    # finetuned checkpoint isn't on disk — e.g. throughput /
+                    # latency profiling where output values don't matter.
+                    print(f"[Pipeline] No adapter weights at {adapter_dir!r}; "
+                          f"random-initializing '{adapter_name}'. Not for accuracy use.")
+                    self.model_instance.model.add_adapter(
+                        adapter_name=adapter_name, peft_config=peft_cfg,
+                    )
                 return adapter_name
             # training path
             if self.model_instance.peft_enable:
