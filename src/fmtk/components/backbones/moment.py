@@ -54,12 +54,18 @@ class MomentModel(BaseModel):
         return x, mask   
 
 
-    def forward(self, batch_x, mask=None):
+    def forward(self, batch_x, mask=None, adapters=[]):
         x, mask=self.preprocess(batch_x,mask)
+        # Multi-LoRA batched inference: peft routes each sample through its
+        # own adapter in a single forward pass. None entries become the
+        # peft sentinel "__base__" (skip LoRA for that sample).
+        extra = {}
+        if self.peft_enable and len(adapters) > 0:
+            extra["adapter_names"] = [a if a is not None else "__base__" for a in adapters]
         if mask is None:
-            embedding=self.model(x_enc=x, reduction="none").embeddings
+            embedding=self.model(x_enc=x, reduction="none", **extra).embeddings
         else:
-            embedding=self.model(x_enc=x, input_mask=mask, reduction="none").embeddings
+            embedding=self.model(x_enc=x, input_mask=mask, reduction="none", **extra).embeddings
         return embedding
     
     def postprocess(self, embedding):

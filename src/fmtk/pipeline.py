@@ -226,6 +226,12 @@ class Pipeline:
             model.eval()
         else:
             return
+        # When peft is enabled, also eval the PeftModel wrapper itself.
+        # The branches above skip past it (down to the inner base model),
+        # which leaves PeftModel in training mode — peft then refuses
+        # `adapter_names` dispatch with a ValueError.
+        if getattr(model, "peft_enable", False) and isinstance(getattr(model, "model", None), torch.nn.Module):
+            model.model.eval()
     
     def forward(self,x,mask=None):
         if self.active_encoder is not None:

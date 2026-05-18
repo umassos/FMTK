@@ -28,10 +28,8 @@ class LinearDecoder(nn.Module, BaseVisionDecoder):
     def preprocess(self,batch_x):
         x=batch_x
         x=x.to(torch.float32).to(self.device)
-        print('[LinearDecoder] Preprocess input shape: ', x.shape)
         if self.mode is not None:
             x = self.select_embeddings(x)
-        print('[LinearDecoder] Postprocess input shape: ', x.shape)
         if x.ndimension() == 4:
             x=x.mean(dim=2)
         if x.ndimension() == 3:
