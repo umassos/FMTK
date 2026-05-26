@@ -5,6 +5,7 @@ import numpy as np
 from tqdm import tqdm
 from fmtk.components.base import BaseModel
 from vllm import LLM, AsyncLLMEngine, AsyncEngineArgs, SamplingParams
+from vllm.lora.request import LoRARequest
 import torch
 from transformers import AutoTokenizer
 
@@ -74,7 +75,7 @@ class QwenVLLMModel(BaseModel):
             self._async_engine_args = dict(
                 model=model_id,
                 download_dir=models_directory,
-                dtype='bfloat16',
+                dtype='float16',
                 trust_remote_code=True,
                 gpu_memory_utilization=model_config.get('gpu_memory_utilization', 0.85),
                 tensor_parallel_size=model_config.get('tensor_parallel_size', 1),
@@ -82,6 +83,15 @@ class QwenVLLMModel(BaseModel):
             )
             if 'max_model_len' in model_config:
                 self._async_engine_args['max_model_len'] = model_config['max_model_len']
+
+            # Multi-LoRA: enable on the engine when requested. Per-request
+            # adapter routing is done via async_forward(prompt, adapter_name).
+            if bool(model_config.get('enable_lora', False)):
+                self._async_engine_args['enable_lora'] = True
+                self._async_engine_args['max_loras'] = int(model_config.get('max_loras', 4))
+                self._async_engine_args['max_lora_rank'] = int(model_config.get('max_lora_rank', 64))
+                if 'max_cpu_loras' in model_config:
+                    self._async_engine_args['max_cpu_loras'] = int(model_config['max_cpu_loras'])
 
             self._async_engine = AsyncLLMEngine.from_engine_args(
                 AsyncEngineArgs(**self._async_engine_args)
@@ -91,12 +101,16 @@ class QwenVLLMModel(BaseModel):
             self.llm = LLM(
                 model=model_id,
                 download_dir=models_directory,
-                dtype='bfloat16',
+                dtype='float16',
                 trust_remote_code=True,
                 gpu_memory_utilization=model_config.get('gpu_memory_utilization', 0.85),
                 tensor_parallel_size=model_config.get('tensor_parallel_size', 1),
                 enforce_eager=model_config.get('enforce_eager', True),
             )
+
+        # Multi-LoRA bookkeeping (used by both async and sync paths if enabled).
+        self._loras: dict[str, LoRARequest] = {}
+        self._next_lora_id = 1
 
     def preprocess(self, batch_x, mask=None):
         """Apply the Qwen chat template to each prompt string."""
@@ -118,21 +132,35 @@ class QwenVLLMModel(BaseModel):
         outputs = self.llm.generate(formatted, self.sampling_params)
         return [out.outputs[0].text.strip() for out in outputs]
 
-    async def async_forward(self, prompt: str) -> dict:
+    def register_adapter(self, adapter_name: str, lora_path: str) -> str:
+        """Register a LoRA adapter directory (PEFT format) under `adapter_name`.
+        Engine must have been built with enable_lora=True. Returns the name."""
+        if adapter_name in self._loras:
+            return adapter_name
+        lora_int_id = self._next_lora_id
+        self._next_lora_id += 1
+        self._loras[adapter_name] = LoRARequest(adapter_name, lora_int_id, lora_path)
+        print(f"[Qwen vLLM] Registered LoRA '{adapter_name}' id={lora_int_id} path={lora_path}")
+        return adapter_name
+
+    def unregister_adapter(self, adapter_name: str) -> None:
+        self._loras.pop(adapter_name, None)
+
+    async def async_forward(self, prompt: str, adapter_name: str | None = None) -> str:
         """
         Schedule a single prompt into the AsyncLLMEngine and await its result.
-
-        Multiple concurrent calls to async_forward() are batched at the
-        iteration level by vLLM (true continuous batching). Returns a dict
-        with text_output and timing fields compatible with InferResponse.
+        If `adapter_name` is given and registered, the request is routed through
+        that LoRA. Concurrent calls are batched by vLLM (continuous batching).
         """
 
         formatted, _ = self.preprocess([prompt])
         request_id = str(uuid.uuid4())
+        lora_request = self._loras.get(adapter_name) if adapter_name else None
 
         final_output = None
         async for output in self._async_engine.generate(
-            formatted[0], self.sampling_params, request_id=request_id
+            formatted[0], self.sampling_params, request_id=request_id,
+            lora_request=lora_request,
         ):
             final_output = output
 
