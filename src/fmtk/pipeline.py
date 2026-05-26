@@ -25,6 +25,15 @@ class Pipeline:
         adapter_name = f'adapter_{self.adapter_id}'
         self.adapter_id += 1
         with (self.logger.measure(f"add_adapter_{path}", device=self.logger.device) if self.logger else nullcontext()):
+            # vLLM-backed LLM path: model exposes register_adapter — multi-LoRA
+            # is routed per-request via LoRARequest, no HF PEFT wrap on weights.
+            if hasattr(self.model_instance, 'register_adapter'):
+                if path is None:
+                    raise ValueError("vLLM LoRA requires `path` to a saved adapter directory")
+                category = self.model_instance.model_category
+                adapter_dir = f"{self.base_dir}/../../models/{category}/finetuned/{path}"
+                self.model_instance.register_adapter(adapter_name, adapter_dir)
+                return adapter_name
             if not train:
                 if not self.model_instance.peft_enable:
                     self.model_instance.enable_peft(peft_cfg)
