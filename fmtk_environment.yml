@@ -37,6 +37,7 @@ dependencies:
       # Utilities
       - psutil
       - pynvml
+      - mlflow
       - tqdm
       - dotmap
       - pillow>=10.0
