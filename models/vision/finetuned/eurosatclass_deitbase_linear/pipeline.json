@@ -1,0 +1,18 @@
+{
+  "add_decoder_None": {
+    "wall time": 0.15633506700396538,
+    "gpu time": 0.19363200664520264,
+    "gpu peak": 0.031232,
+    "gpu energy": 0.0,
+    "avg gpu util pct": 11.0,
+    "cpu dRSS": 0.589824
+  },
+  "train": {
+    "wall time": 687618.4336119331,
+    "gpu time": 687619.75,
+    "gpu peak": 4973.074432,
+    "gpu energy": 80829.521,
+    "avg gpu util pct": 0.0,
+    "cpu dRSS": 254.81216
+  }
+}
