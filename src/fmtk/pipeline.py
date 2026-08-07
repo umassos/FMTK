@@ -9,6 +9,7 @@ from contextlib import nullcontext
 import json
 from huggingface_hub import hf_hub_download
 from .metrics import get_accuracy
+from .embedding_cache import EmbeddingCache
 
 class Pipeline:
     def __init__(self, model_instance,logger=None):
@@ -22,7 +23,8 @@ class Pipeline:
         self.adapter_id=0
         self.encoder_id=0
         self.base_dir = os.path.dirname(__file__)
-        
+        self.embedding_cache = EmbeddingCache(cache_device='cpu', to_device=self.model_instance.device)
+
     def add_adapter(self,peft_cfg):
         adapter_name=f'adapter_{self.adapter_id}'
         self.adapter_id+=1
@@ -170,6 +172,14 @@ class Pipeline:
                 if len(dec_params):
                     param_groups.append({"params": dec_params, "lr": cfg['lr']})
 
+        # 1. If only training decoder, and 2. use_cache is True, then use cache
+        use_cache = (
+            trains_decoder
+            and not trains_adapter
+            and not trains_encoder
+            and cfg.get("use_cache", False)
+        )
+
         start_epoch = 0
         best_metric = None
         resume_run_id = None
@@ -242,7 +252,8 @@ class Pipeline:
                             optimizer.zero_grad()
                             x, y = batch["x"], batch["y"]
                             mask = batch.get("mask", None)
-                            logits=self.forward(x,mask)
+                            idx = batch.get("idx", None)
+                            logits=self.forward(x,mask,use_cache=use_cache,idx=idx)
                             if (hasattr(self.active_decoder, "requires_model") and self.active_decoder.requires_model and hasattr(self.model_instance.model, "normalizer")):
                                 logits = self.model_instance.model.normalizer(x=logits, mode="denorm")
                             if isinstance(criterion, (nn.MSELoss, nn.L1Loss, nn.SmoothL1Loss)):
@@ -321,13 +332,24 @@ class Pipeline:
         else:
             return
     
-    def forward(self,x,mask=None):
+    def forward(self,x,mask=None,use_cache=False,idx=None):
         if self.active_encoder is not None:
             x= self.active_encoder.forward(x)
         self.set_eval_mode()
-        feats=self.model_instance.forward(x,mask)
+
+        if use_cache and idx is not None:
+            # TODO: Add functionality to partially use cache
+            # if only some of the idx are present
+            if self.embedding_cache.contains(idx):  # currently all idx need to be present in the cache
+                feats = self.embedding_cache.get(idx)
+            else:
+                feats = self.model_instance.forward(x, mask)
+                self.embedding_cache.put(idx, feats)
+        else:
+            feats = self.model_instance.forward(x, mask)
+
         logits = self.active_decoder.forward((feats))
-        return logits 
+        return logits
 
     def predict(self, test_loader, cfg):
         if self.active_decoder is not None:
