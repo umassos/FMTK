@@ -8,6 +8,14 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 from peft import LoraConfig, get_peft_model
 
+def get_moment_embed_dim(model_id):
+    if model_id in ['small', 'MOMENT-1-small', 'AutonLab/MOMENT-1-small']:
+        return 512
+    elif model_id in ['base', 'MOMENT-1-base', 'AutonLab/MOMENT-1-base']:
+        return 768
+    elif model_id in ['large', 'MOMENT-1-large', 'AutonLab/MOMENT-1-large']:
+        return 1024
+
 class MomentModel(BaseModel):
     def __init__(self,device,model_name=None,model_config=None):
         super().__init__()
@@ -92,4 +100,76 @@ class MomentModel(BaseModel):
             return []
         return (p for p in self.model.parameters() if p.requires_grad)
 
-    
+
+class MomentReconstructionModel(BaseModel):
+    """
+    MOMENT loaded in `reconstruction` mode (masked-patch reconstruction),
+    used for imputation: unlike `MomentModel` (which strips the model down
+    to pooled/patch embeddings via `task_name='embedding'`), this keeps
+    MOMENT's own pretrained reconstruction head, which is the "decoder" for
+    this task -- there's no separate trainable head to attach on top.
+
+    By default the encoder (patch embedding + transformer trunk) is frozen;
+    only the reconstruction head (`self.model.head`) is left trainable,
+    matching the "backbone(pretrain)+decoder" baseline framing used
+    elsewhere in fmtk. Call `enable_peft(peft_cfg)` for the
+    "backbone(pretrain)+lora+decoder" variant -- this LoRA-adapts the
+    encoder's attention q/v projections while keeping the head fully
+    trainable (via `modules_to_save=["head"]` on the LoRA config), same
+    pattern as `MomentModel`/`DinoV2Model`.
+    """
+
+    def __init__(self, device, model_name=None, model_config=None):
+        super().__init__()
+        self.device = device
+        if model_name == 'large':
+            model_path = 'AutonLab/MOMENT-1-large'
+        elif model_name == 'base':
+            model_path = 'AutonLab/MOMENT-1-base'
+        elif model_name == 'small':
+            model_path = 'AutonLab/MOMENT-1-small'
+        else:
+            model_path = 'AutonLab/MOMENT-1-large'
+            print("Model name not recognized, using default AutonLab/MOMENT-1-large")
+
+        print(f"[MomentReconstruction] Loading {model_path} on device {device}")
+        self.model = MOMENTPipeline.from_pretrained(
+            f'{model_path}',
+            model_kwargs={'task_name': 'reconstruction', 'enable_gradient_checkpointing': False},
+        )
+        self.model.init()
+        self.model.to(device)
+
+        self.peft_enable = False
+        for param in self.model.parameters():
+            param.requires_grad = False
+        for param in self.model.head.parameters():
+            param.requires_grad = True
+
+    def enable_peft(self, peft_cfg):
+        if self.peft_enable:
+            return
+        self.peft_enable = True
+        self.model = get_peft_model(self.model, peft_cfg)
+        self.model.to(self.device)
+        print(self.model.print_trainable_parameters())
+
+    def trainable_parameters(self):
+        if self.peft_enable:
+            return (p for p in self.model.parameters() if p.requires_grad)
+        return self.model.head.parameters()
+
+    def train_head(self):
+        self.model.train()
+
+    def eval(self):
+        self.model.eval()
+
+    def preprocess(self, batch_x):
+        pass
+
+    def forward(self, x_enc, input_mask=None, mask=None):
+        return self.model(x_enc=x_enc, input_mask=input_mask, mask=mask)
+
+    def postprocess(self, output):
+        pass

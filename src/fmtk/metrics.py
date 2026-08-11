@@ -9,6 +9,56 @@ def get_mae(y_test, y_pred):
         y_pred = y_pred.reshape(-1, y_pred.shape[-1])
     return mean_absolute_error(y_test, y_pred)
 
+def get_smape(y_test, y_pred):
+    """
+    Symmetric MAPE, as defined in the M4 competition: (2/h) * sum(|F-A| / (|A|+|F|)) * 100,
+    averaged over all forecast points. Scale-invariant, so unlike MAE it's meaningful when
+    averaging across series with very different magnitudes (e.g. M4's mixed-scale series).
+    """
+    y_test = np.asarray(y_test, dtype=np.float64)
+    y_pred = np.asarray(y_pred, dtype=np.float64)
+    denom = np.abs(y_test) + np.abs(y_pred)
+    diff = np.abs(y_test - y_pred)
+    smape = np.where(denom == 0, 0.0, diff / denom)
+    return 200.0 * np.mean(smape)
+
+def get_miou(y_test, y_pred, num_classes=21, ignore_index=255):
+    """
+    Mean IoU over classes present in y_test, ignoring `ignore_index` pixels
+    (e.g. VOC's boundary/ambiguous region). y_test/y_pred: array-like of any
+    shape (e.g. [N, H, W]) with per-pixel class indices.
+    """
+    y_test = np.asarray(y_test).reshape(-1)
+    y_pred = np.asarray(y_pred).reshape(-1)
+
+    valid = y_test != ignore_index
+    y_test = y_test[valid]
+    y_pred = y_pred[valid]
+
+    ious = []
+    for c in range(num_classes):
+        true_c = y_test == c
+        if not true_c.any():
+            continue
+        pred_c = y_pred == c
+        intersection = np.logical_and(true_c, pred_c).sum()
+        union = np.logical_or(true_c, pred_c).sum()
+        ious.append(intersection / union)
+
+    return float(np.mean(ious)) if ious else 0.0
+
+
+def get_pixel_accuracy(y_test, y_pred, ignore_index=255):
+    """Per-pixel accuracy, ignoring `ignore_index` pixels."""
+    y_test = np.asarray(y_test).reshape(-1)
+    y_pred = np.asarray(y_pred).reshape(-1)
+
+    valid = y_test != ignore_index
+    if not valid.any():
+        return 0.0
+    return float((y_test[valid] == y_pred[valid]).mean())
+
+
 def get_accuracy(y_test, y_pred):
     def normalize(x):
         if isinstance(x, str):

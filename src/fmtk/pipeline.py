@@ -11,8 +11,24 @@ from huggingface_hub import hf_hub_download
 from .metrics import get_accuracy
 from .embedding_cache import EmbeddingCache
 
+class AverageMeter:
+    def __init__(self):
+        self.reset()
+
+    def reset(self):
+        self.val = 0
+        self.avg = 0
+        self.sum = 0
+        self.count = 0
+
+    def update(self, val, n=1):
+        self.val = val
+        self.sum += val * n
+        self.count += n
+        self.avg = self.sum / self.count
+
 class Pipeline:
-    def __init__(self, model_instance,logger=None):
+    def __init__(self, model_instance,logger=None,checkpoint_root=None):
         self.logger=logger
         self.model_instance = model_instance
         self.decoders = {}
@@ -23,6 +39,9 @@ class Pipeline:
         self.adapter_id=0
         self.encoder_id=0
         self.base_dir = os.path.dirname(__file__)
+        # When set, checkpoints save to "{checkpoint_root}/{category}/{path}" instead of
+        # the default "{repo}/models/{category}/finetuned/{path}".
+        self.checkpoint_root = checkpoint_root
         self.embedding_cache = EmbeddingCache(cache_device='cpu', to_device=self.model_instance.device)
 
     def add_adapter(self,peft_cfg):
@@ -99,11 +118,14 @@ class Pipeline:
 
     def _checkpoint_dir(self, path):
         category = self.model_instance.model_category
-        d = f"{self.base_dir}/../../models/{category}/finetuned/{path}"
+        if self.checkpoint_root is not None:
+            d = f"{self.checkpoint_root}/{category}/{path}"
+        else:
+            d = f"{self.base_dir}/../../models/{category}/finetuned/{path}"
         os.makedirs(d, exist_ok=True)
         return d
 
-    def _save_checkpoint(self, path, kind, epoch, optimizer, scheduler, best_metric, run_id, trains_decoder, trains_encoder):
+    def _save_checkpoint(self, path, kind, epoch, optimizer, scheduler, best_metric, run_id, trains_decoder, trains_encoder, trains_adapter=False):
         state = {
             "epoch": epoch,
             "optimizer_state": optimizer.state_dict(),
@@ -115,6 +137,8 @@ class Pipeline:
             state["decoder_state"] = self.active_decoder.model.state_dict()
         if trains_encoder:
             state["encoder_state"] = self.active_encoder.model.state_dict()
+        if trains_adapter:
+            state["adapter_state"] = self.model_instance.model.state_dict()
         torch.save(state, f"{self._checkpoint_dir(path)}/{kind}_checkpoint.pt")
 
     def _load_checkpoint(self, path, kind):
@@ -122,6 +146,23 @@ class Pipeline:
         if not os.path.exists(ckpt_path):
             raise FileNotFoundError(f"No {kind} checkpoint found at {ckpt_path}")
         return torch.load(ckpt_path, map_location="cpu")
+
+    def load_best_checkpoint(self, path, trains_decoder=True, trains_encoder=False, trains_adapter=False):
+        """
+        Reloads the best_checkpoint.pt saved during train() into the active
+        decoder/encoder/adapter, so a subsequent predict() call evaluates the
+        best epoch's weights instead of whatever train() left resident in
+        memory (the last epoch's). Call after train() returns, before the
+        final test-set evaluation.
+        """
+        checkpoint = self._load_checkpoint(path, "best")
+        if trains_decoder and "decoder_state" in checkpoint:
+            self.active_decoder.model.load_state_dict(checkpoint["decoder_state"])
+        if trains_encoder and "encoder_state" in checkpoint:
+            self.active_encoder.model.load_state_dict(checkpoint["encoder_state"])
+        if trains_adapter and "adapter_state" in checkpoint:
+            self.model_instance.model.load_state_dict(checkpoint["adapter_state"])
+        return checkpoint
 
     def train(self, train_loader, val_loader=None, parts_to_train=['decoder'],cfg=None,path=None,
               metric_fn=None, mlflow_cfg=None, resume_from=None):
@@ -247,8 +288,16 @@ class Pipeline:
 
                 for epoch in range(start_epoch, cfg['epochs']):
                     epoch_start = time.time()
-                    epoch_losses = []
-                    for batch in tqdm(train_loader):
+                    losses_m = AverageMeter()
+                    data_time_m = AverageMeter()
+                    update_time_m = AverageMeter()
+                    updates_per_epoch = len(train_loader)
+
+                    pbar = tqdm(train_loader)
+                    end = time.time()
+                    for update_idx, batch in enumerate(pbar):
+                            data_time_m.update(time.time() - end)
+
                             optimizer.zero_grad()
                             x, y = batch["x"], batch["y"]
                             mask = batch.get("mask", None)
@@ -264,7 +313,21 @@ class Pipeline:
                             loss = criterion(logits, y)
                             loss.backward()
                             optimizer.step()
-                            epoch_losses.append(loss.item())
+
+                            batch_size = x.shape[0] if hasattr(x, "shape") else len(x)
+                            losses_m.update(loss.item(), batch_size)
+                            update_time_m.update(time.time() - end)
+                            end = time.time()
+
+                            pbar.set_description(
+                                f'Train: {epoch} [{update_idx:>4d}/{updates_per_epoch} '
+                                f'({100. * update_idx / max(updates_per_epoch - 1, 1):>3.0f}%)]  '
+                                f'Loss: {losses_m.val:#.3g} ({losses_m.avg:#.3g})  '
+                                f'Time: {update_time_m.val:.3f}s, {batch_size / update_time_m.val:>7.2f}/s  '
+                                f'({update_time_m.avg:.3f}s, {batch_size / update_time_m.avg:>7.2f}/s)  '
+                                f'LR: {optimizer.param_groups[0]["lr"]:.3e}  '
+                                f'Data: {data_time_m.val:.3f} ({data_time_m.avg:.3f})'
+                            )
 
                     if scheduler is not None:
                         scheduler.step()
@@ -274,7 +337,7 @@ class Pipeline:
                         continue
 
                     epoch_time = time.time() - epoch_start
-                    avg_loss = sum(epoch_losses) / len(epoch_losses)
+                    avg_loss = losses_m.avg
                     current_lr = optimizer.param_groups[0]['lr']
 
                     val_metric = None
@@ -286,13 +349,21 @@ class Pipeline:
                         mlflow.log_metric("train_loss", avg_loss, step=epoch)
                         mlflow.log_metric("lr", current_lr, step=epoch)
                         mlflow.log_metric("epoch_time_sec", epoch_time, step=epoch)
+                        mlflow.log_metric("update_time_sec_avg", update_time_m.avg, step=epoch)
+                        mlflow.log_metric("data_time_sec_avg", data_time_m.avg, step=epoch)
                         if val_metric is not None:
                             mlflow.log_metric(eval_metric_name, val_metric, step=epoch)
 
                     current_run_id = mlflow.active_run().info.run_id if use_mlflow else None
 
-                    compare_metric = val_metric if val_metric is not None else avg_loss
-                    compare_mode = cfg.get('metric_mode', 'max') if val_metric is not None else 'min'
+                    # select_best_by="train_loss" picks the checkpoint by train loss instead of val_metric.
+                    select_best_by = cfg.get('select_best_by', 'val')
+                    if select_best_by == 'train_loss':
+                        compare_metric = avg_loss
+                        compare_mode = 'min'
+                    else:
+                        compare_metric = val_metric if val_metric is not None else avg_loss
+                        compare_mode = cfg.get('metric_mode', 'max') if val_metric is not None else 'min'
                     is_best = (
                         best_metric is None
                         or (compare_mode == 'max' and compare_metric > best_metric)
@@ -300,21 +371,20 @@ class Pipeline:
                     )
                     if is_best:
                         best_metric = compare_metric
-                        self._save_checkpoint(path, "best", epoch, optimizer, scheduler, best_metric, current_run_id, trains_decoder, trains_encoder)
+                        self._save_checkpoint(path, "best", epoch, optimizer, scheduler, best_metric, current_run_id, trains_decoder, trains_encoder, trains_adapter)
 
-                    self._save_checkpoint(path, "last", epoch, optimizer, scheduler, best_metric, current_run_id, trains_decoder, trains_encoder)
+                    self._save_checkpoint(path, "last", epoch, optimizer, scheduler, best_metric, current_run_id, trains_decoder, trains_encoder, trains_adapter)
 
-        category = self.model_instance.model_category
-        os.makedirs(f"{self.base_dir}/../../models/{category}/finetuned/{path}",exist_ok=True)
+        final_dir = self._checkpoint_dir(path)
         if trains_decoder:
-            torch.save(self.active_decoder.model.state_dict(), f"{self.base_dir}/../../models/{category}/finetuned/{path}/decoder.pth")
+            torch.save(self.active_decoder.model.state_dict(), f"{final_dir}/decoder.pth")
         if trains_encoder:
-            torch.save(self.active_encoder.model.state_dict(), f"{self.base_dir}/../../models/{category}/finetuned/{path}/encoder.pth")
+            torch.save(self.active_encoder.model.state_dict(), f"{final_dir}/encoder.pth")
         if trains_adapter:
-            self.model_instance.model.save_pretrained(f"{self.base_dir}/../../models/{category}/finetuned/{path}/adapter.pth")
-        if path is not None:
+            self.model_instance.model.save_pretrained(f"{final_dir}/adapter.pth")
+        if path is not None and self.logger is not None:
             summary_metrics = self.logger.summary()
-            summary_path = f"{self.base_dir}/../../models/{category}/finetuned/{path}/pipeline.json"
+            summary_path = f"{final_dir}/pipeline.json"
             with open(summary_path, 'w') as f:
                 json.dump(summary_metrics,f, indent=2)
 

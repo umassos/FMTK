@@ -32,6 +32,6 @@ dependencies = [
 "peft==0.10.0",
 "peakutils",
 "torch-ecg<=0.0.28",
-"mlflow",
+"mlflow==3.9.0",
 ]
 
