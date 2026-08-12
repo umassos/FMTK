@@ -107,23 +107,25 @@ class Logger:
         try:
             yield rec
         finally:
+            # Sync before stopping the clock, so async CUDA work has actually finished.
+            if HAS_TORCH and torch.cuda.is_available() and device is not None and "cuda" in str(device):
+                end_event.record()
+                if cuda_sync:
+                    torch.cuda.synchronize()
+
             t1 = time.perf_counter()
             rec["wall_time_sec"] = t1 - t0
 
             # GPU measures
             if HAS_TORCH and torch.cuda.is_available() and device is not None and "cuda" in str(device):
-                end_event.record()
-                if cuda_sync: 
-                    torch.cuda.synchronize()
                 rec["gpu_time_ms"] = start_event.elapsed_time(end_event)
                 rec["gpu_alloc_before"] = alloc_before
                 rec["gpu_alloc_peak"] = torch.cuda.max_memory_allocated(device)
                 rec["gpu_reserved_before"] = reserv_before
                 rec["gpu_reserved_peak"] = torch.cuda.max_memory_reserved(device)
-            
+
             if nvml_handle is not None:
                 try:
-                    if cuda_sync: torch.cuda.synchronize()
                     energy_after_mJ = nvml.nvmlDeviceGetTotalEnergyConsumption(nvml_handle)
                     if energy_after_mJ >= energy_before_mJ:
                         rec["gpu_energy_mJ"] = int(energy_after_mJ - energy_before_mJ)

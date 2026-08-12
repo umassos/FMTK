@@ -5,6 +5,22 @@ import numpy as np
 import pandas as pd
 from tqdm import tqdm
 
+
+def get_chronos_embed_dim(model_name):
+    """
+    T5 encoder hidden size (d_model) for each Chronos-T5 variant, confirmed
+    empirically via ChronosModel.forward() output shape (last dim) for
+    tiny/mini/small/base; large follows the same published Chronos-T5 sizing.
+    """
+    return {
+        "tiny": 256,
+        "mini": 384,
+        "small": 512,
+        "base": 768,
+        "large": 1024,
+    }[model_name]
+
+
 class ChronosModel(BaseModel):
     def __init__(self,device,model_name=None,model_config=None):
         super().__init__()
