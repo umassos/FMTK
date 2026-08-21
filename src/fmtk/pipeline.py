@@ -192,7 +192,7 @@ class Pipeline:
                 train_loader = self._encoder_loader(train_loader, cfg)
         if trains_adapter:
             adapter_params = list(self.model_instance.adapter_trainable_parameters())
-            param_groups.append({"params": adapter_params, "lr": cfg['lr']})
+            param_groups.append({"params": adapter_params, "lr": cfg.get('adapter_lr', cfg['lr'])})
             if hasattr(self.active_decoder,'fit'):
                 "Has own fit non differentiable"
                 raise ValueError("Need differentiable decoder as attached adapter. Because how will backward propagation happen")
@@ -211,7 +211,7 @@ class Pipeline:
             else:
                 dec_params = list(self.active_decoder.trainable_parameters())
                 if len(dec_params):
-                    param_groups.append({"params": dec_params, "lr": cfg['lr']})
+                    param_groups.append({"params": dec_params, "lr": cfg.get('decoder_lr', cfg['lr'])})
 
         # 1. If only training decoder, and 2. use_cache is True, then use cache
         use_cache = (

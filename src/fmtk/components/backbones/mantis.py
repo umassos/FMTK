@@ -40,14 +40,6 @@ class MantisModel(BaseModel):
                 x, size=512, mode="linear", align_corners=False
             )
 
-        # Mantis expects 1 input channel
-        if x.shape[1] != 1:
-            # Previously, this used to average across channels which leads to loss of information
-            # Better way is to run the pipeline separately for each channel
-            raise ValueError(
-                f"MantisModel currently only supports single-channel input, but got {x.shape[1]} channels."
-            )
-
         return x, mask
 
     def forward(self, batch_x, mask=None):
@@ -62,7 +54,15 @@ class MantisModel(BaseModel):
         ##  of the badckbone
         # self.network.train()  # enable training mode if needed
 
-        outputs = self.network(x)
+        # Mantis's network expects 1 input channel per forward call. Rather
+        # than averaging multi-channel input into one (which discards
+        # per-channel information, as the previous version of this method
+        # did), each channel is embedded independently -- B*C flattened into
+        # one batched call -- then reshaped back to [B, C, D] so the caller
+        # (e.g. LinearDecoder) still sees per-channel structure to pool over.
+        B, C, L = x.shape
+        x_flat = x.reshape(B * C, 1, L)
+        outputs = self.network(x_flat)
 
         # handle possible tuple/dict returns
         if isinstance(outputs, (tuple, list)):
@@ -72,6 +72,7 @@ class MantisModel(BaseModel):
         else:
             embedding = outputs
 
+        embedding = embedding.reshape(B, C, *embedding.shape[1:])
         return embedding
 
     @torch.no_grad()

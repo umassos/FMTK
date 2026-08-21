@@ -39,11 +39,23 @@ class PEMSDataset(TimeSeriesDataset):
     ~10k overlapping 512+pred_len windows, which would otherwise mean
     duplicating most of the array dozens of times over.
 
+    history_len (<= seq_len) controls how many of the seq_len steps fed to
+    the model are real: only the most recent history_len steps are read from
+    the series, the rest of the seq_len window is left-padded with zeros,
+    and `mask` is 0 over the padded prefix / 1 over the real steps -- so a
+    model pretrained on a fixed context (MOMENT expects exactly 512) can be
+    fed less real history without changing seq_len (and therefore without
+    changing patch count / decoder input size). Defaults to seq_len, i.e.
+    no padding, matching the previous behavior exactly.
+
     Parameters
     ----------
     dataset_cfg : dict
         dataset_path : str   directory containing PEMS08.npz            (required)
         seq_len      : int   context length fed to the model            (default: 512)
+        history_len  : int   real (unpadded) steps within seq_len; the
+                              leading seq_len - history_len steps are
+                              zero-padded and masked out                (default: seq_len)
         pred_len     : int   forecast horizon                           (default: 12)
         stride       : int   step between consecutive windows           (default: 1)
     task_cfg : dict
@@ -62,6 +74,10 @@ class PEMSDataset(TimeSeriesDataset):
         assert self.dataset_path, "dataset_cfg['dataset_path'] must be set."
 
         self.seq_len = dataset_cfg.get("seq_len", 512)
+        self.history_len = dataset_cfg.get("history_len", self.seq_len)
+        assert 0 < self.history_len <= self.seq_len, (
+            f"history_len ({self.history_len}) must be in (0, seq_len={self.seq_len}]"
+        )
         self.pred_len = dataset_cfg.get("pred_len", 12)
         self.stride = dataset_cfg.get("stride", 1)
         self.forecast_horizon = self.pred_len  # matches M4Dataset's attribute name
@@ -100,9 +116,12 @@ class PEMSDataset(TimeSeriesDataset):
 
     def __getitem__(self, index):
         t = self._starts[index]
-        x = self.series[:, t: t + self.seq_len]  # [N, seq_len]
+        pad_len = self.seq_len - self.history_len
+        x_real = self.series[:, t + pad_len: t + self.seq_len]  # [N, history_len]
+        x = np.pad(x_real, ((0, 0), (pad_len, 0))) if pad_len > 0 else x_real  # [N, seq_len]
         y = self.series[:, t + self.seq_len: t + self.seq_len + self.pred_len]  # [N, pred_len]
-        mask = np.ones(self.seq_len, dtype=np.float32)
+        mask = np.zeros(self.seq_len, dtype=np.float32)
+        mask[pad_len:] = 1.0
         return {"x": x, "mask": mask, "y": y, "idx": index}
 
     def preprocess(self):

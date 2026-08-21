@@ -48,16 +48,27 @@ class ChronosModel(BaseModel):
     
     def preprocess(self,batch_x,mask=None):
 
-        if mask is not None:
-            mask=mask.to(self.device)
-        
-        x=batch_x.float()        
+        x=batch_x.float()
         self.B, self.S, self.L = x.shape
         x = x.view(-1, self.L)
-        return x,None      
-    
+
+        if mask is not None:
+            # FMTK's mask is [B, L] (one mask shared across all S channels,
+            # e.g. PEMSDataset's history_len padding), 0 = padded/not-real.
+            # Chronos has no separate mask argument -- its tokenizer instead
+            # treats NaN values in the context as padding (excluded from its
+            # mean-scaling stats and marked pad in the T5 attention_mask it
+            # builds internally, confirmed via MeanScaleUniformBins._input_transform:
+            # `attention_mask = ~torch.isnan(context)`), so the FMTK mask is
+            # converted to that convention here rather than being dropped.
+            mask = mask.to(x.device)
+            mask_flat = mask.repeat_interleave(self.S, dim=0)  # [B*S, L], matches x's flattening order
+            x = x.masked_fill(mask_flat == 0, float("nan"))
+
+        return x, None
+
     def forward(self, batch_x, mask=None):
-        x, mask=self.preprocess(batch_x)
+        x, mask=self.preprocess(batch_x, mask)
         embedding, _ = self.model.embed(x)
         output=self.postprocess(embedding)
         return output
