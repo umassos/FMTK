@@ -140,7 +140,7 @@ class QwenTextModel(BaseModel):
             model_id,
             cache_dir=models_directory,
             torch_dtype=torch.bfloat16,
-            attn_implementation="flash_attention_2",
+            # attn_implementation="flash_attention_2",
             device_map={"": device},
         )
         self.model.eval()

@@ -25,12 +25,35 @@ class Pipeline:
         adapter_name = f'adapter_{self.adapter_id}'
         self.adapter_id += 1
         with (self.logger.measure(f"add_adapter_{path}", device=self.logger.device) if self.logger else nullcontext()):
-            if not train:
+            # vLLM-backed LLM path: model exposes register_adapter — multi-LoRA
+            # is routed per-request via LoRARequest, no HF PEFT wrap on weights.
+            if hasattr(self.model_instance, 'register_adapter'):
+                if path is None:
+                    raise ValueError("vLLM LoRA requires `path` to a saved adapter directory")
                 category = self.model_instance.model_category
-                adapter_dir = f"{self.base_dir}/../../models/{category}/finetuned/{path}/adapter.pth"
+                adapter_dir = f"{self.base_dir}/../../models/{category}/finetuned/{path}"
+                self.model_instance.register_adapter(adapter_name, adapter_dir)
+                return adapter_name
+            if not train:
                 if not self.model_instance.peft_enable:
                     self.model_instance.enable_peft(peft_cfg)
-                self.model_instance.model.load_adapter(adapter_dir, adapter_name=adapter_name)
+                category = self.model_instance.model_category
+                adapter_dir = (
+                    f"{self.base_dir}/../../models/{category}/finetuned/{path}/adapter.pth"
+                    if path is not None else None
+                )
+                if adapter_dir is not None and os.path.exists(adapter_dir):
+                    self.model_instance.model.load_adapter(adapter_dir, adapter_name=adapter_name)
+                else:
+                    # Fallback: register a fresh peft adapter slot with random
+                    # init (same call the training path uses). Use when the
+                    # finetuned checkpoint isn't on disk — e.g. throughput /
+                    # latency profiling where output values don't matter.
+                    print(f"[Pipeline] No adapter weights at {adapter_dir!r}; "
+                          f"random-initializing '{adapter_name}'. Not for accuracy use.")
+                    self.model_instance.model.add_adapter(
+                        adapter_name=adapter_name, peft_config=peft_cfg,
+                    )
                 return adapter_name
             # training path
             if self.model_instance.peft_enable:
@@ -212,6 +235,12 @@ class Pipeline:
             model.eval()
         else:
             return
+        # When peft is enabled, also eval the PeftModel wrapper itself.
+        # The branches above skip past it (down to the inner base model),
+        # which leaves PeftModel in training mode — peft then refuses
+        # `adapter_names` dispatch with a ValueError.
+        if getattr(model, "peft_enable", False) and isinstance(getattr(model, "model", None), torch.nn.Module):
+            model.model.eval()
     
     def forward(self,x,mask=None):
         if self.active_encoder is not None:
