@@ -19,3 +19,6 @@ memory/
 project-2.zip
 models/llm/pretrained
 models/tsfm/pretrained
+
+# MkDocs build output
+site/
