@@ -7,6 +7,7 @@ import os
 from contextlib import nullcontext
 import json
 from huggingface_hub import hf_hub_download
+from fmtk.embedding_cache import EmbeddingCache
 
 class Pipeline:
     def __init__(self, model_instance,logger=None):
@@ -20,7 +21,8 @@ class Pipeline:
         self.adapter_id=0
         self.encoder_id=0
         self.base_dir = os.path.dirname(__file__)
-        
+        self.embedding_cache = EmbeddingCache(cache_device='cpu', to_device=self.model_instance.device)
+
     def add_adapter(self, peft_cfg, load=True, train=True, path=None):
         adapter_name = f'adapter_{self.adapter_id}'
         self.adapter_id += 1
@@ -81,10 +83,10 @@ class Pipeline:
         if load:
             self.active_encoder = self.encoders[encoder_name]
         return f"{encoder_name}"
-    
+
     def unload_encoder(self):
         self.active_encoder=None
-    
+
     def add_decoder(self,decoder_obj,load=True,train=True,path=None):
         """Adds a named decoder to the manager."""
         decoder_name=f"decoder_{self.decoder_id}"
@@ -109,7 +111,7 @@ class Pipeline:
                         except Exception as e:
                             raise ValueError(f"Decoder file not found at {decoder_file}")
                     self.decoders[decoder_name].model.load_state_dict(torch.load(f"{decoder_file}"))
-                    
+
             else:
                 self.decoders[decoder_name] = decoder_obj
             self.decoder_id+=1
@@ -128,7 +130,7 @@ class Pipeline:
                 if self.active_decoder is not None:
                     self.active_decoder.to_cpu()
                 self.decoders[decoder_id].to_device()
-                
+
             self.active_decoder = self.decoders[decoder_id]
 
     def unload_decoder(self):
@@ -175,6 +177,13 @@ class Pipeline:
                 if len(dec_params):
                     param_groups.append({"params": dec_params, "lr": cfg['lr']})   
 
+        # 1. If only training decoder, and 2. use_cache is True, then use cache
+        use_cache = (
+            trains_decoder
+            and not trains_adapter
+            and not trains_encoder
+            and cfg.get("use_cache", False)
+        )
         with (self.logger.measure("train", device=self.logger.device) if self.logger else nullcontext()):
             optimizer = torch.optim.Adam(param_groups)
             if self.active_decoder is None:
@@ -195,8 +204,9 @@ class Pipeline:
                     for batch in tqdm(train_loader):
                         optimizer.zero_grad()
                         x, y = batch["x"], batch["y"]
+                        idx = batch.get("idx", None)
                         mask = batch.get("mask", None)
-                        logits = self.forward(x, mask)
+                        logits = self.forward(x, mask, use_cache=use_cache, idx=idx)
                         if (hasattr(self.active_decoder, "requires_model") and self.active_decoder.requires_model and hasattr(self.model_instance.model, "normalizer")):
                             logits = self.model_instance.model.normalizer(x=logits, mode="denorm")
                         if isinstance(criterion, (nn.MSELoss, nn.L1Loss, nn.SmoothL1Loss)):
@@ -207,7 +217,7 @@ class Pipeline:
                         loss = criterion(logits, y)
                         loss.backward()
                         optimizer.step()
-        
+
         category = self.model_instance.model_category
         os.makedirs(f"{self.base_dir}/../../models/{category}/finetuned/{path}",exist_ok=True)
         if trains_decoder:
@@ -242,11 +252,22 @@ class Pipeline:
         if getattr(model, "peft_enable", False) and isinstance(getattr(model, "model", None), torch.nn.Module):
             model.model.eval()
     
-    def forward(self,x,mask=None):
+    def forward(self,x,mask=None,use_cache=False,idx=None):
         if self.active_encoder is not None:
             x= self.active_encoder.forward(x)
         self.set_eval_mode()
-        feats=self.model_instance.forward(x,mask)
+        
+        if use_cache and idx is not None:
+            # TODO: Add functionality to partially use cache
+            # if only some of the idx are present
+            if self.embedding_cache.contains(idx):  # currently all idx need to be present in the cache
+                feats = self.embedding_cache.get(idx)
+            else:
+                feats = self.model_instance.forward(x, mask)
+                self.embedding_cache.put(idx, feats)
+        else:
+            feats = self.model_instance.forward(x, mask)
+    
         logits = self.active_decoder.forward((feats))
         return logits 
 
@@ -262,7 +283,7 @@ class Pipeline:
                         return self.active_decoder.predict(self.model_instance.model, test_embed_loader)
                     else:
                         return self.active_decoder.predict(test_embed_loader)
-                        
+
             else:
                 preds=[]
                 labels=[]
@@ -311,7 +332,7 @@ class Pipeline:
             ys.append(y)
         tensor_dataset = torch.utils.data.TensorDataset(torch.tensor(x),torch.tensor(y))
         return torch.utils.data.DataLoader(tensor_dataset, batch_size=cfg['batch_size'], shuffle=cfg['shuffle'])
-    
+
     def _embed_loader(self, dataloader, cfg):
         """
         Uses model_instance.predict() to extract embedding tensors and wraps them into a DataLoader.
@@ -321,4 +342,3 @@ class Pipeline:
         x, y = self.model_instance.predict(dataloader)
         tensor_dataset = torch.utils.data.TensorDataset(torch.tensor(x),torch.tensor(y))
         return torch.utils.data.DataLoader(tensor_dataset, batch_size=cfg['batch_size'], shuffle=cfg['shuffle'])
-    
