@@ -37,6 +37,8 @@ class DinoV2Model(BaseModel):
         self.device = device
         self.model_category = 'vision'
         self.return_all_tokens = model_config.get("return_all_tokens", False)
+        # hidden_states indices to return (0 = embeddings, -1 = last block); None = last_hidden_state
+        self.layers = model_config.get("layers", None)
         # Default to base model if not specified or not recognized
         self.model_id = get_dinov2_model_id(model_name)
 
@@ -79,9 +81,19 @@ class DinoV2Model(BaseModel):
         #         last_hidden_state = outputs.last_hidden_state
         #         embeddings = last_hidden_state[:, 0, :]  # [batch_size, hidden_size]
 
-        outputs = self.model(x)
-        embeddings = outputs.last_hidden_state
+        if self.layers is None:
+            outputs = self.model(x)
+            embeddings = outputs.last_hidden_state
+        else:
+            outputs = self.model(x, output_hidden_states=True)
+            embeddings = self.select_hidden_states(outputs, self.layers, norm=self.model.layernorm)
         return embeddings
+
+    def select_hidden_states(self, outputs, layers, norm=None):
+        hs = [outputs.hidden_states[i] for i in layers]
+        if norm is not None:
+            hs = [norm(h) for h in hs]
+        return torch.stack(hs, dim=1)  # [B, len(layers), T, D]
 
     @singledispatchmethod
     @torch.no_grad()

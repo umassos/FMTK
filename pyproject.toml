@@ -30,6 +30,7 @@ dependencies = [
 "momentfm",
 "pynvml",
 "peft==0.10.0",
+"timm>=0.9",
 "peakutils",
 "torch-ecg<=0.0.28",
 ]

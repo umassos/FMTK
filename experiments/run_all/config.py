@@ -233,6 +233,18 @@ backbones={
         'model_type': 'vgg',
         'model_name': 'vgg19',
     },
+    'convnexttiny': {
+        'model_type': 'convnext',
+        'model_name': 'tiny',
+    },
+    'convnextv2tiny': {
+        'model_type': 'convnext',
+        'model_name': 'v2-tiny',
+    },
+    'beitv2base': {
+        'model_type': 'beit',
+        'model_name': 'base',
+    },
     # ── LLM (text-only) backbones ──────────────────────────────────────
     'llama-3.1-8b': {
         'model_type': 'llama_text',
@@ -792,6 +804,20 @@ adapters={
         'adapter_config':{'r':16,
                 'lora_alpha':32,
                 'target_modules':["q_proj", "v_proj"],
+                'lora_dropout':0.05}
+        },
+    'lora_beit':{
+        'adapter_type': 'lora',
+        'adapter_config':{'r':64,
+                'lora_alpha':32,
+                'target_modules':["qkv"],
+                'lora_dropout':0.05}
+        },
+    'lora_convnext':{
+        'adapter_type': 'lora',
+        'adapter_config':{'r':64,
+                'lora_alpha':32,
+                'target_modules':["pwconv1", "pwconv2"],
                 'lora_dropout':0.05}
         },
 }

@@ -55,6 +55,30 @@ def get_mIoU(y_test, y_pred, num_classes, ignore_index=255):
     return {"mIoU": miou, "per_class_iou": iou_per_class}
 
 
+def seg_intersect_union(y_pred, y_test, num_classes, ignore_index=255):
+    """Per-class intersection and union pixel counts for one image (masks of any size)."""
+    import torch
+
+    y_pred = torch.as_tensor(y_pred).reshape(-1).long()
+    y_test = torch.as_tensor(y_test).reshape(-1).long()
+    mask = y_test != ignore_index
+    y_pred, y_test = y_pred[mask], y_test[mask]
+
+    area_inter = torch.bincount(y_pred[y_pred == y_test], minlength=num_classes)
+    area_pred = torch.bincount(y_pred, minlength=num_classes)
+    area_test = torch.bincount(y_test, minlength=num_classes)
+    return area_inter.cpu().numpy(), (area_pred + area_test - area_inter).cpu().numpy()
+
+
+def get_mIoU_from_areas(area_inter, area_union):
+    """mIoU from intersection/union counts summed over a dataset; same output as get_mIoU."""
+    with np.errstate(divide="ignore", invalid="ignore"):
+        iou = np.where(area_union > 0, area_inter / area_union, np.nan)
+    valid = iou[~np.isnan(iou)]
+    miou = float(valid.mean()) if valid.size else 0.0
+    return {"mIoU": miou, "per_class_iou": iou.tolist()}
+
+
 def get_accuracy(y_test, y_pred):
     def normalize(x):
         if isinstance(x, str):

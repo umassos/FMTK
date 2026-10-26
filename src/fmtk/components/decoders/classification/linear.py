@@ -11,7 +11,16 @@ class LinearDecoder(nn.Module, BaseVisionDecoder):
     def __init__(self, device, cfg):
         super().__init__()
         self.device = device
-        self.model = nn.Linear(in_features=cfg['input_dim'], out_features=cfg['output_dim'])
+        head = nn.Linear(in_features=cfg['input_dim'], out_features=cfg['output_dim'])
+        layers = nn.Sequential()
+        if cfg.get('norm', False):
+            layers.add_module('norm', nn.LayerNorm(cfg['input_dim'], eps=cfg.get('norm_eps', 1e-6)))
+        if len(layers) == 0:
+            # bare Linear keeps the weight/bias keys of existing checkpoints
+            self.model = head
+        else:
+            layers.add_module('head', head)
+            self.model = layers
         self.criterion = nn.CrossEntropyLoss()
         self.mode = cfg.get('mode', None)
 
