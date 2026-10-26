@@ -68,7 +68,9 @@ class ADE20KDataset(VisionDataset):
     ----------
     dataset_cfg : dict
         Must contain ``dataset_path``.  Optional keys:
-        ``target_size`` (default 512), ``mean``, ``std``.
+        ``target_size`` (default 512), ``mean``, ``std``,
+        ``resize_mode`` ("square" default; "short_side" keeps aspect ratio and returns labels at original size),
+        ``interpolation`` ("bicubic" default or "bilinear"), ``antialias`` (default True).
     task_cfg : dict
         Task configuration (e.g. ``{"task_type": "segmentation"}``).
     split : str
@@ -86,6 +88,9 @@ class ADE20KDataset(VisionDataset):
         self.mean = dataset_cfg.get("mean", [0.485, 0.456, 0.406])
         self.std = dataset_cfg.get("std", [0.229, 0.224, 0.225])
         self.target_size = dataset_cfg.get("target_size", 512)
+        self.resize_mode = dataset_cfg.get("resize_mode", "square")
+        self.interpolation = dataset_cfg.get("interpolation", "bicubic")
+        self.antialias = dataset_cfg.get("antialias", True)
         self.num_channels = 3
         self.num_classes = NUM_CLASSES
         self.class_names = list(ADE20K_CLASSES)
@@ -148,6 +153,7 @@ class ADE20KDataset(VisionDataset):
 
         if self.transform is not None:
             image = self.transform(image)
+        if self.transform is not None and self.resize_mode == "square":
             seg = TF.resize(
                 seg,
                 [self.target_size, self.target_size],
@@ -170,9 +176,10 @@ class ADE20KDataset(VisionDataset):
         self.transform = transforms.Compose(
             [
                 transforms.Resize(
-                    (self.target_size, self.target_size),
-                    interpolation=transforms.InterpolationMode.BICUBIC,
-                    antialias=True,
+                    # int resizes the short side and keeps the aspect ratio
+                    (self.target_size, self.target_size) if self.resize_mode == "square" else self.target_size,
+                    interpolation=transforms.InterpolationMode(self.interpolation),
+                    antialias=self.antialias,
                 ),
                 transforms.ToTensor(),
                 transforms.Normalize(self.mean, self.std),

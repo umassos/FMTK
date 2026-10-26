@@ -16,6 +16,7 @@ class ImageNet1kDataset(VisionDataset):
             Root directory passed to load_from_disk (the directory that
             contains the 'train' and 'val' shards).
         target_size : int, optional  (default 224)
+        resize_size : int, optional  (default target_size)
         mean : list[float], optional (default ImageNet stats)
         std  : list[float], optional (default ImageNet stats)
     task_cfg : dict
@@ -34,6 +35,7 @@ class ImageNet1kDataset(VisionDataset):
         self.mean = dataset_cfg.get("mean", [0.485, 0.456, 0.406])
         self.std  = dataset_cfg.get("std",  [0.229, 0.224, 0.225])
         self.target_size = dataset_cfg.get("target_size", 224)
+        self.resize_size = dataset_cfg.get("resize_size", self.target_size)
         self.num_channels = 3
         self.num_classes  = self.NUM_CLASSES
         self.transform = None
@@ -68,7 +70,7 @@ class ImageNet1kDataset(VisionDataset):
     def preprocess(self):
         self.transform = transforms.Compose([
             transforms.Resize(
-                self.target_size,
+                self.resize_size,
                 interpolation=transforms.InterpolationMode.BICUBIC,
                 antialias=True,
             ),

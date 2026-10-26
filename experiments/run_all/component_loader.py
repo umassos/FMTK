@@ -44,6 +44,12 @@ def get_model_class(model_type):
     elif model_type == 'vgg':
         from fmtk.components.backbones.vgg import VGGModel
         return VGGModel
+    elif model_type == 'convnext':
+        from fmtk.components.backbones.convnext import ConvNextModel
+        return ConvNextModel
+    elif model_type == 'beit':
+        from fmtk.components.backbones.beit import BEiTModel
+        return BEiTModel
     # ── LLM (text-only) backbones ──────────────────────────────────────
     elif model_type == 'llama_text':
         from fmtk.components.backbones.llama import LlamaModel
@@ -77,6 +83,9 @@ def get_decoder_class(task_type,decoder_type):
         if decoder_type == 'linear_seg':
             from fmtk.components.decoders.segmentation.LinearSemanticSegmenter import LinearSemanticSegmenter
             return LinearSemanticSegmenter
+        elif decoder_type == 'bn_linear_seg':
+            from fmtk.components.decoders.segmentation.BNLinearSemanticSegmenter import BNLinearSemanticSegmenter
+            return BNLinearSemanticSegmenter
     elif task_type=='classification':
         if decoder_type == 'logistic':
             from fmtk.components.decoders.classification.logisticregression import LogisticDecoder
