@@ -137,6 +137,15 @@ class TestPipelineTasks(unittest.TestCase):
                 self.pipeline.register_task("t", path)
         self.assertEqual(self.pipeline.graph.tasks, {})
 
+    def test_backbone_survives_removing_last_task(self):
+        self.pipeline.add_component("head", self.head)
+        self.pipeline.register_task("t", ["backbone", "head"])
+        self.pipeline.remove_task("t")
+        self.assertNotIn("head", self.pipeline.graph.components)
+        self.pipeline.add_component("head", self.head)
+        self.pipeline.register_task("t", ["backbone", "head"])
+        self.assertEqual(self.pipeline.forward(torch.randn(2, 4), task="t").shape, (2, 3))
+
     def test_legacy_forward_unchanged(self):
         self.pipeline.add_decoder(self.head, load=True, train=True)
         x = torch.randn(2, 4)

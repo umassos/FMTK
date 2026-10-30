@@ -57,14 +57,14 @@ class TaskGraph:
         self._tasks = {**self._tasks, task_id: path}
         self._task_dag = {**self._task_dag, task_id: tuple(self._fns[n] for n in path)}
 
-    def remove_task(self, task_id: str, drop_unused: bool = True) -> None:
-        """Remove a task and, optionally, the components no remaining task uses."""
+    def remove_task(self, task_id: str, drop_unused: bool = True, keep: Sequence[str] = ()) -> None:
+        """Remove a task and, optionally, the components no remaining task uses, except those in keep."""
         path = self._tasks.get(task_id, ())
         self._tasks = {k: v for k, v in self._tasks.items() if k != task_id}
         self._task_dag = {k: v for k, v in self._task_dag.items() if k != task_id}
         if drop_unused:
             still_used = {n for p in self._tasks.values() for n in p}
-            for name in set(path) - still_used:
+            for name in set(path) - still_used - set(keep):
                 self.remove_component(name)
 
     def forward(self, x: Any, task: str) -> Any:

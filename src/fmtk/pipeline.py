@@ -44,7 +44,7 @@ class Pipeline:
 
     def remove_task(self, task_id, drop_unused=True):
         """Removes a task and, optionally, components no other task uses."""
-        self.graph.remove_task(task_id, drop_unused)
+        self.graph.remove_task(task_id, drop_unused, keep=("backbone",))
 
     def forward_tasks(self, x, tasks, on_output=None):
         """Runs a mixed batch with one task per sample; on_output(i, y) fires as each sample finishes."""
