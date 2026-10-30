@@ -8,6 +8,7 @@ from contextlib import nullcontext
 import json
 from huggingface_hub import hf_hub_download
 from fmtk.embedding_cache import EmbeddingCache
+from fmtk.task_graph import TaskGraph
 
 class Pipeline:
     def __init__(self, model_instance,logger=None):
@@ -22,6 +23,32 @@ class Pipeline:
         self.encoder_id=0
         self.base_dir = os.path.dirname(__file__)
         self.embedding_cache = EmbeddingCache(cache_device='cpu', to_device=self.model_instance.device)
+        self.graph = TaskGraph()
+        self.graph.add_component("backbone", lambda x: self.model_instance.forward(x, None))
+
+    def add_component(self, name, obj):
+        """Registers a named component usable in task paths."""
+        self.graph.add_component(name, obj)
+
+    def remove_component(self, name):
+        """Removes a component that no task uses."""
+        self.graph.remove_component(name)
+
+    def register_task(self, task_id, path):
+        """Registers a task as a path of component names, e.g. ["backbone", "stitch", "head"]."""
+        path = tuple(path)
+        if path.count("backbone") != 1 or path[-1] == "backbone":
+            raise ValueError(f"task {task_id!r}: path needs exactly one 'backbone' and a component after it")
+        self.set_eval_mode()
+        self.graph.register_task(task_id, path)
+
+    def remove_task(self, task_id, drop_unused=True):
+        """Removes a task and, optionally, components no other task uses."""
+        self.graph.remove_task(task_id, drop_unused)
+
+    def forward_tasks(self, x, tasks, on_output=None):
+        """Runs a mixed batch with one task per sample; on_output(i, y) fires as each sample finishes."""
+        return self.graph.forward_tasks(x, tasks, on_output)
 
     def add_adapter(self, peft_cfg, load=True, train=True, path=None):
         adapter_name = f'adapter_{self.adapter_id}'
@@ -252,7 +279,9 @@ class Pipeline:
         if getattr(model, "peft_enable", False) and isinstance(getattr(model, "model", None), torch.nn.Module):
             model.model.eval()
     
-    def forward(self,x,mask=None,use_cache=False,idx=None):
+    def forward(self,x,mask=None,use_cache=False,idx=None,task=None):
+        if task is not None:
+            return self.graph.forward(x, task)
         if self.active_encoder is not None:
             x= self.active_encoder.forward(x)
         self.set_eval_mode()
