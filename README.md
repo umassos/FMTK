@@ -9,6 +9,7 @@ Foundation models (FMs) have opened new avenues for machine learning application
 ```
 fmtk/
 ├── pipeline.py             # Main pipeline implementation
+├── task_graph.py           # Named components and task paths (used by Pipeline)
 ├── metrics.py              # Evaluation metrics
 ├── utils.py                # Evaluation metrics
 ├── logger.py               # Memory, Energy logger
@@ -29,6 +30,25 @@ fmtk/
 │       └── forecasting/
 │           └── ...         # Forecasting decoders
 ```
+
+### Tasks and components
+A pipeline can hold several named components and serve several tasks. Each task is a path through those components, starting from the backbone:
+```python
+p = Pipeline(backbone)                      # the backbone is registered as "backbone"
+p.add_component("head_a", decoder_a)        # any object with forward(x), or a callable
+p.add_component("adapter_x", my_component)
+p.add_component("head_b", decoder_b)
+p.register_task("task_a", ["backbone", "head_a"])
+p.register_task("task_b", ["backbone", "adapter_x", "head_b"])
+
+y = p.forward(x, task="task_b")                              # one task per call
+ys = p.forward_tasks(x, ["task_a", "task_b", "task_a"])      # one task per sample
+```
+- Paths are checked, and added to the task DAG, when you call `register_task`, so `forward(x, task=...)` only runs the components in order, under `torch.inference_mode()`.
+- `forward_tasks` runs each component once per wave on every sample whose path reaches it, including components shared after different backbones. It returns the per-sample outputs in input order.
+- `remove_task(task_id)` also removes components that no other task uses.
+- `forward(x)` without `task` keeps the original single-decoder behaviour.
+- Tests and the overhead benchmark: `mkdir -p logs && sbatch tests/run_tests.sbatch`.
 
 ## Installation
 
