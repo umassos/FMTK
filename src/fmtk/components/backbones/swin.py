@@ -45,8 +45,8 @@ class SwinModel(BaseModel):
 
         print(f"[Swin] Loading {self.model_id} on device {device}")
 
-        self.model = AutoModel.from_pretrained(self.model_id)
-        self.processor = AutoImageProcessor.from_pretrained(self.model_id)
+        self.model = AutoModel.from_pretrained(self.model_id, cache_dir=model_config.get("cache_dir"))
+        self.processor = AutoImageProcessor.from_pretrained(self.model_id, cache_dir=model_config.get("cache_dir"))
 
         self.model.to(device)
         self.peft_enable = False

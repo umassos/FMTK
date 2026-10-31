@@ -37,7 +37,7 @@ class BEiTModel(BaseModel):
 
         print(f"[BEiT] Loading {self.model_id} on device {device}")
 
-        self.model = timm.create_model(self.model_id, pretrained=True, num_classes=0)
+        self.model = timm.create_model(self.model_id, pretrained=True, num_classes=0, cache_dir=model_config.get("cache_dir"))
         self.model.to(device)
 
         self.peft_enable = False

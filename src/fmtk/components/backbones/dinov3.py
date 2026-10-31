@@ -61,7 +61,7 @@ class DinoV3Model(BaseModel):
     DINOv3 model for vision tasks.
     """
 
-    def __init__(self, device, model_name="vitb16", return_all_tokens=False):
+    def __init__(self, device, model_name="vitb16", return_all_tokens=False, model_config={}):
         super().__init__()
         self.device = device
         self.model_category = 'vision'
@@ -75,8 +75,8 @@ class DinoV3Model(BaseModel):
 
         print(f"[DINO v3] Loading {self.model_id} on device {device}")
 
-        self.model = AutoModel.from_pretrained(self.model_id)
-        self.processor = AutoImageProcessor.from_pretrained(self.model_id)
+        self.model = AutoModel.from_pretrained(self.model_id, cache_dir=model_config.get("cache_dir"))
+        self.processor = AutoImageProcessor.from_pretrained(self.model_id, cache_dir=model_config.get("cache_dir"))
 
         self.model.to(device)
         self.peft_enable = False

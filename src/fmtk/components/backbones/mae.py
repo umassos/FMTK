@@ -43,8 +43,8 @@ class MAEModel(BaseModel):
         self.embed_dim = get_mae_embed_dim(self.model_id)
         print(f"[MAE] Loading {self.model_id} on device {device}")
 
-        self.model = AutoModel.from_pretrained(self.model_id)
-        self.processor = AutoImageProcessor.from_pretrained(self.model_id)
+        self.model = AutoModel.from_pretrained(self.model_id, cache_dir=model_config.get("cache_dir"))
+        self.processor = AutoImageProcessor.from_pretrained(self.model_id, cache_dir=model_config.get("cache_dir"))
 
         self.model.to(device)
         self.peft_enable = False
