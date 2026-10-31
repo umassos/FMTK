@@ -653,7 +653,7 @@ class ResNetVisionModel(BaseModel):
         # embed_dim = EMBED_DIMS[model_id]
 
         print(f"[ResNet Vision] Loading {self.model_id} on device {self.device}")
-        self.model = ResNetModel.from_pretrained(self.model_id)
+        self.model = ResNetModel.from_pretrained(self.model_id, cache_dir=model_config.get("cache_dir"))
 
         self.model.to(device)
         self.embed_dim = get_resnet_vision_embed_dim(self.model_id)

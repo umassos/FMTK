@@ -7,16 +7,17 @@ import os
 import time
 from contextlib import nullcontext
 import json
-from huggingface_hub import hf_hub_download
 from fmtk.embedding_cache import EmbeddingCache
 from fmtk.metrics import get_accuracy
+from fmtk.model_store import decoder_file
 from fmtk.utils import AverageMeter
 from fmtk.task_graph import TaskGraph
 
 class Pipeline:
-    def __init__(self, model_instance,logger=None,checkpoint_root=None):
+    def __init__(self, model_instance,logger=None,checkpoint_root=None,finetuned_dir=None):
         self.logger=logger
         self.checkpoint_root = checkpoint_root
+        self.finetuned_dir = finetuned_dir
         self.model_instance = model_instance
         self.decoders = {}
         self.encoders = {}
@@ -29,6 +30,12 @@ class Pipeline:
         self.embedding_cache = EmbeddingCache(cache_device='cpu', to_device=self.model_instance.device)
         self.graph = TaskGraph()
         self.graph.add_component("backbone", lambda x: self.model_instance.forward(x, None))
+
+    def _finetuned_dir(self):
+        """Folder of finetuned weights: the one given to the pipeline, else FMTK's models folder."""
+        if self.finetuned_dir is not None:
+            return self.finetuned_dir
+        return f"{self.base_dir}/../../models/{self.model_instance.model_category}/finetuned"
 
     def add_component(self, name, obj):
         """Registers a named component usable in task paths."""
@@ -63,16 +70,14 @@ class Pipeline:
             if hasattr(self.model_instance, 'register_adapter'):
                 if path is None:
                     raise ValueError("vLLM LoRA requires `path` to a saved adapter directory")
-                category = self.model_instance.model_category
-                adapter_dir = f"{self.base_dir}/../../models/{category}/finetuned/{path}"
+                adapter_dir = f"{self._finetuned_dir()}/{path}"
                 self.model_instance.register_adapter(adapter_name, adapter_dir)
                 return adapter_name
             if not train:
                 if not self.model_instance.peft_enable:
                     self.model_instance.enable_peft(peft_cfg)
-                category = self.model_instance.model_category
                 adapter_dir = (
-                    f"{self.base_dir}/../../models/{category}/finetuned/{path}/adapter.pth"
+                    f"{self._finetuned_dir()}/{path}/adapter.pth"
                     if path is not None else None
                 )
                 if adapter_dir is not None and os.path.exists(adapter_dir):
@@ -130,18 +135,8 @@ class Pipeline:
                     self.decoders[decoder_name]= decoder_obj
                 else:
                     self.decoders[decoder_name]= decoder_obj
-                    category = self.model_instance.model_category
-                    decoder_file=f"{self.base_dir}/../../models/{category}/finetuned/{path}/decoder.pth"
-                    if not os.path.exists(decoder_file):
-                        try:
-                            decoder_file = hf_hub_download(repo_id="umass-lass/fmtk-decoder-zoo",
-                                                        filename=f"decoder.pth",
-                                                        subfolder=f"{path}",
-                                                        local_dir=f"{self.base_dir}/../../models/{category}/finetuned",
-                                                        token=open(f"{self.base_dir}/../../hf-token.txt").read().strip())
-                        except Exception as e:
-                            raise ValueError(f"Decoder file not found at {decoder_file}")
-                    self.decoders[decoder_name].model.load_state_dict(torch.load(f"{decoder_file}"))
+                    weights = decoder_file(path, self._finetuned_dir())
+                    self.decoders[decoder_name].model.load_state_dict(torch.load(f"{weights}"))
 
             else:
                 self.decoders[decoder_name] = decoder_obj
@@ -173,7 +168,7 @@ class Pipeline:
         if self.checkpoint_root is not None:
             d = f"{self.checkpoint_root}/{category}/{path}"
         else:
-            d = f"{self.base_dir}/../../models/{category}/finetuned/{path}"
+            d = f"{self._finetuned_dir()}/{path}"
         os.makedirs(d, exist_ok=True)
         return d
 
