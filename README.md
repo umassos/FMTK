@@ -50,6 +50,17 @@ ys = p.forward_tasks(x, ["task_a", "task_b", "task_a"])      # one task per samp
 - `forward(x)` without `task` keeps the original single-decoder behaviour.
 - Tests and the overhead benchmark: `mkdir -p logs && sbatch tests/run_tests.sbatch`.
 
+### Model locations
+By default, finetuned weights live in FMTK's `models/<category>/finetuned/` and backbones in the default Hugging Face cache. Both can point somewhere else:
+```python
+backbone = DinoV2Model(device, "base", {"cache_dir": "/data/models/backbones"})
+p = Pipeline(backbone, finetuned_dir="/data/models/decoders")
+p.add_decoder(decoder, train=False, path="imagenetclass_dinobase_linear")
+```
+- `finetuned_dir` holds `<path>/decoder.pth`, and also the encoder, adapter and `pipeline.json` that `train()` saves there. A decoder missing from it is downloaded from `umass-lass/fmtk-decoder-zoo`, which is public, so no token file is needed.
+- `cache_dir` is a Hugging Face cache folder. The vision backbones `dinov2`, `dinov3`, `mae`, `convnext`, `swin`, `resnet`, `beit` and `vgg` accept it. `dinov3` takes it by keyword, as `model_config={...}`. The LLM and VLM backbones keep their fixed `models/*/pretrained` folders.
+- `fmtk.model_store.decoder_file(name, folder)` finds or downloads one decoder without building a pipeline.
+
 ## Installation
 
 Clone the repo and run the install script:
