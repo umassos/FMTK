@@ -4,14 +4,18 @@ import numpy as np
 import torch.nn as nn
 from tqdm import tqdm
 import os
+import time
 from contextlib import nullcontext
 import json
 from huggingface_hub import hf_hub_download
 from fmtk.embedding_cache import EmbeddingCache
+from fmtk.metrics import get_accuracy
+from fmtk.utils import AverageMeter
 
 class Pipeline:
-    def __init__(self, model_instance,logger=None):
+    def __init__(self, model_instance,logger=None,checkpoint_root=None):
         self.logger=logger
+        self.checkpoint_root = checkpoint_root
         self.model_instance = model_instance
         self.decoders = {}
         self.encoders = {}
@@ -136,10 +140,63 @@ class Pipeline:
     def unload_decoder(self):
         self.active_decoder=None
 
-    def train(self, train_loader, val_loader=None, parts_to_train=['decoder'],cfg=None,path=None):
+    def _checkpoint_dir(self, path):
+        """Returns the folder holding a path's weights and checkpoints, creating it if needed."""
+        category = self.model_instance.model_category
+        if self.checkpoint_root is not None:
+            d = f"{self.checkpoint_root}/{category}/{path}"
+        else:
+            d = f"{self.base_dir}/../../models/{category}/finetuned/{path}"
+        os.makedirs(d, exist_ok=True)
+        return d
+
+    def _save_checkpoint(self, path, kind, epoch, optimizer, scheduler, best_metric, run_id, parts_to_train):
+        """Saves training state to {kind}_checkpoint.pt."""
+        state = {
+            "epoch": epoch,
+            "optimizer_state": optimizer.state_dict(),
+            "scheduler_state": scheduler.state_dict() if scheduler is not None else None,
+            "best_metric": best_metric,
+            "run_id": run_id,
+        }
+        if 'decoder' in parts_to_train:
+            state["decoder_state"] = self.active_decoder.model.state_dict()
+        if 'encoder' in parts_to_train:
+            state["encoder_state"] = self.active_encoder.model.state_dict()
+        if 'adapter' in parts_to_train:
+            state["adapter_state"] = {n: p.detach() for n, p in self.model_instance.model.named_parameters() if p.requires_grad}
+        torch.save(state, f"{self._checkpoint_dir(path)}/{kind}_checkpoint.pt")
+
+    def _load_checkpoint(self, path, kind):
+        """Reads {kind}_checkpoint.pt."""
+        ckpt_path = f"{self._checkpoint_dir(path)}/{kind}_checkpoint.pt"
+        if not os.path.exists(ckpt_path):
+            raise FileNotFoundError(f"No {kind} checkpoint found at {ckpt_path}")
+        return torch.load(ckpt_path, map_location="cpu")
+
+    def load_best_checkpoint(self, path, trains_decoder=True, trains_encoder=False, trains_adapter=False):
+        """Loads the best checkpoint's weights into the active components."""
+        checkpoint = self._load_checkpoint(path, "best")
+        if trains_decoder and "decoder_state" in checkpoint:
+            self.active_decoder.model.load_state_dict(checkpoint["decoder_state"])
+        if trains_encoder and "encoder_state" in checkpoint:
+            self.active_encoder.model.load_state_dict(checkpoint["encoder_state"])
+        if trains_adapter and "adapter_state" in checkpoint:
+            self.model_instance.model.load_state_dict(checkpoint["adapter_state"], strict=False)
+        return checkpoint
+
+    def checkpoint_run_id(self, path, kind="last"):
+        """Returns the tracking run id stored in a checkpoint."""
+        return self._load_checkpoint(path, kind).get("run_id")
+
+    def train(self, train_loader, val_loader=None, parts_to_train=['decoder'],cfg=None,path=None,
+              metric_fn=None, ml_logger=None, resume_from=None):
         trains_decoder = 'decoder' in parts_to_train
         trains_adapter = 'adapter' in parts_to_train
         trains_encoder = 'encoder' in parts_to_train
+
+        if resume_from is not None and trains_adapter:
+            raise ValueError("resume_from is not supported when 'adapter' is in parts_to_train.")
 
         param_groups = []
         if self.active_encoder is not None:
@@ -157,7 +214,7 @@ class Pipeline:
                 train_loader = self._encoder_loader(train_loader, cfg)
         if trains_adapter:
             adapter_params = list(self.model_instance.adapter_trainable_parameters())
-            param_groups.append({"params": adapter_params, "lr": cfg['lr']})
+            param_groups.append({"params": adapter_params, "lr": cfg.get('adapter_lr', cfg['lr'])})
             if self.active_decoder and hasattr(self.active_decoder, 'fit'):
                 raise ValueError("Need differentiable decoder as attached adapter. Because how will backward propagation happen")
         if trains_decoder:
@@ -175,7 +232,7 @@ class Pipeline:
             else:
                 dec_params = list(self.active_decoder.trainable_parameters())
                 if len(dec_params):
-                    param_groups.append({"params": dec_params, "lr": cfg['lr']})   
+                    param_groups.append({"params": dec_params, "lr": cfg.get('decoder_lr', cfg['lr'])})
 
         # 1. If only training decoder, and 2. use_cache is True, then use cache
         use_cache = (
@@ -199,38 +256,153 @@ class Pipeline:
                         scaler.step(optimizer)
                         scaler.update()
             else:
-                criterion = getattr(self.active_decoder, "criterion")
-                for _ in range(cfg['epochs']):
-                    for batch in tqdm(train_loader):
-                        optimizer.zero_grad()
-                        x, y = batch["x"], batch["y"]
-                        idx = batch.get("idx", None)
-                        mask = batch.get("mask", None)
-                        logits = self.forward(x, mask, use_cache=use_cache, idx=idx)
-                        if (hasattr(self.active_decoder, "requires_model") and self.active_decoder.requires_model and hasattr(self.model_instance.model, "normalizer")):
-                            logits = self.model_instance.model.normalizer(x=logits, mode="denorm")
-                        if isinstance(criterion, (nn.MSELoss, nn.L1Loss, nn.SmoothL1Loss)):
-                            logits = logits.float()
-                            y = y.to(self.active_decoder.device).float()
-                        elif isinstance(criterion, (nn.CrossEntropyLoss)):
-                            y = y.to(self.active_decoder.device)
-                        loss = criterion(logits, y)
-                        loss.backward()
-                        optimizer.step()
+                self._train_decoder(train_loader, val_loader, optimizer, parts_to_train, cfg, path, use_cache, metric_fn, ml_logger, resume_from)
 
-        category = self.model_instance.model_category
-        os.makedirs(f"{self.base_dir}/../../models/{category}/finetuned/{path}",exist_ok=True)
+        final_dir = self._checkpoint_dir(path)
         if trains_decoder:
-            torch.save(self.active_decoder.model.state_dict(), f"{self.base_dir}/../../models/{category}/finetuned/{path}/decoder.pth")
+            torch.save(self.active_decoder.model.state_dict(), f"{final_dir}/decoder.pth")
         if trains_encoder:
-            torch.save(self.active_encoder.model.state_dict(), f"{self.base_dir}/../../models/{category}/finetuned/{path}/encoder.pth")
+            torch.save(self.active_encoder.model.state_dict(), f"{final_dir}/encoder.pth")
         if trains_adapter:
-            self.model_instance.model.save_pretrained(f"{self.base_dir}/../../models/{category}/finetuned/{path}/adapter.pth")
-        if path is not None:
+            self.model_instance.model.save_pretrained(f"{final_dir}/adapter.pth")
+        if path is not None and self.logger is not None:
             summary_metrics = self.logger.summary()
-            summary_path = f"{self.base_dir}/../../models/{category}/finetuned/{path}/pipeline.json"
+            summary_path = f"{final_dir}/pipeline.json"
             with open(summary_path, 'w') as f:
                 json.dump(summary_metrics,f, indent=2)
+
+    def _train_decoder(self, train_loader, val_loader, optimizer, parts_to_train, cfg, path, use_cache, metric_fn, ml_logger, resume_from):
+        """Runs the decoder training loop with validation, checkpointing and tracker logging."""
+        if val_loader is not None and metric_fn is None:
+            metric_fn = get_accuracy
+        criterion = getattr(self.active_decoder, "criterion")
+
+        scheduler = None
+        min_lr = cfg['lr']
+        if cfg.get('scheduler'):
+            sc = cfg['scheduler']
+            if sc['type'] == 'cosine':
+                scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=sc['T_max'], eta_min=sc.get('eta_min', 0))
+                min_lr = sc.get('eta_min', 0)
+            else:
+                raise ValueError(f"Unsupported scheduler type: {sc['type']}")
+
+        start_epoch = 0
+        best_metric = None
+        continues_run = False
+        if resume_from is not None:
+            checkpoint = self._load_checkpoint(path, resume_from)
+            if 'decoder' in parts_to_train and "decoder_state" in checkpoint:
+                self.active_decoder.model.load_state_dict(checkpoint["decoder_state"])
+            if 'encoder' in parts_to_train and "encoder_state" in checkpoint:
+                self.active_encoder.model.load_state_dict(checkpoint["encoder_state"])
+            optimizer.load_state_dict(checkpoint["optimizer_state"])
+            if scheduler is not None and checkpoint.get("scheduler_state") is not None:
+                scheduler.load_state_dict(checkpoint["scheduler_state"])
+            start_epoch = checkpoint["epoch"] + 1
+            best_metric = checkpoint.get("best_metric")
+            continues_run = ml_logger is not None and checkpoint.get("run_id") == ml_logger.run_id
+
+        log_interval = cfg.get('log_interval', 1)
+        eval_metric_name = cfg.get('eval_metric', 'val_metric')
+
+        if ml_logger is not None and not continues_run:
+            ml_logger.log_params({
+                "batch_size": cfg.get('batch_size'),
+                "epochs": cfg['epochs'],
+                "starting_lr": cfg['lr'],
+                "min_lr": min_lr,
+                "num_train_samples": len(train_loader.dataset),
+                "num_test_samples": len(val_loader.dataset) if val_loader is not None else 0,
+                "parts_to_train": ",".join(parts_to_train),
+                "eval_metric": eval_metric_name,
+                "log_interval": log_interval,
+            })
+
+        for epoch in range(start_epoch, cfg['epochs']):
+            epoch_start = time.time()
+            losses_m = AverageMeter()
+            data_time_m = AverageMeter()
+            update_time_m = AverageMeter()
+            updates_per_epoch = len(train_loader)
+
+            pbar = tqdm(train_loader)
+            end = time.time()
+            for update_idx, batch in enumerate(pbar):
+                data_time_m.update(time.time() - end)
+
+                optimizer.zero_grad()
+                x, y = batch["x"], batch["y"]
+                idx = batch.get("idx", None)
+                mask = batch.get("mask", None)
+                logits = self.forward(x, mask, use_cache=use_cache, idx=idx)
+                if (hasattr(self.active_decoder, "requires_model") and self.active_decoder.requires_model and hasattr(self.model_instance.model, "normalizer")):
+                    logits = self.model_instance.model.normalizer(x=logits, mode="denorm")
+                if isinstance(criterion, (nn.MSELoss, nn.L1Loss, nn.SmoothL1Loss)):
+                    logits = logits.float()
+                    y = y.to(self.active_decoder.device).float()
+                elif isinstance(criterion, (nn.CrossEntropyLoss)):
+                    y = y.to(self.active_decoder.device)
+                loss = criterion(logits, y)
+                loss.backward()
+                optimizer.step()
+
+                batch_size = x.shape[0] if hasattr(x, "shape") else len(x)
+                losses_m.update(loss.item(), batch_size)
+                update_time_m.update(time.time() - end)
+                end = time.time()
+
+                pbar.set_description(
+                    f'Train: {epoch} [{update_idx:>4d}/{updates_per_epoch} '
+                    f'({100. * update_idx / max(updates_per_epoch - 1, 1):>3.0f}%)]  '
+                    f'Loss: {losses_m.val:#.3g} ({losses_m.avg:#.3g})  '
+                    f'Time: {update_time_m.val:.3f}s ({update_time_m.avg:.3f}s)  '
+                    f'LR: {optimizer.param_groups[0]["lr"]:.3e}  '
+                    f'Data: {data_time_m.val:.3f} ({data_time_m.avg:.3f})'
+                )
+
+            if scheduler is not None:
+                scheduler.step()
+
+            if ((epoch + 1) % log_interval != 0) and (epoch != cfg['epochs'] - 1):
+                continue
+
+            val_metric = None
+            if val_loader is not None:
+                with torch.no_grad():
+                    val_labels, val_preds = self.predict(val_loader, cfg)
+                val_metric = float(metric_fn(val_labels, val_preds))
+
+            if ml_logger is not None:
+                metrics = {
+                    "train_loss": losses_m.avg,
+                    "lr": optimizer.param_groups[0]['lr'],
+                    "epoch_time_sec": time.time() - epoch_start,
+                    "update_time_sec_avg": update_time_m.avg,
+                    "data_time_sec_avg": data_time_m.avg,
+                }
+                if val_metric is not None:
+                    metrics[eval_metric_name] = val_metric
+                ml_logger.log_metrics(metrics, step=epoch)
+
+            # select_best_by="train_loss" picks the best checkpoint by train loss instead of val metric
+            if cfg.get('select_best_by', 'val') == 'train_loss' or val_metric is None:
+                compare_metric, compare_mode = losses_m.avg, 'min'
+            else:
+                compare_metric, compare_mode = val_metric, cfg.get('metric_mode', 'max')
+            is_best = (
+                best_metric is None
+                or (compare_mode == 'max' and compare_metric > best_metric)
+                or (compare_mode == 'min' and compare_metric < best_metric)
+            )
+            if is_best:
+                best_metric = compare_metric
+
+            if path is not None:
+                run_id = ml_logger.run_id if ml_logger is not None else None
+                if is_best:
+                    self._save_checkpoint(path, "best", epoch, optimizer, scheduler, best_metric, run_id, parts_to_train)
+                self._save_checkpoint(path, "last", epoch, optimizer, scheduler, best_metric, run_id, parts_to_train)
 
     def set_eval_mode(self):
         model = self.model_instance

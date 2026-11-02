@@ -33,5 +33,6 @@ dependencies = [
 "timm>=0.9",
 "peakutils",
 "torch-ecg<=0.0.28",
+"mlflow==3.9.0",
 ]
 
