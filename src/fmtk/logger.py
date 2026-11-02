@@ -1,4 +1,5 @@
 import time, json, os
+from abc import ABC, abstractmethod
 from collections import defaultdict
 from contextlib import contextmanager
 
@@ -21,6 +22,59 @@ try:
     HAS_NVML = True
 except Exception:
     HAS_NVML = False
+
+class MLLogger(ABC):
+    """Common interface for experiment trackers (MLflow, W&B, ...)."""
+
+    def __init__(self, run_name=None, run_id=None):
+        self.run_name = run_name
+        self.run_id = run_id
+
+    @abstractmethod
+    def start_run(self):
+        """Starts a new run, or continues self.run_id if set, and stores the active run's id."""
+
+    @abstractmethod
+    def end_run(self, failed=False):
+        """Ends the active run with a finished or failed status."""
+
+    @abstractmethod
+    def log_params(self, params: dict):
+        """Logs fixed run settings."""
+
+    @abstractmethod
+    def log_metrics(self, metrics: dict, step=None):
+        """Logs numeric values at a step."""
+
+    def __enter__(self):
+        self.start_run()
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        self.end_run(failed=exc_type is not None)
+
+class MLFLOWLogger(MLLogger):
+    """MLLogger backed by MLflow."""
+
+    def __init__(self, experiment_name, run_name=None, run_id=None, tracking_uri="./mlruns"):
+        super().__init__(run_name, run_id)
+        import mlflow
+        self._mlflow = mlflow
+        mlflow.set_tracking_uri(tracking_uri)
+        mlflow.set_experiment(experiment_name)
+
+    def start_run(self):
+        run = self._mlflow.start_run(run_id=self.run_id, run_name=self.run_name)
+        self.run_id = run.info.run_id
+
+    def end_run(self, failed=False):
+        self._mlflow.end_run(status="FAILED" if failed else "FINISHED")
+
+    def log_params(self, params: dict):
+        self._mlflow.log_params(params)
+
+    def log_metrics(self, metrics: dict, step=None):
+        self._mlflow.log_metrics(metrics, step=step)
 
 class Logger:
     def __init__(self, device, run_name="run", save_dir="./logs"):

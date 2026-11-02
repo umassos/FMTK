@@ -57,3 +57,24 @@ pip install pyPPG==1.0.41  # may conflict with other packages
 ```
 
 For quick start please check out [examples](./examples).
+
+## Experiment tracking
+
+`Pipeline.train` takes an optional `ml_logger`. The caller opens the run, so anything logged after training lands in the same run. Use one run per `train` call.
+```python
+from fmtk.logger import MLFLOWLogger
+
+with MLFLOWLogger("dino-voc", run_name="base") as ml:
+    ml.log_params({"model_id": model_id})
+    P.train(train_dl, val_dl, cfg=cfg, path=path, metric_fn=metric_fn, ml_logger=ml)
+    P.load_best_checkpoint(path)
+    y, p = P.predict(test_dl, cfg)
+    ml.log_metrics({"test_metric": metric_fn(y, p)})
+```
+To resume, read the run id from the checkpoint so training continues in the same run:
+```python
+run_id = P.checkpoint_run_id(path, "last")
+with MLFLOWLogger("dino-voc", run_id=run_id) as ml:
+    P.train(train_dl, val_dl, cfg=cfg, path=path, metric_fn=metric_fn, ml_logger=ml, resume_from="last")
+```
+Decoders with their own `fit` (e.g. SVM, KNN) log no training metrics. To add another tracker, subclass `MLLogger` in [logger.py](./src/fmtk/logger.py).

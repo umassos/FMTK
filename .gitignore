@@ -11,6 +11,7 @@ src/fmtk/saved
 **/stored_tokens/
 data/
 logs/
+mlruns/
 *.pth
 *.pt
 models/vlm/

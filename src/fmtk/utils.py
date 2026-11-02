@@ -12,6 +12,21 @@ def control_randomness(seed: int = 13):
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
+class AverageMeter:
+    """Tracks the latest value and running average of a quantity."""
+
+    def __init__(self):
+        self.val = 0
+        self.avg = 0
+        self.sum = 0
+        self.count = 0
+
+    def update(self, val, n=1):
+        self.val = val
+        self.sum += val * n
+        self.count += n
+        self.avg = self.sum / self.count
+
 def load_from_tsfile(
     full_file_path_and_name,
     replace_missing_vals_with="NaN",
