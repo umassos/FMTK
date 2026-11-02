@@ -1,0 +1,98 @@
+import numpy as np
+from sklearn.preprocessing import StandardScaler
+
+from fmtk.datasetloaders.base import TimeSeriesDataset
+from fmtk.utils import load_from_tsfile
+
+
+class ECG200Dataset(TimeSeriesDataset):
+    """
+    ECG200 dataset (UCR archive): univariate ECG traces (96 timesteps each),
+    2 classes (normal heartbeat vs. myocardial infarction).
+    """
+
+    def __init__(self, dataset_cfg, task_cfg, split):
+        """
+        Parameters
+        ----------
+        data_split : str
+            Split of the dataset, 'train', 'val' or 'test'.
+        """
+        super().__init__(dataset_cfg, task_cfg, split)
+        self.seq_len = self.dataset_cfg.get('seq_len', 96)  # ECG200 series length
+
+        dataset_path = dataset_cfg.get("dataset_path", "./data")
+        self.train_file_path_and_name = f"{dataset_path}/ECG200_TRAIN.ts"
+        self.test_file_path_and_name = f"{dataset_path}/ECG200_TEST.ts"
+
+        # Read data
+        self._read_data()
+        self.num_classes = len(np.unique(self.train_labels))
+
+    def _transform_labels(self, train_labels: np.ndarray, test_labels: np.ndarray):
+        labels = np.unique(train_labels)  # Move the labels to {0, ..., L-1}
+        transform = {}
+        for i, l in enumerate(labels):
+            transform[l] = i
+
+        train_labels = np.vectorize(transform.get)(train_labels)
+        test_labels = np.vectorize(transform.get)(test_labels)
+
+        return train_labels, test_labels
+
+    def __len__(self):
+        return self.num_timeseries
+
+    def _read_data(self):
+        self.scaler = StandardScaler()
+
+        self.train_data, self.train_labels = load_from_tsfile(
+            self.train_file_path_and_name
+        )
+        self.test_data, self.test_labels = load_from_tsfile(
+            self.test_file_path_and_name
+        )
+
+        self.train_labels, self.test_labels = self._transform_labels(
+            self.train_labels, self.test_labels
+        )
+
+        if self.split == "train":
+            self.data = self.train_data
+            self.labels = self.train_labels
+        elif self.split == "test" or self.split == "val":
+            self.data = self.test_data
+            self.labels = self.test_labels
+
+        self.num_timeseries = self.data.shape[0]
+        self.len_timeseries = self.data.shape[2]
+
+        self.data = self.data.reshape(-1, self.len_timeseries)
+        self.scaler.fit(self.data)
+        self.data = self.scaler.transform(self.data)
+        self.data = self.data.reshape(self.num_timeseries, self.len_timeseries)
+
+        self.data = self.data.T
+
+        return self.data, self.labels
+
+    def __getitem__(self, index):
+        assert index < self.__len__()
+
+        timeseries = self.data[:, index]
+        timeseries_len = len(timeseries)
+        labels = self.labels[index,].astype(int)
+        input_mask = np.ones(self.seq_len)
+        input_mask[: self.seq_len - timeseries_len] = 0
+
+        timeseries = np.pad(timeseries, (self.seq_len - timeseries_len, 0))
+
+        return {
+            "x": np.expand_dims(timeseries, axis=0),
+            "mask": input_mask,
+            "y": labels,
+            "idx": index,
+        }
+
+    def preprocess(self):
+        pass
