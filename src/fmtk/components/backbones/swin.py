@@ -28,6 +28,22 @@ def get_swin_embed_dim(model_id):
     elif model_id in ['large', 'swin-large', 'microsoft/swin-large-patch4-window7-224']:
         return 1536
 
+def get_swin_hierarchical_dims(model_id):
+    """
+    Per-stage channel counts for return_hierarchical=True's 4 feature maps
+    (embedding + stages 1/2/4, at strides 4/8/16/32 -- see SwinModel.forward
+    for why stage 3's entry is skipped). Derived from each variant's
+    embed_dim C: stages are [C, 2C, 4C, 8C] (doubling at each patch-merge).
+    Confirmed empirically for small: [96, 192, 384, 768].
+    """
+    if model_id in ['tiny', 'swin-tiny', 'microsoft/swin-tiny-patch4-window7-224',
+                     'small', 'swin-small', 'microsoft/swin-small-patch4-window7-224']:
+        return [96, 192, 384, 768]
+    elif model_id in ['base', 'swin-base', 'microsoft/swin-base-patch4-window7-224']:
+        return [128, 256, 512, 1024]
+    elif model_id in ['large', 'swin-large', 'microsoft/swin-large-patch4-window7-224']:
+        return [192, 384, 768, 1536]
+
 class SwinModel(BaseModel):
     """
     Swin Transformer backbone for vision tasks.
@@ -39,6 +55,7 @@ class SwinModel(BaseModel):
         self.device = device
         self.model_category = 'vision'
         self.return_all_tokens = model_config.get("return_all_tokens", False)
+        self.return_hierarchical = model_config.get("return_hierarchical", False)
 
         self.model_id = get_swin_model_id(model_name)
         self.embed_dim = get_swin_embed_dim(self.model_id)
@@ -74,7 +91,17 @@ class SwinModel(BaseModel):
         #
         # return embeddings
 
-        outputs = self.model(x)
+        outputs = self.model(x, output_hidden_states=self.return_hierarchical)
+
+        if self.return_hierarchical:
+            # reshaped_hidden_states = (embedding, stage1, stage2, stage3, stage4),
+            # at strides (4, 8, 16, 32, 32) -- stage4 has no downsample, so its
+            # entry duplicates stage3's resolution. Use the 4 *distinct*
+            # resolutions (embedding + stages 1/2/4, strides 4/8/16/32),
+            # finest-to-coarsest, skipping the redundant stage3 entry.
+            reshaped = outputs.reshaped_hidden_states
+            return [reshaped[0], reshaped[1], reshaped[2], reshaped[4]]
+
         embeddings = outputs.last_hidden_state
         return embeddings
 
