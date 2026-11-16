@@ -44,7 +44,7 @@ class Chronos2Model(BaseModel):
     def preprocess(self, batch_x, mask=None):
         if mask is not None:
             mask = mask.to(self.device)
-        x = batch_x.float().to(self.device)
+        x = batch_x.float().cpu()
         return x, mask
 
     def forward(self, batch_x, mask=None):

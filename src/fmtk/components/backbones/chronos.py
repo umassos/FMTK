@@ -48,7 +48,7 @@ class ChronosModel(BaseModel):
     
     def preprocess(self,batch_x,mask=None):
 
-        x=batch_x.float()
+        x=batch_x.float().cpu()
         self.B, self.S, self.L = x.shape
         x = x.view(-1, self.L)
 
