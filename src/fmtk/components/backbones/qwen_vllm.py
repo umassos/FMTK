@@ -4,7 +4,7 @@ import time
 import numpy as np
 from tqdm import tqdm
 from fmtk.components.base import BaseModel
-from vllm import LLM, AsyncLLMEngine, AsyncEngineArgs, SamplingParams
+from vllm import LLM, AsyncLLMEngine, AsyncEngineArgs, EngineArgs, LLMEngine, SamplingParams
 from vllm.lora.request import LoRARequest
 import torch
 from transformers import AutoTokenizer
@@ -109,9 +109,20 @@ class QwenVLLMModel(BaseModel):
                 if 'max_cpu_loras' in model_config:
                     self._async_engine_args['max_cpu_loras'] = int(model_config['max_cpu_loras'])
 
-            self._async_engine = AsyncLLMEngine.from_engine_args(
-                AsyncEngineArgs(**self._async_engine_args)
-            )
+            # engine="step" builds a plain LLMEngine from the SAME arguments;
+            # the caller drives it with add_request()/step() (serving's
+            # device/llm_loop.py), so it owns admission and sees every step.
+            # Default "async" keeps the AsyncLLMEngine path unchanged.
+            self.engine_kind = model_config.get('engine', 'async')
+            self._engine = None
+            if self.engine_kind == 'step':
+                self._engine = LLMEngine.from_engine_args(
+                    EngineArgs(**self._async_engine_args)
+                )
+            else:
+                self._async_engine = AsyncLLMEngine.from_engine_args(
+                    AsyncEngineArgs(**self._async_engine_args)
+                )
 
         else:
             self.llm = LLM(
@@ -182,6 +193,22 @@ class QwenVLLMModel(BaseModel):
 
         text = final_output.outputs[0].text.strip() if final_output else ""
         return self.postprocess([text])[0]
+
+    # -- engine="step" helpers (used by serving's device/llm_loop.py) --------
+
+    def prompt_token_ids(self, prompt: str) -> list:
+        """The token ids vLLM would make from this prompt: chat template, then
+        the tokenizer's encode() (what vLLM does to a text prompt)."""
+        formatted, _ = self.preprocess([prompt])
+        return self.tokenizer.encode(formatted[0])
+
+    def decode_tokens(self, token_ids) -> str:
+        """Generated ids -> text, as async_forward returns it."""
+        text = self.tokenizer.decode(list(token_ids), skip_special_tokens=True)
+        return self.postprocess([text.strip()])[0]
+
+    def lora_request(self, adapter_name):
+        return self._loras.get(adapter_name) if adapter_name else None
 
     def postprocess(self, responses):
         return responses
