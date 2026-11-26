@@ -64,9 +64,19 @@ class QwenVLLMModel(BaseModel):
         if self.tokenizer.pad_token is None:
             self.tokenizer.pad_token = self.tokenizer.eos_token
             
+        # ignore_eos forces every request to emit exactly max_tokens; mirrors
+        # qwen2_vl_vllm.py. Off by default, which is how the RTVSntask LLM
+        # experiment runs: its open-ended prompts reach the 32-token cap on
+        # their own. Turn it on when the prompts do NOT run long — the
+        # profiler's SST2 template ("respond with exactly one word") stops at
+        # ~12 tokens, which would otherwise measure a much shorter generation
+        # than the same backbone does under those experiments. Forcing the
+        # length makes output length an experimental constant; the text past
+        # the natural stop is filler, so this mode is for timing, not accuracy.
         self.sampling_params = SamplingParams(
             temperature=model_config.get('temperature', 0.0),
             max_tokens=model_config.get('max_new_tokens', 64),
+            ignore_eos=bool(model_config.get('ignore_eos', False)),
         )
         if async_only:
             # AsyncLLMEngine is created lazily in async_forward() to avoid
@@ -79,10 +89,16 @@ class QwenVLLMModel(BaseModel):
                 trust_remote_code=True,
                 gpu_memory_utilization=model_config.get('gpu_memory_utilization', 0.85),
                 tensor_parallel_size=model_config.get('tensor_parallel_size', 1),
-                enforce_eager=model_config.get('enforce_eager', True),
+                enforce_eager=model_config.get('enforce_eager', False),
             )
             if 'max_model_len' in model_config:
                 self._async_engine_args['max_model_len'] = model_config['max_model_len']
+            # Engine cap on concurrent sequences. vLLM defaults to 256, which
+            # binds long before KV memory does for short generations — and,
+            # being per-engine, silently gives an N-server deployment an Nx
+            # concurrency budget over a single shared engine.
+            if 'max_num_seqs' in model_config:
+                self._async_engine_args['max_num_seqs'] = int(model_config['max_num_seqs'])
 
             # Multi-LoRA: enable on the engine when requested. Per-request
             # adapter routing is done via async_forward(prompt, adapter_name).
